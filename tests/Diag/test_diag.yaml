@@ -1,0 +1,120 @@
+test_scenario:
+  test_id: "D1001"
+  test_name: "ExampleInbandDockerDiagTest"
+  test_group: "Examples"
+  tags: ["D2"]
+  docker:
+  - container_name: prime95-test
+    container_image: prime95_stress
+    shell: "/bin/bash"
+    container_location: ssh
+    connection_type: ssh
+    connection: Inband
+    use_sudo: true
+
+
+  test_steps:
+  - step_id: step_001
+    step_name: lspci test
+    step_description: "Check for PCI devices"
+    connection_type: ssh
+    connection: Inband
+    step_type: command_execution
+    step_command: "timeout 180 ./mprime -t"
+    use_sudo: true
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: true
+    loop: 1
+    validator_type: regex/ exact_match
+    output_analysis:
+      - regex: ((\d+) Lucas-Lehmer in-place iterations of M(\d+) using FMA3 FFT length 384K, Pass1=384, Pass2=1K, clm=4, 2 threads)
+        parameter_to_set: c_pci_devices
+      - regex: 44000 Lucas-Lehmer in-place iterations of M7471105 using FMA3 FFT length (\d+)K, Pass1=384, Pass2=1K, clm=4, 2 threads.
+        parameter_to_set: c_vga_device
+    expected_output: |
+        44000 Lucas-Lehmer in-place iterations of M7471105 using FMA3 FFT length 384K, Pass1=384, Pass2=1K, clm=4, 2 threads
+    
+
+  - step_id: step_002
+    step_name: prime95 test
+    step_description: Run prime95 stress test
+    validate_continued_step: step_001
+    connection_type: ssh
+    connection: Inband
+    step_type: command_execution
+    container_name: prime95-test
+    step_command: timeout 30 ./mprime -t
+    use_sudo: true
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: false
+    loop: 1
+    validator_type: regex
+    output_analysis:
+      - regex: ((\d+) Lucas-Lehmer in-place iterations of M(\d+) using FMA3 FFT length 384K, Pass1=384, Pass2=1K, clm=4, 2 threads)
+        parameter_to_set: pci_devices
+      - regex: 44000 Lucas-Lehmer in-place iterations of M7471105 using FMA3 FFT length (\d+)K, Pass1=384, Pass2=1K, clm=4, 2 threads.
+        parameter_to_set: vga_device
+    expected_output: |
+        44000 Lucas-Lehmer in-place iterations of M7471105 using FMA3 FFT length 384K, Pass1=384, Pass2=1K, clm=4, 2 threads
+
+
+  - step_id: step_003
+    step_name: log analysis
+    step_description: Analyze prime95 log for errors
+    connection_type: subprocess
+    connection: Local
+    step_type: log_analysis   
+    log_analysis_path: ..\workspace\logs\test_run_20250813_213512\test_run.log
+    validator_type: regex
+    diagnostic_analysis:
+      - diagnostic_search_string: (M\d+)
+        parameter_to_set: cpu_fault_analysis
+
+      - search_string: 44000 Lucas-Lehmer in-place iterations of M7471105 using FMA3 FFT length 384K, Pass1=384, Pass2=1K, clm=4, 2 threads
+        diagnostic_result_code: M7471105
+        parameter_to_set: gpu_fault_analysis1
+
+
+  - step_id: step_004
+    step_name: log analysis
+    step_description: "Analyze prime95 log for errors"
+    connection_type: subprocess
+    connection: Local
+    step_type: log_analysis
+    log_analysis_path: ..\workspace\logs\test_run_20250813_213512\test_run1.log
+    validator_type: regex
+    diagnostic_analysis:
+      - search_string: 44000 Lucas-Lehmer in-place iterations of M74711051
+        diagnostic_result_code: M74711051
+        parameter_to_set: gpu_fault_analysis2
+        
+      - search_string: Diagnostic error occurred
+        diagnostic_result_code: DIAG1002
+        parameter_to_set: diagnostic_fault_analysis
+
+      - diagnostic_search_string: (M\d+)
+        parameter_to_set: diagnostic_fault_analysis
+
+
+
+  - step_id: step_005
+    step_name: invoke lspci scenario
+    step_description: Invoke lspci scenario for further analysis
+    connection_type: subprocess
+    connection: Local
+    entry_criteria:
+      - expression: diagnostic_fault_analysis==True and pci_devices==True
+        entry_criteria_note: Ensure GPU or diagnostic faults are detected before running the log analysis
+    step_type: invoke_scenario
+    scenario_path: ..\tests\Diag\test_diag_command.yaml
+    
+    
+  
+    
+

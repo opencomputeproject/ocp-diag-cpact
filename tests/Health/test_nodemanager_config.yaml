@@ -1,0 +1,23 @@
+test_scenario:
+  test_id: "H1003"
+  test_name: "ExampleNodeManagerConfigTest"
+  test_group: "Examples"
+  tags: ["H1"]
+  test_steps:
+  - step_id: step_001
+    step_name: NodeManagerSystemInfoTest
+    step_description: "Check for system information"
+    connection_type: redfish
+    connection: NodeManager
+    step_type: command_execution
+    step_command: /redfish/v1
+    use_sudo: false
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: false
+    loop: 1
+    validator_type: regex
+    expected_output: |
+        "@odata.id": "/redfish/v1"

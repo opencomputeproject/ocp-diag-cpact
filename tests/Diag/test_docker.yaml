@@ -1,0 +1,54 @@
+test_scenario:
+  test_id: "D1003"
+  test_name: "ExampleDockerTest"
+  test_group: "Examples"
+  tags: ["D2"]
+  docker:
+  - container_name: prime95-test
+    container_image: prime95_stress
+    shell: "/bin/bash"
+    container_location: remote
+    connection_type: ssh
+    connection: Inband
+    use_sudo: true
+
+  test_steps:
+  - step_id: step_001
+    step_name: prime95 test
+    step_description: "Run prime95 stress test"
+    validate_continued_step: step_001
+    connection_type: ssh
+    connection: Inband
+    step_type: command_execution
+    container_name: prime95-test
+    step_command: "timeout 120 ./mprime -t"
+    use_sudo: false
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: true
+    loop: 1
+    validator_type: regex
+    output_analysis:
+      - regex: "(44000 Lucas-Lehmer in-place iterations of M7471105 using FMA3 FFT length 384K, Pass1=384, Pass2=1K, clm=4, 2 threads.)"
+        parameter_to_set: prime95_test_result
+    expected_output:
+      Starting workers.
+  - step_id: step_002
+    step_name: lspci test
+    step_description: "Check for PCI devices"
+    connection_type: ssh
+    connection: Inband
+    step_type: command_execution
+    step_command: lspci
+    use_sudo: true
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: false
+    loop: 1
+    validator_type: regex/ exact_match
+    expected_output: |
+      System peripheral
