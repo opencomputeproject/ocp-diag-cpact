@@ -1,5 +1,5 @@
 """
-Copyright (c) Microsoft Corporation.
+Copyright (c) 2025 Open Compute Project
 Licensed under the MIT License.
 
 This source code is licensed under the MIT license found in the
