@@ -1,0 +1,23 @@
+test_scenario:
+  test_id: DG_3S
+  test_name: DiagSampleLogRegex3
+  test_description: Sample Diagnostic recipe to search a regex string with assignment which is then called out as DRC.
+  test_group: Diag
+  tags: [Diag, Sample]
+
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForRegexAssignDRC
+    step_description: Search for a regex string in log and assign a DRC.
+    connection_type: Local
+    connection: Local
+    step_type: log_analysis
+    log_analysis_path: ../sample_workspace/test_run.log
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (?P<Error_Code>(?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))
+      diagnostic_result_code: Error_Code
+      parameter_to_set: error_code
+
+# Note:- Multiple instance of the same search string will still yield only one DRC.
+#        e.g. if the search string is found 3 times in the log, only one DRC will be assigned.

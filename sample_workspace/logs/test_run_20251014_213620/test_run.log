@@ -1,0 +1,123 @@
+2025-10-14 21:36:20,449 [INFO] 📁 Log directory created: ..\sample_workspace\logs\test_run_20251014_213620
+2025-10-14 21:36:20,450 [INFO] 📝 Logging to file: ..\sample_workspace\logs\test_run_20251014_213620\test_run.log
+2025-10-14 21:36:20,450 [INFO] Log directory: ..\sample_workspace\logs\test_run_20251014_213620
+2025-10-14 21:36:20,450 [INFO] Starting test discovery in: ..\tests
+2025-10-14 21:36:20,501 [INFO] Found 10 matching test cases.
+2025-10-14 21:36:20,554 [INFO] 
+🚀 Running Test: ..\tests\Diagnostic\diag_sample_log_regex_5.yaml
+2025-10-14 21:36:20,560 [INFO] 🔧 OCP TV output file: ..\sample_workspace\logs\test_run_20251014_213620\ocptv_DiagSampleLogRegex5_20251014_213620.json
+2025-10-14 21:36:20,560 [INFO] Test Metadata set: ID=DG_5S
+2025-10-14 21:36:20,561 [INFO] Running 1 steps in scenario: DiagSampleLogRegex5
+2025-10-14 21:36:20,562 [INFO] Running inline steps...
+2025-10-14 21:36:20,565 [INFO] 🚀 Test Run Started: DiagSampleLogRegex5
+2025-10-14 21:36:20,576 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForRegexAssignDRCWithFields
+2025-10-14 21:36:20,576 [INFO] Executing step: SearchForRegexAssignDRCWithFields
+2025-10-14 21:36:20,577 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x000001B73FD12CF0>
+2025-10-14 21:36:23,657 [INFO] Log path: ../sample_workspace/test_run.log
+2025-10-14 21:36:23,687 [INFO] Analyzing log: ..\sample_workspace\logs\test_run_20251014_213620\step_logs
+2025-10-14 21:36:23,687 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2025-10-14 21:36:23,694 [INFO] ---------------- Applying Rule ----------------
+2025-10-14 21:36:23,696 [INFO] 🔍 Matched '(FAIL-(?=\d*[1-9])\d+)\s*\|.*?\|.*?\|.*?\|(?P<Component_ID>[^\|]+)\|\s*(?P<Notes>.*?)(?=(\nFAIL-|$))' → True → set error_code
+2025-10-14 21:36:23,696 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_5S': {'step_001': {'error_code': True}}}}
+2025-10-14 21:36:23,696 [INFO] ---------------- Diagnostic Keys ----------------
+2025-10-14 21:36:23,696 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'FAIL-000000000XXX': [{'Component_ID': ' 0008:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0019:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0009:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0018:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0008:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0008:05:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0019:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0019:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0009:02:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0009:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0018:11:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0018:11:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' GPU_0018_11_00_0_VBIOS_version   ', 'Notes': "'GPU_0018_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0018_21_00_0_InfoROM_version ', 'Notes': "'GPU_0018_01_00_0_InfoROM_version': not found. expected '=/M215\\.0201\\.00\\..*/'"}, {'Component_ID': ' GPU_0008_015_00_0_VBIOS_version   ', 'Notes': "'GPU_0008_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0008_017_00_0_InfoROM_version ', 'Notes': "'GPU_0008_01_00_0_InfoROM_version': not found. expected '=/D777\\.0201\\.00\\..*/'"}, {'Component_ID': ' GPU_0009_017_00_0_VBIOS_version   ', 'Notes': "'GPU_0009_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0009_017_00_0_InfoROM_version ', 'Notes': "'GPU_0009_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}, {'Component_ID': ' GPU_0019_019_00_0_VBIOS_version   ', 'Notes': "'GPU_0019_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0019_019_00_0_InfoROM_version ', 'Notes': "'GPU_0019_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}]})
+2025-10-14 21:36:23,703 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:36:23,706 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:36:23,708 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2025-10-14 21:36:23,710 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2025-10-14 21:36:23,711 [INFO] Finalizing continued steps...
+2025-10-14 21:36:23,711 [DEBUG] Finalizing continued steps in context: {}
+2025-10-14 21:36:23,711 [INFO] No continued steps to finalize.
+2025-10-14 21:36:23,711 [INFO] ✅ Test completed in 3.15 seconds
+2025-10-14 21:36:23,712 [INFO] ---------------------- Test Summary -------------------------
+2025-10-14 21:36:23,712 [INFO] [PASS] Step: SearchForRegexAssignDRCWithFields | Type: log_analysis | Time: 3.12s | Msg: Log analyzed successfully.
+2025-10-14 21:36:23,712 [INFO] 
+❌ Detected Diagnostic Issues:
+2025-10-14 21:36:23,720 [INFO] 
++-------------------+--------------------------+------------------------------------------+
+| Diagnostic Code   | Component_ID             | Notes                                    |
++===================+==========================+==========================================+
+| FAIL-000000000XXX | 0008:01:00.0_Version     | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0019:01:00.0_Version     | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0009:01:00.0_Version     | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0018:01:00.0_Version     | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0008:01:00.0_InfoROM     | Flash execution failed, please check     |
+|                   | Version                  | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0008:05:00.0_Board ID    | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0019:01:00.0_InfoROM     | Flash execution failed, please check     |
+|                   | Version                  | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0019:02:00.0_Board ID    | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0009:02:00.0_InfoROM     | Flash execution failed, please check     |
+|                   | Version                  | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0009:02:00.0_Board ID    | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0018:11:00.0_InfoROM     | Flash execution failed, please check     |
+|                   | Version                  | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | 0018:11:00.0_Board ID    | Flash execution failed, please check     |
+|                   |                          | command.                                 |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0018_11_00_0_VBIOS_v | 'GPU_0018_01_00_0_VBIOS_version': not    |
+|                   | ersion                   | found. expected '=/.*/'                  |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0018_21_00_0_InfoROM | 'GPU_0018_01_00_0_InfoROM_version': not  |
+|                   | _version                 | found. expected '=/M215\.0201\.00\..*/'  |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0008_015_00_0_VBIOS_ | 'GPU_0008_01_00_0_VBIOS_version': not    |
+|                   | version                  | found. expected '=/.*/'                  |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0008_017_00_0_InfoRO | 'GPU_0008_01_00_0_InfoROM_version': not  |
+|                   | M_version                | found. expected '=/D777\.0201\.00\..*/'  |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0009_017_00_0_VBIOS_ | 'GPU_0009_01_00_0_VBIOS_version': not    |
+|                   | version                  | found. expected '=/.*/'                  |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0009_017_00_0_InfoRO | 'GPU_0009_01_00_0_InfoROM_version': not  |
+|                   | M_version                | found. expected '=/K4545\.0201\.00\..*/' |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0019_019_00_0_VBIOS_ | 'GPU_0019_01_00_0_VBIOS_version': not    |
+|                   | version                  | found. expected '=/.*/'                  |
++-------------------+--------------------------+------------------------------------------+
+| FAIL-000000000XXX | GPU_0019_019_00_0_InfoRO | 'GPU_0019_01_00_0_InfoROM_version': not  |
+|                   | M_version                | found. expected '=/K4545\.0201\.00\..*/' |
++-------------------+--------------------------+------------------------------------------+
+2025-10-14 21:36:23,720 [INFO] 
+📊 Diagnostic Codes Summary:
+2025-10-14 21:36:23,721 [INFO] 
++-------------------+---------------+
+| Diagnostic Code   |   Occurrences |
++===================+===============+
+| FAIL-000000000XXX |             1 |
++-------------------+---------------+
+2025-10-14 21:36:23,721 [INFO] 
+🔑 Final Context Keys:
+2025-10-14 21:36:23,721 [INFO] DG_5S = {'step_001': {'error_code': True}}
+2025-10-14 21:36:23,724 [INFO] Results saved to ..\sample_workspace\logs\test_run_20251014_213620\test_results.json
+2025-10-14 21:36:23,726 [INFO] Diagnostics saved to ..\sample_workspace\logs\test_run_20251014_213620\diagnostics_codes.json
+2025-10-14 21:36:23,727 [INFO] 
++-----------------------------------+--------------+----------+----------------+----------------------------+
+| Step Name                         | Type         | Status   |   Duration (s) | Message                    |
++===================================+==============+==========+================+============================+
+| SearchForRegexAssignDRCWithFields | log_analysis | success  |           3.12 | Log analyzed successfully. |
++-----------------------------------+--------------+----------+----------------+----------------------------+
+2025-10-14 21:36:23,727 [INFO] ⏱️ Total execution time: 3.15s
+
+2025-10-14 21:36:23,728 [INFO] All tests executed successfully.

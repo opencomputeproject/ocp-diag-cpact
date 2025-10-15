@@ -1,0 +1,13 @@
+{
+    "Connection": {
+        "redfish_port": 8080,
+        "protocol": "https",
+        "use_ssl":true,
+        "connections": [
+            "Local"
+        ],
+        "connection_types": [
+            "local"
+        ]
+    }
+}

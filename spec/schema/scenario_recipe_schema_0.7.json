@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test Scenario Spec",
+  "type": "object",
+  "properties": {
+    "test_scenario": {
+      "type": "object",
+      "properties": {
+        "test_id": { "type": "string" },
+        "test_name": { "type": "string" },
+        "test_group": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "docker": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "container_name": { "type": "string" },
+              "container_image": { "type": "string" },
+              "shell": { "type": "string" },
+              "container_location": { "type": "string", "enum": ["local", "remote"] },
+              "connection_type": { "type": "string", "enum": ["Local", "Inband", "RackManager", "NodeManager"] },
+              "connection": { "type": "string", "enum": ["local", "redfish", "ssh"] },
+              "use_sudo": { "type": "boolean" }
+            },
+            "required": ["container_name", "container_image", "connection_type", "connection"],
+            "additionalProperties": false
+          }
+        },
+        "test_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step_id": { "type": "string" },
+              "step_name": { "type": "string" },
+              "step_description": { "type": "string" },
+              "entry_criteria": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "expression": { "type": "string" },
+                    "entry_criteria_note": { "type": "string" }
+                  },
+                  "required": ["expression"],
+                  "additionalProperties": false
+                }
+              },
+              "container_name": { "type": "string" },
+              "connection_type": { "type": "string", "enum": ["local", "Inband", "RackManager", "NodeManager"] },
+              "connection": { "type": "string", "enum": ["local", "redfish", "ssh"] },
+              "step_type": { "type": "string", "enum": ["command_execution", "log_analysis", "invoke_scenario"] }
+            },
+            "required": ["step_id", "step_name", "step_type", "connection_type", "connection"],
+            "allOf": [
+              {
+                "if": { "properties": { "step_type": { "const": "command_execution" } } },
+                "then": {
+                  "properties": {
+                    "step_command": { "type": "string" },
+                    "use_sudo": { "type": "boolean" },
+                    "method": { "type": "string" },
+                    "body": {},
+                    "headers": {},
+                    "duration": { "type": "integer" },
+                    "continue": { "type": "boolean" },
+                    "loop": { "type": "integer" },
+                    "validator_type": { "type": "string" },
+                    "expected_output": { "type": "string" },
+                    "expected_output_path": { "type": "string" },
+                    "output_analysis": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "regex": { "type": "string" },
+                          "parameter_to_set": { "type": "string" }
+                        },
+                        "required": ["regex", "parameter_to_set"],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": ["step_command", "validator_type"],
+                  "additionalProperties": true
+                }
+              },
+              {
+                "if": { "properties": { "step_type": { "const": "log_analysis" } } },
+                "then": {
+                  "properties": {
+                    "log_analysis_path": { "type": "string" },
+                    "validator_type": { "type": "string" },
+                    "diagnostic_analysis": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "search_string": { "type": "string" },
+                              "diagnostic_result_code": { "type": "string" },
+                              "parameter_to_set": { "type": "string" }
+                            },
+                            "required": ["search_string", "diagnostic_result_code"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "diagnostic_search_string": { "type": "string" },
+                              "parameter_to_set": { "type": "string" }
+                            },
+                            "required": ["diagnostic_search_string"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": ["log_analysis_path", "validator_type"],
+                  "additionalProperties": true
+                }
+              },
+              {
+                "if": { "properties": { "step_type": { "const": "invoke_scenario" } } },
+                "then": {
+                  "properties": {
+                    "scenario_path": { "type": "string" }
+                  },
+                  "required": ["scenario_path"],
+                  "additionalProperties": true
+                }
+              }
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["test_id", "test_name", "test_steps", "test_group"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["test_scenario"],
+  "additionalProperties": false
+}

@@ -4,13 +4,33 @@ Licensed under the MIT License.
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
+
+===============================================================================
+YamlJsonUtils provides utility functions for loading and converting YAML and JSON files
+commonly used in test scenarios or configuration workflows. It supports automatic format
+detection and error handling for invalid or unsupported file types.
+
+Features:
+- Loads YAML or JSON files into Python dictionaries or lists.
+- Automatically detects file extension and parses accordingly.
+- Converts YAML files to JSON format with optional output directory.
+- Raises descriptive errors for missing files or malformed content.
+
+Attributes:
+    None (module-level functions only)
+
+Usage:
+    Use `load_yaml_file()` to read test scenario files.
+    Use `convert_yaml_to_json()` to transform YAML into JSON for downstream tools.
+===============================================================================
 """
 
 import os
 import json
 import yaml
 
-def load_yaml_file(file_path):
+
+def load_yaml_file(file_path: str) -> dict | list:
     """
     Load a YAML or JSON test scenario file and return the data as a Python dict/list.
     """
@@ -34,7 +54,7 @@ def load_yaml_file(file_path):
             raise ValueError(f"Unsupported file type: {ext}")
 
 
-def convert_yaml_to_json(yaml_path, output_dir=None):
+def convert_yaml_to_json(yaml_path: str, output_dir: str = None) -> str:
     """
     Convert a YAML file to a JSON file in the same or specified directory.
     Returns the path to the created JSON file.

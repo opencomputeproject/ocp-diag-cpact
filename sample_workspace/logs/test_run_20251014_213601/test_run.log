@@ -1,0 +1,62 @@
+2025-10-14 21:36:01,816 [INFO] 📁 Log directory created: ..\sample_workspace\logs\test_run_20251014_213601
+2025-10-14 21:36:01,817 [INFO] 📝 Logging to file: ..\sample_workspace\logs\test_run_20251014_213601\test_run.log
+2025-10-14 21:36:01,817 [INFO] Log directory: ..\sample_workspace\logs\test_run_20251014_213601
+2025-10-14 21:36:01,818 [INFO] Starting test discovery in: ..\tests
+2025-10-14 21:36:01,866 [INFO] Found 10 matching test cases.
+2025-10-14 21:36:01,915 [INFO] 
+🚀 Running Test: ..\tests\Diagnostic\diag_sample_log_regex_3.yaml
+2025-10-14 21:36:01,921 [INFO] 🔧 OCP TV output file: ..\sample_workspace\logs\test_run_20251014_213601\ocptv_DiagSampleLogRegex3_20251014_213601.json
+2025-10-14 21:36:01,921 [INFO] Test Metadata set: ID=DG_3S
+2025-10-14 21:36:01,922 [INFO] Running 1 steps in scenario: DiagSampleLogRegex3
+2025-10-14 21:36:01,922 [INFO] Running inline steps...
+2025-10-14 21:36:01,925 [INFO] 🚀 Test Run Started: DiagSampleLogRegex3
+2025-10-14 21:36:01,937 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForRegexAssignDRC
+2025-10-14 21:36:01,941 [INFO] Executing step: SearchForRegexAssignDRC
+2025-10-14 21:36:01,941 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x0000028AA82D2CF0>
+2025-10-14 21:36:05,021 [INFO] Log path: ../sample_workspace/test_run.log
+2025-10-14 21:36:05,053 [INFO] Analyzing log: ..\sample_workspace\logs\test_run_20251014_213601\step_logs
+2025-10-14 21:36:05,053 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2025-10-14 21:36:05,059 [INFO] ---------------- Applying Rule ----------------
+2025-10-14 21:36:05,061 [INFO] 🔍 Matched '(?P<Error_Code>(?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))' → True → set error_code
+2025-10-14 21:36:05,061 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_3S': {'step_001': {'error_code': True}}}}
+2025-10-14 21:36:05,062 [INFO] ---------------- Diagnostic Keys ----------------
+2025-10-14 21:36:05,062 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'FAIL-000000000086': [{'Error_Code': 'FAIL-000000000086'}], 'FAIL-000000000110': [{'Error_Code': 'FAIL-000000000110'}]})
+2025-10-14 21:36:05,068 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:36:05,071 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:36:05,073 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2025-10-14 21:36:05,076 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2025-10-14 21:36:05,076 [INFO] Finalizing continued steps...
+2025-10-14 21:36:05,076 [DEBUG] Finalizing continued steps in context: {}
+2025-10-14 21:36:05,076 [INFO] No continued steps to finalize.
+2025-10-14 21:36:05,077 [INFO] ✅ Test completed in 3.16 seconds
+2025-10-14 21:36:05,077 [INFO] ---------------------- Test Summary -------------------------
+2025-10-14 21:36:05,077 [INFO] [PASS] Step: SearchForRegexAssignDRC | Type: log_analysis | Time: 3.12s | Msg: Log analyzed successfully.
+2025-10-14 21:36:05,077 [INFO] 
+❌ Detected Diagnostic Issues:
+2025-10-14 21:36:05,078 [INFO] No diagnostic data to display.
+2025-10-14 21:36:05,078 [INFO] 
+📊 Diagnostic Codes Summary:
+2025-10-14 21:36:05,079 [INFO] 
++-------------------+---------------+
+| Diagnostic Code   |   Occurrences |
++===================+===============+
+| FAIL-000000000086 |             1 |
++-------------------+---------------+
+| FAIL-000000000110 |             1 |
++-------------------+---------------+
+2025-10-14 21:36:05,079 [INFO] 
+🔑 Final Context Keys:
+2025-10-14 21:36:05,079 [INFO] DG_3S = {'step_001': {'error_code': True}}
+2025-10-14 21:36:05,081 [INFO] Results saved to ..\sample_workspace\logs\test_run_20251014_213601\test_results.json
+2025-10-14 21:36:05,083 [INFO] Diagnostics saved to ..\sample_workspace\logs\test_run_20251014_213601\diagnostics_codes.json
+2025-10-14 21:36:05,083 [INFO] 
++-------------------------+--------------+----------+----------------+----------------------------+
+| Step Name               | Type         | Status   |   Duration (s) | Message                    |
++=========================+==============+==========+================+============================+
+| SearchForRegexAssignDRC | log_analysis | success  |           3.12 | Log analyzed successfully. |
++-------------------------+--------------+----------+----------------+----------------------------+
+2025-10-14 21:36:05,084 [INFO] ⏱️ Total execution time: 3.16s
+
+2025-10-14 21:36:05,084 [INFO] All tests executed successfully.

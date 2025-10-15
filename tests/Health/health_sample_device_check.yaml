@@ -1,0 +1,28 @@
+test_scenario:
+  test_id: HC_01
+  test_name: HealthConfigTest
+  test_description: Sample Health recipe to check PCI devices using lspci command.
+  test_group: Health
+  tags: [Health, Sample]
+
+  test_steps:
+  - step_id: step_001
+    step_name: CheckPCIDevices
+    step_description: Check PCI devices using lspci command.
+    connection_type: ssh
+    connection: Inband
+    step_type: command_execution
+    step_command: lspci
+    use_sudo: true
+    duration: 30
+    continue: false
+    loop: 1
+    validator_type: regex
+    expected_output: |
+      1794:00:00.0 System peripheral: Red Hat, Inc. Virtio file system (rev 01)
+      5582:00:00.0 SCSI storage controller: Red Hat, Inc. Virtio console (rev 01)
+      d0f8:00:00.0 3D controller: Microsoft Corporation Device 008e
+
+    
+
+

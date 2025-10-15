@@ -1,0 +1,69 @@
+2025-10-14 21:35:47,598 [INFO] 📁 Log directory created: ..\sample_workspace\logs\test_run_20251014_213547
+2025-10-14 21:35:47,598 [INFO] 📝 Logging to file: ..\sample_workspace\logs\test_run_20251014_213547\test_run.log
+2025-10-14 21:35:47,599 [INFO] Log directory: ..\sample_workspace\logs\test_run_20251014_213547
+2025-10-14 21:35:47,599 [INFO] Starting test discovery in: ..\tests
+2025-10-14 21:35:47,645 [INFO] Found 10 matching test cases.
+2025-10-14 21:35:47,696 [INFO] 
+🚀 Running Test: ..\tests\Diagnostic\diag_sample_log_regex_2.yaml
+2025-10-14 21:35:47,700 [INFO] 🔧 OCP TV output file: ..\sample_workspace\logs\test_run_20251014_213547\ocptv_DiagSampleLogRegex2_20251014_213547.json
+2025-10-14 21:35:47,701 [INFO] Test Metadata set: ID=DG_2S
+2025-10-14 21:35:47,701 [INFO] Running 1 steps in scenario: DiagSampleLogRegex2
+2025-10-14 21:35:47,702 [INFO] Running inline steps...
+2025-10-14 21:35:47,705 [INFO] 🚀 Test Run Started: DiagSampleLogRegex2
+2025-10-14 21:35:47,717 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForDRCNoAssignment
+2025-10-14 21:35:47,718 [INFO] Executing step: SearchForDRCNoAssignment
+2025-10-14 21:35:47,718 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x00000286A27C2CF0>
+2025-10-14 21:35:50,801 [INFO] Log path: ../sample_workspace/test_run.log
+2025-10-14 21:35:50,828 [INFO] Analyzing log: ..\sample_workspace\logs\test_run_20251014_213547\step_logs
+2025-10-14 21:35:50,829 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2025-10-14 21:35:50,834 [INFO] ---------------- Applying Rule ----------------
+2025-10-14 21:35:50,836 [INFO] 🔍 Matched '((?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))' → True → set partnerdiag_fault_analysis
+2025-10-14 21:35:50,836 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_2S': {'step_001': {'partnerdiag_fault_analysis': True}}}}
+2025-10-14 21:35:50,836 [INFO] ---------------- Diagnostic Keys ----------------
+2025-10-14 21:35:50,837 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'FAIL-000000000086': [['FAIL-000000000086']], 'FAIL-000000000110': [['FAIL-000000000110']]})
+2025-10-14 21:35:50,843 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:35:50,846 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:35:50,849 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2025-10-14 21:35:50,851 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2025-10-14 21:35:50,852 [INFO] Finalizing continued steps...
+2025-10-14 21:35:50,852 [DEBUG] Finalizing continued steps in context: {}
+2025-10-14 21:35:50,852 [INFO] No continued steps to finalize.
+2025-10-14 21:35:50,852 [INFO] ✅ Test completed in 3.15 seconds
+2025-10-14 21:35:50,853 [INFO] ---------------------- Test Summary -------------------------
+2025-10-14 21:35:50,853 [INFO] [PASS] Step: SearchForDRCNoAssignment | Type: log_analysis | Time: 3.12s | Msg: Log analyzed successfully.
+2025-10-14 21:35:50,853 [INFO] 
+❌ Detected Diagnostic Issues:
+2025-10-14 21:35:50,854 [INFO] 
++-------------------+
+| Diagnostic Code   |
++===================+
+| FAIL-000000000086 |
++-------------------+
+| FAIL-000000000110 |
++-------------------+
+2025-10-14 21:35:50,854 [INFO] 
+📊 Diagnostic Codes Summary:
+2025-10-14 21:35:50,855 [INFO] 
++-------------------+---------------+
+| Diagnostic Code   |   Occurrences |
++===================+===============+
+| FAIL-000000000086 |             1 |
++-------------------+---------------+
+| FAIL-000000000110 |             1 |
++-------------------+---------------+
+2025-10-14 21:35:50,855 [INFO] 
+🔑 Final Context Keys:
+2025-10-14 21:35:50,855 [INFO] DG_2S = {'step_001': {'partnerdiag_fault_analysis': True}}
+2025-10-14 21:35:50,857 [INFO] Results saved to ..\sample_workspace\logs\test_run_20251014_213547\test_results.json
+2025-10-14 21:35:50,859 [INFO] Diagnostics saved to ..\sample_workspace\logs\test_run_20251014_213547\diagnostics_codes.json
+2025-10-14 21:35:50,859 [INFO] 
++--------------------------+--------------+----------+----------------+----------------------------+
+| Step Name                | Type         | Status   |   Duration (s) | Message                    |
++==========================+==============+==========+================+============================+
+| SearchForDRCNoAssignment | log_analysis | success  |           3.12 | Log analyzed successfully. |
++--------------------------+--------------+----------+----------------+----------------------------+
+2025-10-14 21:35:50,860 [INFO] ⏱️ Total execution time: 3.15s
+
+2025-10-14 21:35:50,860 [INFO] All tests executed successfully.
