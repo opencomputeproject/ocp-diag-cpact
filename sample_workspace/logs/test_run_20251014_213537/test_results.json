@@ -1,0 +1,37 @@
+{
+    "diagnostic_codes": [
+        "FAIL-0000000001101"
+    ],
+    "diagnostics": [
+        {
+            "scenario_id": "DG_1S",
+            "step_id": "step_001",
+            "codes": {
+                "FAIL-0000000001101": [
+                    [
+                        "Flash execution failed"
+                    ]
+                ]
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_1S": {
+            "step_001": {
+                "error_code": true
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_1S",
+            "step_id": "step_001",
+            "step_name": "SearchForExactStringAssignDRC",
+            "step_type": "log_analysis",
+            "status": "success",
+            "duration": 3.156,
+            "message": "Log analyzed successfully."
+        }
+    ]
+}

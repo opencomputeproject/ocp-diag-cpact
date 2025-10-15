@@ -1,0 +1,22 @@
+test_scenario:
+  test_id: DG_2S
+  test_name: DiagSampleLogRegex2
+  test_description: Sample Diagnostic recipe for searching a DRC without any assignment.
+  test_group: Diag
+  tags: [Diag, Sample]
+
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForDRCNoAssignment
+    step_description: Search for a DRC in log without any assignment.
+    connection_type: Local
+    connection: Local
+    step_type: log_analysis
+    log_analysis_path: ../sample_workspace/test_run.log
+    validator_type: regex
+    diagnostic_analysis:
+    - diagnostic_search_string: ((?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))
+      parameter_to_set: partnerdiag_fault_analysis
+
+# Note:- Multiple instance of the same DRC search will be considered as one only.
+#        e.g. if the DRC search string is found 3 times in the log, only one instance will be considered.

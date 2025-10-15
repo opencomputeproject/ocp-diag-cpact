@@ -1,0 +1,43 @@
+{
+    "diagnostic_codes": [
+        "FAIL-000000000086",
+        "FAIL-000000000110"
+    ],
+    "diagnostics": [
+        {
+            "scenario_id": "DG_2S",
+            "step_id": "step_001",
+            "codes": {
+                "FAIL-000000000086": [
+                    [
+                        "FAIL-000000000086"
+                    ]
+                ],
+                "FAIL-000000000110": [
+                    [
+                        "FAIL-000000000110"
+                    ]
+                ]
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_2S": {
+            "step_001": {
+                "partnerdiag_fault_analysis": true
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_2S",
+            "step_id": "step_001",
+            "step_name": "SearchForDRCNoAssignment",
+            "step_type": "log_analysis",
+            "status": "success",
+            "duration": 3.122,
+            "message": "Log analyzed successfully."
+        }
+    ]
+}

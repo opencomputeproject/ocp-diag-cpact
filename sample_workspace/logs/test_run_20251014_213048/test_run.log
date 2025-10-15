@@ -1,0 +1,14 @@
+2025-10-14 21:30:48,362 [INFO] 📁 Log directory created: ..\sample_workspace\logs\test_run_20251014_213048
+2025-10-14 21:30:48,363 [INFO] 📝 Logging to file: ..\sample_workspace\logs\test_run_20251014_213048\test_run.log
+2025-10-14 21:30:48,363 [INFO] Log directory: ..\sample_workspace\logs\test_run_20251014_213048
+2025-10-14 21:30:48,363 [INFO] Starting test discovery in: ..\tests
+2025-10-14 21:30:48,411 [INFO] Found 10 matching test cases.
+2025-10-14 21:30:48,462 [INFO] 
+🚀 Running Test: ..\tests\Diagnostic\diag_sample_log_regex_1.yaml
+2025-10-14 21:30:48,467 [INFO] 🔧 OCP TV output file: ..\sample_workspace\logs\test_run_20251014_213048\ocptv_DiagSampleLogRegex1_20251014_213048.json
+2025-10-14 21:30:48,468 [INFO] Test Metadata set: ID=DG_1S
+2025-10-14 21:30:48,468 [INFO] Running 1 steps in scenario: DiagSampleLogRegex1
+2025-10-14 21:30:48,469 [INFO] Running inline steps...
+2025-10-14 21:30:48,472 [INFO] 🚀 Test Run Started: DiagSampleLogRegex1
+2025-10-14 21:30:48,484 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForExactStringAssignDRC
+2025-10-14 21:30:48,484 [INFO] Executing step: SearchForExactStringAssignDRC

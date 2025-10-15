@@ -1,0 +1,24 @@
+test_scenario:
+  test_id: "H1002"
+  test_name: "ExampleInbandConfigTest"
+  test_group: "Examples"
+  test_description: "Sample recipe to invoke and validate an inband command execution step."
+  tags: ["Health","Sample"]
+  test_steps:
+  - step_id: step_001
+    step_name: InbandLspciTest
+    step_description: "Check for PCI devices"
+    connection_type: ssh
+    connection: Inband
+    step_type: command_execution
+    step_command: lspci
+    use_sudo: true
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: false
+    loop: 1
+    validator_type: regex/ exact_match
+    expected_output: |
+      System peripheral

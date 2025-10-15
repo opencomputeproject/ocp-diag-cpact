@@ -1,0 +1,158 @@
+{
+    "diagnostic_codes": [
+        "Error_Code",
+        "Error_Code",
+        "FAIL-000000000086",
+        "FAIL-000000000110"
+    ],
+    "diagnostics": [
+        {
+            "scenario_id": "DG_4S",
+            "step_id": "step_001",
+            "codes": {
+                "Error_Code": [
+                    {
+                        "ErrorCode": "ERR-00000000000011",
+                        "Component_ID": "0018_01_00.0                     "
+                    }
+                ]
+            },
+            "message": "Found codes: "
+        },
+        {
+            "scenario_id": "DG_4S",
+            "step_id": "step_001",
+            "codes": {
+                "Error_Code": [
+                    {
+                        "ErrorCode": "ERR-00000000000011",
+                        "Component_ID": "0018_01_00.0                     "
+                    }
+                ],
+                "FAIL-000000000086": [
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0008:01:00.0_Version             ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0019:01:00.0_Version             ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0009:01:00.0_Version             ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0018:01:00.0_Version             ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0008:01:00.0_InfoROM Version     ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0008:05:00.0_Board ID            ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0019:01:00.0_InfoROM Version     ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0019:02:00.0_Board ID            ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0009:02:00.0_InfoROM Version     ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0009:02:00.0_Board ID            ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0018:11:00.0_InfoROM Version     ",
+                        "Notes": "Flash execution failed, please check command."
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000086",
+                        "Component_ID": " 0018:11:00.0_Board ID            ",
+                        "Notes": "Flash execution failed, please check command."
+                    }
+                ],
+                "FAIL-000000000110": [
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0018_11_00_0_VBIOS_version   ",
+                        "Notes": "'GPU_0018_01_00_0_VBIOS_version': not found. expected '=/.*/'"
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0018_21_00_0_InfoROM_version ",
+                        "Notes": "'GPU_0018_01_00_0_InfoROM_version': not found. expected '=/M215\\.0201\\.00\\..*/'"
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0008_015_00_0_VBIOS_version   ",
+                        "Notes": "'GPU_0008_01_00_0_VBIOS_version': not found. expected '=/.*/'"
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0008_017_00_0_InfoROM_version ",
+                        "Notes": "'GPU_0008_01_00_0_InfoROM_version': not found. expected '=/D777\\.0201\\.00\\..*/'"
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0009_017_00_0_VBIOS_version   ",
+                        "Notes": "'GPU_0009_01_00_0_VBIOS_version': not found. expected '=/.*/'"
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0009_017_00_0_InfoROM_version ",
+                        "Notes": "'GPU_0009_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0019_019_00_0_VBIOS_version   ",
+                        "Notes": "'GPU_0019_01_00_0_VBIOS_version': not found. expected '=/.*/'"
+                    },
+                    {
+                        "Error_Code": "FAIL-000000000110",
+                        "Component_ID": " GPU_0019_019_00_0_InfoROM_version ",
+                        "Notes": "'GPU_0019_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"
+                    }
+                ]
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_4S": {
+            "step_001": {
+                "error_code": true
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_4S",
+            "step_id": "step_001",
+            "step_name": "SearchForRegexAssignDRCWithFields",
+            "step_type": "log_analysis",
+            "status": "success",
+            "duration": 3.121,
+            "message": "Log analyzed successfully."
+        }
+    ]
+}

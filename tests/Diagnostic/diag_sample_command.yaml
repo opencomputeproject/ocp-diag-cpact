@@ -1,0 +1,71 @@
+test_scenario:
+  test_id: "D1002"
+  test_name: "ExampleInbandDiagTest"
+  test_group: "Examples"
+  test_description: "Sample Diagnostic recipe to execute command analyze for DRCs."
+  tags: ["Diag","Sample"]
+
+  test_steps:
+  - step_id: step_001
+    step_name: lspci test
+    step_description: "Check for PCI devices"
+    connection_type: ssh
+    connection: Inband
+    step_type: command_execution
+    step_command: "lspci"
+    use_sudo: true
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: false
+    loop: 1
+    validator_type: regex/ exact_match
+    output_analysis:
+      - regex: "(0310:00:00.0)"
+        parameter_to_set: pci_devices
+      - regex: "(.*VGA compatible controller.*)"
+        parameter_to_set: vga_device
+    expected_output: |
+      System peripheral
+      
+
+  - step_id: step_0010
+    step_name: log analysis1
+    step_description: "Analyze prime95 log for errors"
+    connection_type: ssh
+    connection: Inband
+    step_type: log_analysis
+    log_analysis_path: "/var/log/prime95.log"
+    validator_type: regex
+    diagnostic_analysis:
+      - search_string: "GPU error occurred 1"
+        diagnostic_result_code: MOD10011
+        parameter_to_set: gpu_fault_analysis2
+        
+      - search_string: "Diagnostic error occurred 1"
+        diagnostic_result_code: DIAG10021
+        parameter_to_set: diagnostic_fault_analysis
+      
+      - diagnostic_search_string: "(DIAGX//d+)"
+        parameter_to_set: diagnostic_fault_analysis
+
+  - step_id: step_0011
+    step_name: log analysis1
+    step_description: "Analyze prime952 log for errors"
+    connection_type: ssh
+    connection: Inband
+    step_type: log_analysis
+    log_analysis_path: "/var/log/prime95.log"
+    validator_type: regex
+    diagnostic_analysis:
+      - search_string: "GPU error occurred 1"
+        diagnostic_result_code: MOD10011
+        parameter_to_set: gpu_fault_analysis2
+        
+      - search_string: "Diagnostic error occurred 1"
+        diagnostic_result_code: DIAG10021
+        parameter_to_set: diagnostic_fault_analysis
+      
+      - diagnostic_search_string: "(DIAGX//d+)"
+        parameter_to_set: diagnostic_fault_analysis

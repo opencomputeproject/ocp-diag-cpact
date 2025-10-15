@@ -1,0 +1,24 @@
+test_scenario:
+  test_id: "H1004"
+  test_name: "ExampleRackManagerConfigTest"
+  test_group: "Examples"
+  test_description: "Sample recipe to invoke and validate a rackmanager based command execution step."
+  tags: ["Health","Sample"]
+  test_steps:
+  - step_id: step_001
+    step_name: RackManagerSystemInfoTest
+    step_description: Check RackManager system info
+    connection_type: ssh
+    connection: RackManager
+    step_type: command_execution
+    step_command: show system info -i 5
+    use_sudo: false
+    method: GET
+    body: null
+    headers: null
+    duration: 30
+    continue: false
+    loop: 1
+    validator_type: regex
+    expected_output: |
+      System Information

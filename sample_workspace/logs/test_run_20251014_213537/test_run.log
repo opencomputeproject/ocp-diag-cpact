@@ -1,0 +1,65 @@
+2025-10-14 21:35:37,478 [INFO] 📁 Log directory created: ..\sample_workspace\logs\test_run_20251014_213537
+2025-10-14 21:35:37,479 [INFO] 📝 Logging to file: ..\sample_workspace\logs\test_run_20251014_213537\test_run.log
+2025-10-14 21:35:37,479 [INFO] Log directory: ..\sample_workspace\logs\test_run_20251014_213537
+2025-10-14 21:35:37,480 [INFO] Starting test discovery in: ..\tests
+2025-10-14 21:35:37,527 [INFO] Found 10 matching test cases.
+2025-10-14 21:35:37,576 [INFO] 
+🚀 Running Test: ..\tests\Diagnostic\diag_sample_log_regex_1.yaml
+2025-10-14 21:35:37,581 [INFO] 🔧 OCP TV output file: ..\sample_workspace\logs\test_run_20251014_213537\ocptv_DiagSampleLogRegex1_20251014_213537.json
+2025-10-14 21:35:37,581 [INFO] Test Metadata set: ID=DG_1S
+2025-10-14 21:35:37,582 [INFO] Running 1 steps in scenario: DiagSampleLogRegex1
+2025-10-14 21:35:37,583 [INFO] Running inline steps...
+2025-10-14 21:35:37,586 [INFO] 🚀 Test Run Started: DiagSampleLogRegex1
+2025-10-14 21:35:37,596 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForExactStringAssignDRC
+2025-10-14 21:35:37,597 [INFO] Executing step: SearchForExactStringAssignDRC
+2025-10-14 21:35:37,597 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x000001CACB282CF0>
+2025-10-14 21:35:40,715 [INFO] Log path: ../sample_workspace/test_run.log
+2025-10-14 21:35:40,743 [INFO] Analyzing log: ..\sample_workspace\logs\test_run_20251014_213537\step_logs
+2025-10-14 21:35:40,743 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2025-10-14 21:35:40,749 [INFO] ---------------- Applying Rule ----------------
+2025-10-14 21:35:40,749 [INFO] 🔍 Matched '(Flash execution failed)' → True → set error_code
+2025-10-14 21:35:40,750 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_1S': {'step_001': {'error_code': True}}}}
+2025-10-14 21:35:40,750 [INFO] ---------------- Diagnostic Keys ----------------
+2025-10-14 21:35:40,750 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'FAIL-0000000001101': [['Flash execution failed']]})
+2025-10-14 21:35:40,756 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:35:40,759 [INFO] ✅ Diagnosis PASS: passed
+2025-10-14 21:35:40,761 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2025-10-14 21:35:40,763 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2025-10-14 21:35:40,764 [INFO] Finalizing continued steps...
+2025-10-14 21:35:40,764 [DEBUG] Finalizing continued steps in context: {}
+2025-10-14 21:35:40,764 [INFO] No continued steps to finalize.
+2025-10-14 21:35:40,765 [INFO] ✅ Test completed in 3.19 seconds
+2025-10-14 21:35:40,765 [INFO] ---------------------- Test Summary -------------------------
+2025-10-14 21:35:40,766 [INFO] [PASS] Step: SearchForExactStringAssignDRC | Type: log_analysis | Time: 3.16s | Msg: Log analyzed successfully.
+2025-10-14 21:35:40,766 [INFO] 
+❌ Detected Diagnostic Issues:
+2025-10-14 21:35:40,767 [INFO] 
++--------------------+
+| Diagnostic Code    |
++====================+
+| FAIL-0000000001101 |
++--------------------+
+2025-10-14 21:35:40,768 [INFO] 
+📊 Diagnostic Codes Summary:
+2025-10-14 21:35:40,768 [INFO] 
++--------------------+---------------+
+| Diagnostic Code    |   Occurrences |
++====================+===============+
+| FAIL-0000000001101 |             1 |
++--------------------+---------------+
+2025-10-14 21:35:40,768 [INFO] 
+🔑 Final Context Keys:
+2025-10-14 21:35:40,769 [INFO] DG_1S = {'step_001': {'error_code': True}}
+2025-10-14 21:35:40,770 [INFO] Results saved to ..\sample_workspace\logs\test_run_20251014_213537\test_results.json
+2025-10-14 21:35:40,772 [INFO] Diagnostics saved to ..\sample_workspace\logs\test_run_20251014_213537\diagnostics_codes.json
+2025-10-14 21:35:40,773 [INFO] 
++-------------------------------+--------------+----------+----------------+----------------------------+
+| Step Name                     | Type         | Status   |   Duration (s) | Message                    |
++===============================+==============+==========+================+============================+
+| SearchForExactStringAssignDRC | log_analysis | success  |           3.16 | Log analyzed successfully. |
++-------------------------------+--------------+----------+----------------+----------------------------+
+2025-10-14 21:35:40,773 [INFO] ⏱️ Total execution time: 3.19s
+
+2025-10-14 21:35:40,773 [INFO] All tests executed successfully.
