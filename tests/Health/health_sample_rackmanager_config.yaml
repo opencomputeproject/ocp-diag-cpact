@@ -2,7 +2,8 @@ test_scenario:
   test_id: "H1004"
   test_name: "ExampleRackManagerConfigTest"
   test_group: "Examples"
-  tags: ["H1"]
+  test_description: "Sample recipe to invoke and validate a rackmanager based command execution step."
+  tags: ["Health","Sample"]
   test_steps:
   - step_id: step_001
     step_name: RackManagerSystemInfoTest

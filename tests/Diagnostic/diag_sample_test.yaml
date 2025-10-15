@@ -2,7 +2,8 @@ test_scenario:
   test_id: "D1001"
   test_name: "ExampleInbandDockerDiagTest"
   test_group: "Examples"
-  tags: ["D2"]
+  test_description: "Sample Diagnostic recipe covering multiple possiblities."
+  tags: ["Diag", "Sample"]
   docker:
   - container_name: prime95-test
     container_image: prime95_stress
@@ -112,7 +113,7 @@ test_scenario:
       - expression: diagnostic_fault_analysis==True and pci_devices==True
         entry_criteria_note: Ensure GPU or diagnostic faults are detected before running the log analysis
     step_type: invoke_scenario
-    scenario_path: ..\tests\Diag\test_diag_command.yaml
+    scenario_path: ..\tests\Diagnostic\diag_sample_command.yaml
     
     
   

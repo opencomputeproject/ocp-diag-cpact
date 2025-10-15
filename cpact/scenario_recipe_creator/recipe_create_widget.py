@@ -1490,11 +1490,14 @@ class RecipeCreator(QMainWindow):
         Returns:
             None
         """
-
+        default_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "tests"
+        )
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select YAML or JSON file",
-            "",
+            default_path,
             "YAML Files (*.yaml *.yml);;JSON Files (*.json);;All Files (*)",
         )
 

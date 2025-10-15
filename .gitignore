@@ -14,3 +14,4 @@ docs/build/*
 *.egg-info
 /dist
 .codegpt
+/cpact/venv

@@ -2,7 +2,8 @@ test_scenario:
   test_id: "H1002"
   test_name: "ExampleInbandConfigTest"
   test_group: "Examples"
-  tags: ["H1"]
+  test_description: "Sample recipe to invoke and validate an inband command execution step."
+  tags: ["Health","Sample"]
   test_steps:
   - step_id: step_001
     step_name: InbandLspciTest

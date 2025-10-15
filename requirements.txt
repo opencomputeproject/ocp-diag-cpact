@@ -31,6 +31,7 @@ mdurl==0.1.2
 multipart==1.2.1
 ocptv==0.1.7
 packaging==24.2
+pandas==2.3.2
 paramiko==3.5.0
 pluggy==1.5.0
 ply==3.11

@@ -2,7 +2,8 @@ test_scenario:
   test_id: "D1003"
   test_name: "ExampleDockerTest"
   test_group: "Examples"
-  tags: ["D2"]
+  test_description: "Sample Diagnostic recipe with a docker to check PCI devices using prime95 stress test."
+  tags: ["Diag","Sample"]
   docker:
   - container_name: prime95-test
     container_image: prime95_stress

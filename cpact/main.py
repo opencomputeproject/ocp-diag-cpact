@@ -154,9 +154,7 @@ def list_tests(test_files: List[str], logger=None) -> None:
     for test_file in test_files:
         scenario_data = load_yaml_file(test_file)
         if logger:
-            logger.info(f"Processing test file: {test_file}")
-        else:
-            print(f"Processing test file: {test_file}")
+            logger.debug(f"Processing test file: {test_file}")
         if not scenario_data or "test_scenario" not in scenario_data:
             logger.error(f"❌ Invalid test scenario in {test_file}. Skipping.")
             logger.error(f"❌ No test scenario found in {test_file}. Skipping.")
@@ -164,7 +162,7 @@ def list_tests(test_files: List[str], logger=None) -> None:
                 [test_file, "No test scenario found or invalid format"]
             )
             continue
-        logger.info(f"Available tests in {test_file}:")
+        logger.debug(f"Available tests in {test_file}:")
         test_scenario = scenario_data["test_scenario"]
         rows.append(
             [
@@ -172,7 +170,7 @@ def list_tests(test_files: List[str], logger=None) -> None:
                 test_scenario.get("test_name", ""),
                 test_scenario.get("test_group", ""),
                 ", ".join([str(tag) for tag in test_scenario.get("tags", [])]),
-                test_scenario.get("description", ""),
+                test_scenario.get("test_description", ""),
             ]
         )
 
