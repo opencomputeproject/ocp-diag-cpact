@@ -43,7 +43,7 @@ import json
 import argparse
 from tabulate import tabulate
 from typing import Dict, List, Any, Type
-
+from versions import get_version_info
 from utils.logger_utils import TestLogger
 from utils.scenario_parser import load_yaml_file
 from utils.scenario_parser import load_yaml_file
@@ -451,6 +451,11 @@ def validate_schema(
 
 
 def main() -> None:
+
+    print("=" * 80)
+    print(get_version_info())
+    print("=" * 80)
+    print("Starting framework initialization...\n")
     parser = argparse.ArgumentParser(description="YAML-Based Test Executor")
 
     parser.add_argument(
