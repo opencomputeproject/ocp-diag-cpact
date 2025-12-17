@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Diagnostic Error Map Schema",
+  "type": "object",
+
+  "additionalProperties": {
+    "type": "object",
+    "required": ["message", "component", "actions", "confidence"],
+    "properties": {
+      "message": { "type": "string" },
+      "component": { "type": "string" },
+      "search_strings": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "patternProperties": {
+            "^[0-9]+$": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "confidence": { "type": "integer" }
+    },
+    "additionalProperties": false
+  }
+}

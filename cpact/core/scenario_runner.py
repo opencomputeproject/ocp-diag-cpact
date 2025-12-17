@@ -29,10 +29,10 @@ Usage:
 ===========================================================================
 """
 from concurrent.futures import ThreadPoolExecutor
-from core.context import Context
-from core.step_executor import StepExecutor
-from utils.logger_utils import TestLogger
-from utils.logger_utils import OCPTVFileWriter
+from cpact.core.context import Context
+from cpact.core.step_executor import StepExecutor
+from cpact.utils.logger_utils import TestLogger
+from cpact.utils.logger_utils import OCPTVFileWriter
 import ocptv.output as tv
 from ocptv.output import (
     DiagnosisType,
@@ -85,6 +85,7 @@ class ScenarioRunner:
         data = self.scenario
         steps = data.get("test_steps", [])
         self.context.set("test_id", data.get("test_id"))
+        self.context.set("test_name", data.get("test_name"))
         run = tv.TestRun(name=self.scenario.get("test_name"), version="1.0")
         dut = tv.Dut(id=self.scenario["test_id"], name=self.scenario["test_name"])
         run.start(dut=dut)

@@ -31,18 +31,19 @@ Usage:
 
 import re
 import time
+from datetime import datetime, timedelta
 from typing import Any, Type, List
 
-from core.context import Context
-from core.scenario_runner import ScenarioRunner
-from core.step_executor import StepExecutor
+from cpact.core.context import Context
+from cpact.core.scenario_runner import ScenarioRunner
+from cpact.core.step_executor import StepExecutor
 
 from concurrent.futures import ThreadPoolExecutor
-from result_builder.result_builder import ResultCollector
+from cpact.result_builder.result_builder import ResultCollector
 
-from utils.logger_utils import TestLogger
-from utils.docker_executor import DockerExecutor
-from utils.logger_utils import OCPTVFileWriter
+from cpact.utils.logger_utils import TestLogger
+from cpact.utils.docker_executor import DockerExecutor
+from cpact.utils.logger_utils import OCPTVFileWriter
 import ocptv.output as tv
 from ocptv.output import (
     DiagnosisType,
@@ -67,7 +68,7 @@ class Orchestrator:
         self.context = Context.get_instance()
         self.executor_continue = ThreadPoolExecutor(max_workers=5)
 
-    def run(self, test_scenario: dict = None) -> None:
+    def run(self, test_scenario: dict = None, scenario_path: str = None) -> None:
         """
         Runs the test scenario by loading Docker containers if specified, building metadata,
         and executing the defined test steps.
@@ -83,14 +84,14 @@ class Orchestrator:
 
         # Configure OCP TV to use our custom writer
         tv.config(writer=self.ocptv_writer, enable_runtime_checks=True)
-
-        self._build_metadata(test_scenario)
+        self.scenario_path = scenario_path
+        self._build_metadata(test_scenario, scenario_path)
         docker_steps = test_scenario.get("docker", [])
         if docker_steps:
             self.load_dockers(test_scenario)
         self._run_steps(test_scenario)
 
-    def _build_metadata(self, scenario: dict = None) -> None:
+    def _build_metadata(self, scenario: dict = None, scenario_path: str = None) -> None:
         """
         Builds and sets metadata in the context based on the provided scenario.
         Args:
@@ -101,6 +102,8 @@ class Orchestrator:
         self.context.set("test_id", scenario.get("test_id"))
         self.context.set("test_name", scenario.get("test_name"))
         self.context.set("test_group", scenario.get("test_group"))
+        self.context.set("scenario_parent", scenario.get("test_name"))
+        self.context.set("scenario_path", scenario_path)
         self.logger.info(f"Test Metadata set: ID={scenario.get('test_id')}")
 
     def load_dockers(self, scenario: dict = None) -> None:
@@ -143,6 +146,12 @@ class Orchestrator:
         self.logger.info(
             f"Running {len(steps)} steps in scenario: {scenario.get('test_name')}"
         )
+        scenario_output = {
+            "status":"",
+            "start_timestamp":"",
+            "end_timestamp":""
+        }
+        start_time = time.time()
         if steps:
             self.logger.info(f"Running inline steps...")
             run = tv.TestRun(name=scenario.get("test_name"), version="1.0")
@@ -158,7 +167,7 @@ class Orchestrator:
                     name=f"Step: ID:{step.get('step_id', 'Unnamed Step')}_{step.get('step_name', 'Unnamed Step')}"
                 )
                 scenario_step.__setattr__("step_details", step)
-
+                self.logger.info(f"================= Started Executing Step {step.get('step_name', 'Unnamed Step')}=================")
                 with scenario_step.scope():
                     start_time = time.time()
                     self.context.set("start_time", start_time)
@@ -178,8 +187,8 @@ class Orchestrator:
                             message=message,
                             verdict="failed",
                         )
-
                         # if not step.get("continue", False):
+                        self.logger.info(f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} =================")
                         run_status = False
                         break
                         # raise Exception(f"Step execution failed: {message}")
@@ -188,16 +197,12 @@ class Orchestrator:
                         message=message,
                         verdict="passed",
                     )
-
-        else:
-            self.logger.info("Delegating to ScenarioRunner...")
-            ScenarioRunner(scenario=scenario, context=self.context).run()
-
+                self.logger.info(f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} =================")
         if not run_status:
             run.end(status=TestStatus.ERROR, result=TestResult.FAIL)
         else:
             run.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
-
+        
         self.logger.info("Finalizing continued steps...")
         final_results = self.finalize_all_continued_steps(self.context)
         if not final_results:
@@ -217,6 +222,36 @@ class Orchestrator:
             for docker_executor in self.context.get("docker_steps").values():
                 docker_executor.stop_container()
             self.logger.info("All Docker containers stopped.")
+
+
+        end_time = time.time()
+        duration = end_time - start_time
+        start_timestamp = datetime.fromtimestamp(start_time).strftime("%Y-%m-%d %H:%M:%S")
+        end_timestamp = datetime.fromtimestamp(end_time).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Convert duration to HH:MM:SS
+        formatted_duration = time.strftime("%H:%M:%S", time.gmtime(duration))
+
+        scenario_output = {
+            "status": "PASS" if run_status else "FAIL",
+            "start_timestamp": start_timestamp,
+            "end_timestamp": end_timestamp,
+            "duration": formatted_duration,
+        }
+        ResultCollector.get_instance().add_scenario_output(
+            scenario_name=scenario["test_name"],
+            scenario_output=scenario_output,
+            headers={
+                "test_id": scenario.get("test_id"),
+                "test_name": scenario.get("test_name"),
+                "test_group": scenario.get("test_group"),
+                "tags": scenario.get("tags", []),
+                "description": scenario.get("description", ""),
+                "map_file": scenario.get("map_file", ""),
+                "scenario_path": self.scenario_path,
+
+            }
+        )
 
     def finalize_all_continued_steps(self, context: Context) -> dict:
         """

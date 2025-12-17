@@ -30,7 +30,7 @@ Usage:
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Union
 
-from utils.logger_utils import TestLogger
+from cpact.utils.logger_utils import TestLogger
 
 
 class ConnectionInterface(ABC):

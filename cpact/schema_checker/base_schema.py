@@ -32,7 +32,7 @@ import json
 import yaml
 from abc import ABC, abstractmethod
 
-from utils.logger_utils import TestLogger
+from cpact.utils.logger_utils import TestLogger
 
 
 class BaseSchema(ABC):
@@ -41,7 +41,7 @@ class BaseSchema(ABC):
     This class should be inherited by all schema classes.
     """
 
-    def __init__(self, schema: dict) -> None:
+    def __init__(self, schema: dict, schema_dir: str) -> None:
         """
         Initializes the BaseSchema with a schema file or dictionary.
         Args:
@@ -50,6 +50,7 @@ class BaseSchema(ABC):
             None
         """
         self.schema = self.load_schema(schema)
+        self.schema_dir = schema_dir
         self.logger = TestLogger().get_logger()
 
     def load_file(self, file_name: str) -> dict:

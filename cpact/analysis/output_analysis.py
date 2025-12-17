@@ -31,9 +31,9 @@ Usage:
 import re
 from typing import Any, Type, List
 
-from core.context import Context
-from analysis.base_analysis import BaseAnalysis
-from result_builder.result_builder import ResultCollector
+from cpact.core.context import Context
+from cpact.analysis.base_analysis import BaseAnalysis
+from cpact.result_builder.result_builder import ResultCollector
 
 
 class OutputAnalysis(BaseAnalysis):

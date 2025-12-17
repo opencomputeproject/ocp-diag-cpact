@@ -34,7 +34,7 @@ import requests
 from typing import Dict, Any
 from requests.auth import HTTPBasicAuth
 
-from system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.base_connection import ConnectionInterface
 
 
 class RedfishConnection(ConnectionInterface):

@@ -30,15 +30,15 @@ Usage:
 """
 import time
 
-from executor.command_executor import CommandExecutor
+from cpact.executor.command_executor import CommandExecutor
 from concurrent.futures import ThreadPoolExecutor
-from core.context import Context
-from executor.log_analyzer import LogAnalyzer
-from executor.scenario_invoker import ScenarioInvoker
-from executor.executor_factory import ExecutorFactory
-from utils.logger_utils import TestLogger
-from result_builder.result_builder import ResultCollector
-from expression.evaluator import ExpressionEvaluator
+from cpact.core.context import Context
+from cpact.executor.log_analyzer import LogAnalyzer
+from cpact.executor.scenario_invoker import ScenarioInvoker
+from cpact.executor.executor_factory import ExecutorFactory
+from cpact.utils.logger_utils import TestLogger
+from cpact.result_builder.result_builder import ResultCollector
+from cpact.expression.evaluator import ExpressionEvaluator
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
@@ -95,7 +95,8 @@ class StepExecutor:
                 f"[SKIP] Entry criteria '{entry_criteria}' not met. Skipping step. {diagnostic_keys}"
             )
             ResultCollector().get_instance().add_step_result(
-                self.scenario_id,
+                scenario_name=self.context.get("scenario_parent", self.context.get("test_name")),
+                scenario_id=self.scenario_id,
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
                 step_type=self.step_details["step_type"],
@@ -167,9 +168,13 @@ class StepExecutor:
             validate_continue=validate_continue,
         )
         output, status, message = executor.execute()
+        if self.step_details["step_type"] == "invoke_scenario":
+            parent_scenario = ".".join(self.context.get("scenario_parent").split(".")[:-1])
+            self.context.set("scenario_parent", parent_scenario)
         if not validate_continue:
             ResultCollector().get_instance().add_step_result(
-                self.scenario_id,
+                scenario_name=self.context.get("scenario_parent", self.context.get("test_name")),
+                scenario_id=self.scenario_id,
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
                 step_type=self.step_details["step_type"],
@@ -182,4 +187,16 @@ class StepExecutor:
                 message=message,
                 verdict="passed" if status else "failed",
             )
+        self.context.update_diagnostic_context(
+            tc_id=self.scenario_id,
+            step_id=self.step_details["step_id"],
+            key=self.step_details["step_id"],
+            value=True if status else False
+        )
+        ResultCollector.get_instance().add_diagnostic_keys(
+            tc_id=self.scenario_id,
+            step_id=self.step_details["step_id"],
+            key=self.step_details["step_id"],
+            value=True if status else False
+        )
         return output, status, message

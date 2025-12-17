@@ -1,0 +1,43 @@
+{
+    "ERR-00000000000011":{
+
+        "message":"Flash execution failed",
+        "component":"Flash",
+        "actions":
+            [
+                {"1":"Do Nothing - Please check command"},
+                {"5":"RMA nearest FRU"}
+            ],
+        "confidence":99
+    },
+    "FAIL-000000000086":{
+        "message":"Flash execution failed",
+        "component":"Flash",
+        "actions":
+            [
+                {"1":"Do Nothing - Pl ease check command"},
+                {"5":"RMA nearest FRU"}
+            ],
+        "confidence":99
+    },
+    "FAIL-000000000110":{
+        "message":"GPU Version Not Found.",
+        "component":"Flash",
+        "actions":
+            [
+                {"1":"Please reinstall Firmware"},
+                {"5":"RMA nearest FRU"}
+            ],
+        "confidence":99
+    },
+    "FAIL-000000000123":{
+        "message":"GPU Version Not Found.123",
+        "component":"Flash",
+        "actions":
+            [
+                {"1":"Please reinstall Firmware123"},
+                {"2":"RMA nearest FRU"}
+            ],
+        "confidence":99
+    }
+} 

@@ -33,8 +33,8 @@ Usage:
 import time
 from typing import Dict, Any, List
 
-from system_connections.connection_factory import ConnectionFactory
-from system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.connection_factory import ConnectionFactory
+from cpact.system_connections.base_connection import ConnectionInterface
 
 
 class ConnectionDiscovery:

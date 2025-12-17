@@ -9,6 +9,7 @@
         "test_id": { "type": "string" },
         "test_name": { "type": "string" },
         "test_group": { "type": "string" },
+        "test_description": {"type": "string"},
         "tags": {
           "type": "array",
           "items": { "type": "string" }
@@ -51,7 +52,7 @@
                 }
               },
               "container_name": { "type": "string" },
-              "connection_type": { "type": "string", "enum": ["local", "Inband", "RackManager", "NodeManager"] },
+              "connection_type": { "type": "string", "enum": ["Local", "Inband", "RackManager", "NodeManager"] },
               "connection": { "type": "string", "enum": ["local", "redfish", "ssh"] },
               "step_type": { "type": "string", "enum": ["command_execution", "log_analysis", "invoke_scenario"] }
             },

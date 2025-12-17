@@ -63,10 +63,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtCore import pyqtSignal
 
-from step_widget import StepDialog
-from docker_widget import DockerDialog
-from schema_order_parser import SchemaOrderParser
-from constants import show_error, make_button, APP_ICON, NumberedListWidget, TOOLBAR_QSS
+from scenario_recipe_creator.step_widget import StepDialog
+from scenario_recipe_creator.docker_widget import DockerDialog
+from scenario_recipe_creator.schema_order_parser import SchemaOrderParser
+from scenario_recipe_creator.constants import show_error, make_button, APP_ICON, NumberedListWidget, TOOLBAR_QSS
 
 # ============================= CONSTANTS =============================
 

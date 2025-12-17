@@ -34,16 +34,16 @@ import re
 import time
 import traceback
 import subprocess
-from core.context import Context
+from cpact.core.context import Context
 from concurrent.futures import ThreadPoolExecutor
-from executor.base_executor import BaseExecutor
-from analysis.analysis_factory import AnalysisFactory
-from system_connections.connection_factory import ConnectionFactory
-from system_connections.constants import ExecutionMode
-from utils.docker_executor import DockerExecutor
-from utils.logger_utils import TestLogger
-from utils.validator import Validator
-from result_builder.result_builder import ResultCollector
+from cpact.executor.base_executor import BaseExecutor
+from cpact.analysis.analysis_factory import AnalysisFactory
+from cpact.system_connections.connection_factory import ConnectionFactory
+from cpact.system_connections.constants import ExecutionMode
+from cpact.utils.docker_executor import DockerExecutor
+from cpact.utils.logger_utils import TestLogger
+from cpact.utils.validator import Validator
+from cpact.result_builder.result_builder import ResultCollector
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,

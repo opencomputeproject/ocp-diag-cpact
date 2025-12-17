@@ -30,8 +30,8 @@ Usage:
 
 import operator
 from typing import Union, List, Dict, Type
-from utils.logger_utils import TestLogger
-from core.context import Context
+from cpact.utils.logger_utils import TestLogger
+from cpact.core.context import Context
 
 
 class ExpressionEvaluator:

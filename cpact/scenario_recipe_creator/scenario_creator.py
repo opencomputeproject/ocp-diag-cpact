@@ -60,7 +60,7 @@ from constants import (
     add_card_shadows,
     APP_ICON,
 )
-from recipe_create_widget import RecipeCreator
+from scenario_recipe_creator.recipe_create_widget import RecipeCreator
 
 if platform.system() == "Windows":
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(

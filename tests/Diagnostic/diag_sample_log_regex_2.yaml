@@ -3,16 +3,20 @@ test_scenario:
   test_name: DiagSampleLogRegex2
   test_description: Sample Diagnostic recipe for searching a DRC without any assignment.
   test_group: Diag
+  schema_version: '0.8'
+  map_file: '{workspace_path}/map_file1.json'
   tags: [Diag, Sample]
-
+  paths:
+    workspace_path: ./sample_workspace
+    scenario_path: ./tests    
   test_steps:
   - step_id: step_001
     step_name: SearchForDRCNoAssignment
     step_description: Search for a DRC in log without any assignment.
     connection_type: Local
-    connection: Local
+    connection: local
     step_type: log_analysis
-    log_analysis_path: ../sample_workspace/test_run.log
+    log_analysis_path: '{workspace_path}/test_run.log'
     validator_type: regex
     diagnostic_analysis:
     - diagnostic_search_string: ((?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))

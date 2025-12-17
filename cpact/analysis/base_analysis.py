@@ -29,8 +29,8 @@ Usage:
 from abc import ABC, abstractmethod
 from typing import Any, Type
 
-from utils.logger_utils import TestLogger
-from core.context import Context
+from cpact.utils.logger_utils import TestLogger
+from cpact.core.context import Context
 
 
 class BaseAnalysis(ABC):

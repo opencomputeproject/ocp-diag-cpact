@@ -29,9 +29,9 @@ Usage:
     Instantiate the returned class with scenario step and context to execute the step.
 ===========================================================================
 """
-from executor.command_executor import CommandExecutor
-from executor.log_analyzer import LogAnalyzer
-from executor.scenario_invoker import ScenarioInvoker
+from cpact.executor.command_executor import CommandExecutor
+from cpact.executor.log_analyzer import LogAnalyzer
+from cpact.executor.scenario_invoker import ScenarioInvoker
 from typing import Type
 
 class ExecutorFactory:

@@ -34,9 +34,9 @@ Usage:
 import json
 import re
 from collections import defaultdict, OrderedDict
-from analysis.base_analysis import BaseAnalysis
-from result_builder.result_builder import ResultCollector
-from core.context import Context
+from cpact.analysis.base_analysis import BaseAnalysis
+from cpact.result_builder.result_builder import ResultCollector
+from cpact.core.context import Context
 from typing import Any, Type
 
 
@@ -132,6 +132,11 @@ class DiagnosticAnalysis(BaseAnalysis):
                 step_id=self.step_id,
                 codes=diagnostic_result_codes,
                 message="Found codes: ",
+                parent_scenario=context.get("scenario_parent", context.get("test_name"))
+            )
+            ResultCollector.get_instance().add_scenario_output(
+                scenario_name=context.get("scenario_parent", context.get("test_name")),
+                diag_codes=diagnostic_result_codes
             )
         self.logger.info("---------------- Diagnostic Keys ----------------")
         return diagnostics_map

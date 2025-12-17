@@ -29,12 +29,12 @@ Usage:
 
 from jsonschema import Draft7Validator
 
-from schema_checker.base_schema import BaseSchema
+from cpact.schema_checker.base_schema import BaseSchema
 
 
 class ConfigSchemaValidator(BaseSchema):
-    def __init__(self, schema: dict) -> None:
-        super().__init__(schema)
+    def __init__(self, schema: dict, schema_dir: str) -> None:
+        super().__init__(schema, schema_dir)
 
     def validate_schema(self, data_file: str) -> None:
         """
@@ -48,7 +48,7 @@ class ConfigSchemaValidator(BaseSchema):
 
         if not errors:
             self.logger.info("✅ Config Schema is valid")
-            return
+            return True
 
         self.logger.info("❌ Validation error")
         for error in errors:
@@ -57,3 +57,4 @@ class ConfigSchemaValidator(BaseSchema):
             if path:
                 self.logger.info(f"   Path: {path}")
             self.logger.info("\n")
+        return False
