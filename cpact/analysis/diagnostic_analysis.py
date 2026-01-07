@@ -189,14 +189,16 @@ class DiagnosticAnalysis(BaseAnalysis):
             if matched_groups:
                 group_data = matched_groups
             else:
-                d = []
+                d = {}
                 if len(all_groups) == 1:
-                    group_data = all_groups[0]
-                    d.append(all_groups[0])
+                    group_data = {all_groups[0]: all_groups[0]}
+                    d[all_groups[0]] = all_groups[0]
+                    print("All Groups:", all_groups[0])
                 else:
                     for idx, group in enumerate(all_groups):
                         if group:
-                            d.append(group)
+                            print(f"Group {idx}:", group)
+                            d[group] = group
                 if d:
                     group_data = d
             if diagnostic_result_code not in diagnostics_map:

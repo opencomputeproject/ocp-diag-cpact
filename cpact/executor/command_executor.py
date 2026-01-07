@@ -115,6 +115,12 @@ class CommandExecutor(BaseExecutor):
                     "Connection name or type not provided in step data.",
                 )
                 return "", False, "Connection name or type not provided in step data."
+            cwd = os.getcwd()
+            self.logger.info(f"Current working directory before execution: {cwd}")
+            self.scenario_step.add_log(
+                LogSeverity.INFO,
+                f"Current working directory before execution: {cwd}",
+            )
             self.logger.info(
                 f"Executing command: {command} on connection: {connection_name} with type: {connection_type}"
             )
@@ -138,6 +144,12 @@ class CommandExecutor(BaseExecutor):
                     False,
                     f"Failed to connect to {connection_name} of type {connection_type}.",
                 )
+            cwd = os.getcwd()
+            self.logger.info(f"Current working directory before execution: {cwd}")
+            self.scenario_step.add_log(
+                LogSeverity.INFO,
+                f"Current working directory before execution: {cwd}",
+            )
             self.logger.info(
                 f"Started executing command: {command} on connection: {connection_name} with type: {connection_type}"
             )
@@ -146,16 +158,34 @@ class CommandExecutor(BaseExecutor):
                 f"Started executing command: {command} on connection: {connection_name} with type: {connection_type}",
             )
             result = connection.execute_command(
-                command,
-                mode=ExecutionMode.SYNCHRONOUS,
+            command,
+            mode=ExecutionMode.SYNCHRONOUS,
             )
-            output = result.stdout
-            if not output:
-                self.logger.error(f"Command execution failed: {command}")
+
+            stdout = result.stdout or ""
+            stderr = getattr(result, "stderr", "") or ""
+            exit_code = getattr(result, "returncode", None)
+
+            output = stdout
+
+            # 🔍 Log exit code
+            self.logger.info(f"Command exit code: {exit_code}")
+
+            # 🔍 Log stdout
+            if stdout:
+                self.logger.info(f"Command stdout:\n{stdout}")
+
+            # 🔍 Log stderr (CRITICAL for tar failures)
+            if stderr:
+                self.logger.error(f"Command stderr:\n{stderr}")
+
+            # ❌ Fail properly
+            if exit_code not in (0, None):
                 self.scenario_step.add_log(
-                    LogSeverity.ERROR, f"Command execution failed: {command}"
+                    LogSeverity.ERROR,
+                    f"Command failed with exit code {exit_code}. Stderr:\n{stderr}",
                 )
-                return "", False, "Command execution failed."
+                return stdout, False, f"Command failed with exit code {exit_code}"
             log_dir = TestLogger().get_log_dir()
             output_dir = os.path.join(log_dir, "command_outputs")
             os.makedirs(output_dir, exist_ok=True)

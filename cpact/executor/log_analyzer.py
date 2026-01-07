@@ -245,7 +245,7 @@ class LogAnalyzer(BaseExecutor):
         # -------------------------------------------------------------------------
         # 🧩 4. Build regex for relative path
         # -------------------------------------------------------------------------
-        regex_path = pre_regex[len(search_dir) + 1:] + regex_expr + (os.sep if self.is_known_file_extension(post_regex) else "") + post_regex
+        regex_path = pre_regex[len(search_dir) + 1:] + regex_expr + (os.sep if self.is_known_file_extension(post_regex) else "") + os.sep + post_regex
         regex_path = re.sub(r"//+", "/", regex_path)  # clean slashes
         matched_files = []
         for dirpath, _, filenames in os.walk(search_dir):

@@ -189,7 +189,7 @@ class ResultCollector:
                 if code_key in existing["codes"]:
                     existing["codes"][code_key].extend(code_value)
                 else:
-                    existing["codes"][code_key] = code_value
+                    existing["codes"][code_key] = {"Message": code_value}
         else:
             # Add as new diagnostic
             self.diagnostics.append(
@@ -543,7 +543,7 @@ class ResultCollector:
                         entry_data = (
                             {k: v for k, v in entry.items() if v != code}
                             if isinstance(entry, dict)
-                            else entry
+                            else {"message": entry}
                         )
                         if entry_data:
                             merged_codes[code].append(entry_data)
@@ -876,7 +876,6 @@ class ResultCollector:
                             if k == "actions":
                                 continue
                             merged_fields[k] = deepcopy(v)
-
                     # insert matched action under "actions" key (only if we found it)
                     if matched_action_key is not None:
                         # represent actions the same way map uses: list of single-key dict, but to keep simple we store single dict
@@ -891,7 +890,7 @@ class ResultCollector:
 
                     # Replace entry content in-place (entry object is updated, insertion order preserved)
                     entry.clear()
+
                     entry.update(merged_fields)
                     self.logger.debug(f"Updated entry for code '{code_key}' in '{top_key}' with merged fields")
-
         return current_data
