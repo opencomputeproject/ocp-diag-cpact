@@ -80,7 +80,7 @@ class ScenarioInvoker:
         scenario_data, _ = resolve_paths_in_yaml(
             scenario_data["test_scenario"], scenario_data.get("paths", {})
         )
-        parent_scenario = f"{self.context.get("scenario_parent")}.{scenario_data.get("test_name")}"
+        parent_scenario = f"{self.context.get('scenario_parent')}.{scenario_data.get('test_name')}"
         start_time = time.time()
         self.context.set("scenario_parent", parent_scenario)
         runner = ScenarioRunner(
