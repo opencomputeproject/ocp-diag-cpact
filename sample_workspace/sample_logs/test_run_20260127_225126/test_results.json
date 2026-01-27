@@ -1,0 +1,72 @@
+{
+    "diagnostic_codes": [
+        "FAIL-0000000001101",
+        "FAIL-0000000001101",
+        "FAIL-000000000086",
+        "FAIL-000000000110"
+    ],
+    "diagnostics": [
+        {
+            "parent_scenario": "DiagSampleLogRegex9",
+            "scenario_id": "DG_9S",
+            "step_id": "step_001",
+            "codes": {
+                "FAIL-0000000001101": [
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    },
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    }
+                ],
+                "FAIL-000000000086": {
+                    "Message": [
+                        {
+                            "FAIL-000000000086": "FAIL-000000000086"
+                        }
+                    ]
+                },
+                "FAIL-000000000110": {
+                    "Message": [
+                        {
+                            "FAIL-000000000110": "FAIL-000000000110"
+                        }
+                    ]
+                }
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_9S": {
+            "step_001": {
+                "error_code": true,
+                "partnerdiag_fault_analysis": true,
+                "step_001": true
+            },
+            "step_002": {
+                "step_002": false
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_9S",
+            "step_id": "step_001",
+            "step_name": "SearchForExactStringAssignDRC",
+            "step_type": "log_analysis",
+            "status": "success",
+            "duration": 3.137,
+            "message": "Log analyzed successfully."
+        },
+        {
+            "scenario_id": "DG_9S",
+            "step_id": "step_002",
+            "step_name": "SearchForExactStringAssignDRC1",
+            "step_type": "log_analysis",
+            "status": "fail",
+            "duration": 0.028,
+            "message": "Log path is required for LogAnalyzer step."
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "FAIL-000000000086": [
+        {
+            "message": "Flash execution failed",
+            "component": "Flash",
+            "confidence": 99,
+            "actions": "Do Nothing - Pl ease check command",
+            "Error_Code": "FAIL-000000000086",
+            "DRC_count": "1"
+        }
+    ],
+    "FAIL-000000000110": [
+        {
+            "message": "GPU Version Not Found.",
+            "component": "Flash",
+            "confidence": 99,
+            "actions": "Please reinstall Firmware",
+            "Error_Code": "FAIL-000000000110",
+            "DRC_count": "1"
+        }
+    ]
+}

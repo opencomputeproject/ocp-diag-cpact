@@ -1,0 +1,94 @@
+2026-01-27 22:48:53,304 [INFO] 📁 Log directory created: ./sample_workspace\logs\test_run_20260127_224853
+2026-01-27 22:48:53,304 [INFO] 📝 Logging to file: ./sample_workspace\logs\test_run_20260127_224853\test_run.log
+2026-01-27 22:48:53,304 [INFO] Log directory: ./sample_workspace\logs\test_run_20260127_224853
+2026-01-27 22:48:53,304 [INFO] Starting test discovery in: .\tests\
+2026-01-27 22:48:53,386 [INFO] Found 16 matching test cases.
+2026-01-27 22:48:53,443 [INFO] Using schema version: 0.8 for .\tests\Diagnostic\diag_sample_log_regex_3.yaml
+2026-01-27 22:48:53,443 [INFO] Using schema directory: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8 for .\tests\Diagnostic\diag_sample_log_regex_3.yaml
+2026-01-27 22:48:53,443 [INFO] Using schema file: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8\scenario_recipe_schema.json for .\tests\Diagnostic\diag_sample_log_regex_3.yaml
+2026-01-27 22:48:53,443 [INFO] Validating .\tests\Diagnostic\diag_sample_log_regex_3.yaml against scenario schema...
+2026-01-27 22:48:53,443 [INFO] Validating .\tests\Diagnostic\diag_sample_log_regex_3.yaml against scenario schema...
+2026-01-27 22:48:53,458 [INFO] ✅ Scenario Schema is valid
+2026-01-27 22:48:53,458 [INFO] 🔍 Starting MAP Schema Validation...
+2026-01-27 22:48:53,458 [INFO] 📍 Resolved map file absolute path: ./sample_workspace/map_file.json
+2026-01-27 22:48:53,458 [INFO] 📍 Attempting to load map file from: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\map_file.json
+2026-01-27 22:48:53,458 [INFO] ✅ Scenario Schema is valid
+2026-01-27 22:48:53,458 [INFO] map_file detected in YAML: ./sample_workspace/map_file.json
+2026-01-27 22:48:53,458 [INFO] 
+🚀 Running Test: .\tests\Diagnostic\diag_sample_log_regex_3.yaml
+2026-01-27 22:48:53,468 [INFO] 🔧 OCP TV output file: ./sample_workspace\logs\test_run_20260127_224853\ocptv_DiagSampleLogRegex3_20260127_224853.json
+2026-01-27 22:48:53,468 [INFO] Test Metadata set: ID=DG_3S
+2026-01-27 22:48:53,468 [INFO] Running 1 steps in scenario: DiagSampleLogRegex3
+2026-01-27 22:48:53,468 [INFO] Running inline steps...
+2026-01-27 22:48:53,468 [INFO] 🚀 Test Run Started: DiagSampleLogRegex3
+2026-01-27 22:48:53,481 [INFO] ================= Started Executing Step SearchForRegexAssignDRC=================
+2026-01-27 22:48:53,483 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForRegexAssignDRC
+2026-01-27 22:48:53,483 [INFO] Executing step: SearchForRegexAssignDRC
+2026-01-27 22:48:53,483 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x0000026643D5D150>
+2026-01-27 22:48:53,515 [INFO] Resolved relative path to absolute: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-01-27 22:48:56,525 [INFO] Log path: ./sample_workspace\logs\test_run_20260127_224853\AnalyzedLogFiles\analyzed_step_001.log
+2026-01-27 22:48:56,525 [INFO] Analyzing log: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-01-27 22:48:56,525 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2026-01-27 22:48:56,531 [INFO] ---------------- Applying Rule ----------------
+2026-01-27 22:48:56,534 [INFO] 🔍 Matched '(?P<Error_Code>(?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))' → True → set error_code
+2026-01-27 22:48:56,534 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_3S': {'step_001': {'error_code': True}}}}
+2026-01-27 22:48:56,534 [INFO] ---------------- Diagnostic Keys ----------------
+2026-01-27 22:48:56,535 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'FAIL-000000000086': [{'Error_Code': 'FAIL-000000000086'}], 'FAIL-000000000110': [{'Error_Code': 'FAIL-000000000110'}]})
+2026-01-27 22:48:56,536 [DEBUG] ==================== Step Result SearchForRegexAssignDRC ====================
+2026-01-27 22:48:56,536 [DEBUG] 
+Scenario ID:        DG_3S
+Step ID:            step_001
+Step Name:          SearchForRegexAssignDRC
+Step Type:          log_analysis
+Status:             success
+Duration:           3.053 seconds
+Message:            Log analyzed successfully.
+2026-01-27 22:48:56,536 [DEBUG] =====================================================
+2026-01-27 22:48:56,539 [INFO] ✅ Diagnosis PASS: passed
+2026-01-27 22:48:56,542 [INFO] ✅ Diagnosis PASS: passed
+2026-01-27 22:48:56,544 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2026-01-27 22:48:56,544 [INFO] ================= Completed Executing Step SearchForRegexAssignDRC =================
+2026-01-27 22:48:56,546 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2026-01-27 22:48:56,546 [INFO] Finalizing continued steps...
+2026-01-27 22:48:56,546 [DEBUG] Finalizing continued steps in context: {}
+2026-01-27 22:48:56,546 [INFO] No continued steps to finalize.
+2026-01-27 22:48:56,547 [INFO] ✅ Test completed in 3.08 seconds
+2026-01-27 22:48:56,547 [INFO] ---------------------- Test Summary -------------------------
+2026-01-27 22:48:56,547 [INFO] [PASS] Step: SearchForRegexAssignDRC | Type: log_analysis | Time: 3.05s | Msg: Log analyzed successfully.
+2026-01-27 22:48:56,547 [INFO] 
+❌ Detected Diagnostic Issues:
+2026-01-27 22:48:56,548 [INFO] No diagnostic data to display.
+2026-01-27 22:48:56,548 [INFO] 
+📊 Diagnostic Codes Summary:
+2026-01-27 22:48:56,549 [INFO] 
++-------------------+---------------+
+| Diagnostic Code   |   Occurrences |
++===================+===============+
+| FAIL-000000000086 |             1 |
++-------------------+---------------+
+| FAIL-000000000110 |             1 |
++-------------------+---------------+
+2026-01-27 22:48:56,549 [INFO] 
+🔑 Final Context Keys:
+2026-01-27 22:48:56,549 [INFO] DG_3S = {'step_001': {'error_code': True, 'step_001': True}}
+2026-01-27 22:48:56,551 [INFO] Results saved to ./sample_workspace\logs\test_run_20260127_224853\test_results.json
+2026-01-27 22:48:56,552 [INFO] Building historical data index...
+2026-01-27 22:48:56,555 [INFO] Merging map data from './sample_workspace/map_file.json' into diagnostics for 'DiagSampleLogRegex3'
+2026-01-27 22:48:56,556 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:48:56,556 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:48:56,556 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex3' with merged fields
+2026-01-27 22:48:56,556 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:48:56,556 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:48:56,556 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex3' with merged fields
+2026-01-27 22:48:56,560 [INFO] Diagnostics saved to ./sample_workspace\logs\test_run_20260127_224853\diagnostics_result_codes.json
+2026-01-27 22:48:56,561 [INFO] 
++-------------------------+--------------+----------+----------------+----------------------------+
+| Step Name               | Type         | Status   |   Duration (s) | Message                    |
++=========================+==============+==========+================+============================+
+| SearchForRegexAssignDRC | log_analysis | success  |           3.05 | Log analyzed successfully. |
++-------------------------+--------------+----------+----------------+----------------------------+
+2026-01-27 22:48:56,561 [INFO] ⏱️ Total execution time: 3.08s
+
+2026-01-27 22:48:56,561 [INFO] All tests executed successfully.

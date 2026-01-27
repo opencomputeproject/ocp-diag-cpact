@@ -37,6 +37,8 @@ from packaging import version
 
 from cpact.utils.path_resolver import resolve_paths_in_yaml
 from cpact.schema_checker.base_schema import BaseSchema
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+
 
 
 class ScenarioSchemaValidator(BaseSchema):
@@ -117,6 +119,7 @@ class ScenarioSchemaValidator(BaseSchema):
         try:
             data = self.load_yaml_with_duplicates(data_file)
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"Failed to load YAML file: {e}")
             return False
         # Validate the data against the schema
@@ -164,11 +167,13 @@ class ScenarioSchemaValidator(BaseSchema):
         try:
             map_data = self.load_schema(map_file_path)
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"❌ Failed to load map file '{map_file_path}': {e}")
             return False
         try:
             spec_schema_dir = self.schema_dir
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"❌ Failed to resolve schema directory: {e}")
             return False
 
@@ -208,6 +213,7 @@ class ScenarioSchemaValidator(BaseSchema):
         try:
             map_schema = self.load_schema(map_schema_file)
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"❌ Failed to load map schema '{map_schema_file}': {e}")
             return False
 

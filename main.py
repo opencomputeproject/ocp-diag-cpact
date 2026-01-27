@@ -8,6 +8,7 @@ LICENSE file in the root directory of this source tree.
 """
 
 from cpact.main import main
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
 import sys
 
 if __name__ == "__main__":
@@ -15,5 +16,5 @@ if __name__ == "__main__":
         main()
         sys.exit(0)
     except Exception as e:
-        print(f"An error occurred during execution: {e}")
+        CustomExceptionHandler.print_exception(e)
         sys.exit(1)

@@ -92,7 +92,6 @@ FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019
 FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_SSDeviceID      | OK
 FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_PCIID           | OK
 FAIL-000000000000  | AutomaticRepair | repair_utility | GPU       |                                  | OK - Nothing to repair
-FAIL-00000000001X  | AutomaticRepair | repair_utility | GPU       |                                  | OK - Nothing to repair
 
 #######     ####    ########  ###
 #######    ######   ########  ###

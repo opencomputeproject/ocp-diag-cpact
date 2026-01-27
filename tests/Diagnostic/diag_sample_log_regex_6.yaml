@@ -1,0 +1,30 @@
+test_scenario:
+  test_id: DG_6S
+  test_name: DiagSampleLogRegex6
+  test_description: Search for a regex string with multiple assignment and create a DRC with the assignment as associate fields(The combination of DRCs with the associated fields are unique)
+  test_group: Diag
+  schema_version: '0.8'
+  map_file: '{workspace_path}/map_file.json'
+  tags: [Diag, Sample]
+  paths:
+    workspace_path: ./sample_workspace
+    scenario_path: ./tests
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForRegexAssignDRCWithFields11
+    step_description: Search for a regex string in log and assign a DRC with associated fields.
+    connection_type: Local
+    connection: local
+    step_type: log_analysis
+    log_analysis_path: '{workspace_path}/test_run.log'
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (FAIL-(?=\d*[1-9])\d+)\s*\|.*?\|.*?\|.*?\|(?P<Component_ID>[^\|]+)\|\s*(?P<Notes>.*?)(?=(\nFAIL-|$))
+      diagnostic_result_code: FAIL-000000000123
+      parameter_to_set: error_code
+
+
+# Note:- Combination of DRCs and associated fields are unique.
+#        e.g. if the search string is found 3 times in the log with different
+#        associated fields, 3 different DRCs will be assigned.
+#        Refer log path 'sample_workspace/sample_logs/test_run_20260127_225022' for more details.

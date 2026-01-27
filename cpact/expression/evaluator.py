@@ -32,6 +32,7 @@ import operator
 from typing import Union, List, Dict, Type
 from cpact.utils.logger_utils import TestLogger
 from cpact.core.context import Context
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
 
 
 class ExpressionEvaluator:
@@ -99,5 +100,6 @@ class ExpressionEvaluator:
             self.logger.info(f"[Expression] '{expression}' => {result}")
             return result
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"Failed to evaluate expression '{expression}': {e}")
             return False

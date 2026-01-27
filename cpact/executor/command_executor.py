@@ -44,6 +44,8 @@ from cpact.utils.docker_executor import DockerExecutor
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.validator import Validator
 from cpact.result_builder.result_builder import ResultCollector
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
@@ -231,12 +233,14 @@ class CommandExecutor(BaseExecutor):
                 )
             return output, True, "Command executed successfully and output validated."
         except AssertionError as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Output validation failed: {e}")
             self.logger.error(f"Output validation failed: {e}")
             return output, False, str(e)
         except KeyError as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Key error during command execution: {e}")
@@ -245,6 +249,7 @@ class CommandExecutor(BaseExecutor):
             )
             return "", False, f"Key error during command execution: {str(e)}"
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Command execution failed: {str(e)}")
@@ -314,6 +319,7 @@ class CommandExecutor(BaseExecutor):
 
             return output, status, message
         except AssertionError as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Output validation failed: {e}")
@@ -322,6 +328,7 @@ class CommandExecutor(BaseExecutor):
             )
             return output, False, str(e)
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Command execution failed: {e}")
@@ -504,6 +511,7 @@ class CommandExecutor(BaseExecutor):
             return {"status": "pass", "message": f"Validated continued step: {step_id}"}
 
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"Error validating continued step {step_id}: {e}")
             self.scenario_step.add_log(
                 LogSeverity.ERROR,

@@ -32,6 +32,7 @@ Usage:
 ===========================================================================
 """
 import os
+import re
 from collections import defaultdict
 import copy
 import json
@@ -42,9 +43,13 @@ from tabulate import tabulate
 import pprint
 import pandas as pd
 import textwrap
-from typing import Any, Dict, FrozenSet, Iterable, Optional, List, Tuple, Type
+from collections.abc import Mapping, Sequence
+from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, FrozenSet, Iterable, Mapping, Optional, List, Sequence, Tuple, Type
 from copy import deepcopy
 from cpact.utils.logger_utils import TestLogger
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+
 
 
 class ResultCollector:
@@ -187,7 +192,10 @@ class ResultCollector:
             # Merge codes into existing entry
             for code_key, code_value in codes.items():
                 if code_key in existing["codes"]:
-                    existing["codes"][code_key].extend(code_value)
+                    if isinstance(existing["codes"][code_key], list) and isinstance(code_value, list):
+                        existing["codes"][code_key].extend(code_value)
+                    else:
+                        existing["codes"][code_key] = {"Message": code_value}
                 else:
                     existing["codes"][code_key] = {"Message": code_value}
         else:
@@ -428,7 +436,7 @@ class ResultCollector:
             json.dump(self.get_results(), f, indent=4)
         self.logger.info(f"Results saved to {file_path}")
 
-    def dump_diagnostics(self, file_path: str) -> None:
+    def dump_diagnostics(self, file_path: str, dump_data: dict) -> None:
         """
         Save only the diagnostics to a JSON file.
         Args:
@@ -437,11 +445,98 @@ class ResultCollector:
             None
         """
         import json
-
-        data = self.filter_unique_diagnostics(self.diagnostics)
-        with open(file_path, "w") as f:
-            json.dump(data, f, indent=4)
+        import re
+        if not dump_data:
+            data = self.filter_unique_diagnostics(self.diagnostics)
+            with open(file_path, "w") as f:
+                json.dump(data, f, indent=4)
+        else:
+            data = self.build_drc_summary(dump_data)
+            with open(file_path, "w") as f:
+                json.dump(data, f, indent=4)
         self.logger.info(f"Diagnostics saved to {file_path}")
+
+
+    def find_first_key(self, data: Any, target_key: str) -> Optional[Any]:
+        """
+        Recursively search nested dict/list and return the first value for target_key.
+
+        Args:
+            data: Input nested structure (dict/list/other).
+            target_key: Key name to locate.
+
+        Returns:
+            Value associated with target_key if found, else None.
+        """
+        if isinstance(data, Mapping):
+            if target_key in data:
+                return data[target_key]
+            for value in data.values():
+                found = self.find_first_key(value, target_key)
+                if found is not None:
+                    return found
+
+        elif isinstance(data, Sequence) and not isinstance(data, (str, bytes, bytearray)):
+            for item in data:
+                found = self.find_first_key(item, target_key)
+                if found is not None:
+                    return found
+
+        return None
+
+
+    def build_drc_summary(self, report: Mapping[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        Create a new dictionary by browsing `diagnostic_result_codes` and aggregating
+        its entries per DRC key.
+
+        This function:
+        - Locates `diagnostic_result_codes` inside the input report.
+        - Iterates each DRC code.
+        - Appends all entry dicts under that DRC into `entries`.
+        - Computes `total_count` as the number of entries (or from DRC_count if valid).
+
+        Args:
+            report: Full report dict (like the JSON you shared) OR any dict containing
+                    `diagnostic_result_codes` somewhere inside.
+
+        Returns:
+            New aggregated dictionary keyed by DRC code.
+            Example:
+                {
+                "FAIL-...": {"total_count": 3, "entries": [..]},
+                ...
+                }
+        """
+        drc_block = self.find_first_key(report, "diagnostic_result_codes")
+        if not isinstance(drc_block, Mapping):
+            return {}
+
+        new_dict: Dict[str, Dict[str, Any]] = {}
+
+        for drc_code, items in drc_block.items():
+            if not isinstance(items, list):
+                # Normalize non-list payloads into a list so appending is consistent.
+                items = [items]
+
+            bucket = new_dict.setdefault(drc_code, [])
+            for entry in items:
+                if not isinstance(entry, Mapping):
+                    # Skip unexpected entry types safely.
+                    continue
+
+                bucket.append(dict(entry))
+
+                # Prefer numeric DRC_count if present, else count each entry as 1.
+                # drc_count = entry.get("DRC_count")
+                # if isinstance(drc_count, int):
+                #     bucket["total_count"] += drc_count
+                # elif isinstance(drc_count, str) and drc_count.isdigit():
+                #     bucket["total_count"] += int(drc_count)
+                # else:
+                #     bucket["total_count"] += 1
+
+        return new_dict
 
     def diagnostic_table(self, diagnostic_data: dict) -> None:
         """
@@ -567,7 +662,8 @@ class ResultCollector:
             # convert to stable string representation
             try:
                 sval = json.dumps(v, sort_keys=True, ensure_ascii=False)
-            except Exception:
+            except Exception as e:
+                CustomExceptionHandler.print_exception(e)
                 sval = str(v)
             items.append((k, sval))
         return frozenset(items)
@@ -732,7 +828,8 @@ class ResultCollector:
                 self.logger.debug(f"Unknown actions_obj type: {type(actions_obj)}, returning (None, None)")
                 # unknown type
                 return None, None
-        except Exception:
+        except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.debug("Exception occurred while processing actions_obj, returning (None, None)")
             return None, None
 
@@ -805,7 +902,33 @@ class ResultCollector:
                     return int(float(raw))
                 except Exception:
                     return 1
-
+        def get_map_entry_for_code(map_data: Dict[str, Any], code_key: str) -> Optional[Union[Dict[str, Any], List[Any]]]:
+            """
+            Search map_data for a matching entry:
+            1. First, try exact match for code_key.
+            2. If not found, try regex matching against map keys.
+            3. Return the matched entry or None.
+            """
+            
+            # 1. Try exact match first
+            if code_key in map_data:
+                return map_data[code_key]
+            
+            # 2. Try regex matching
+            for map_key, map_value in map_data.items():
+                try:
+                    # Treat map_key as a regex pattern
+                    if re.match(map_key, code_key):
+                        self.logger.debug(f"Regex match found: '{map_key}' matched code_key '{code_key}'")
+                        return map_value
+                except re.error:
+                    # If map_key is not a valid regex, skip it
+                    self.logger.debug(f"Invalid regex pattern in map: '{map_key}'")
+                    continue
+            
+            # 3. No match found
+            self.logger.debug(f"No exact or regex match found for code_key '{code_key}' in map_data")
+            return None
         # iterate top-level blocks
         for top_key, current_block in list(current_data.items()):
             if not isinstance(current_block, dict):
@@ -829,6 +952,11 @@ class ResultCollector:
                     continue
                 map_entry_for_code = map_data.get(code_key)
                 if not map_entry_for_code:
+                    for ent in code_entries:
+                        ent.setdefault("message", "Map data is unavailable")
+                        ent.setdefault("component", "Map data is unavailable")
+                        ent.setdefault("confidence", "Map data is unavailable")
+                        ent.setdefault("actions", "Map data is unavailable")
                     self.logger.debug(f"No map entry for code '{code_key}' in '{top_key}'")
                     continue
                 # normalize map entries into a list of dicts (so below logic is uniform)

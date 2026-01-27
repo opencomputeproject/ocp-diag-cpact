@@ -39,6 +39,8 @@ from cpact.executor.executor_factory import ExecutorFactory
 from cpact.utils.logger_utils import TestLogger
 from cpact.result_builder.result_builder import ResultCollector
 from cpact.expression.evaluator import ExpressionEvaluator
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
@@ -133,6 +135,7 @@ class StepExecutor:
                     break  # Exit loop if step fails and continue is not set
                 break
             except Exception as e:
+                CustomExceptionHandler.print_exception(e)
                 self.scenario_step.add_log(
                     LogSeverity.WARNING, f"[Attempt {attempts + 1}] Step failed: {e}"
                 )

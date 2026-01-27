@@ -1,0 +1,171 @@
+2026-01-27 22:49:56,487 [INFO] 📁 Log directory created: ./sample_workspace\logs\test_run_20260127_224956
+2026-01-27 22:49:56,487 [INFO] 📝 Logging to file: ./sample_workspace\logs\test_run_20260127_224956\test_run.log
+2026-01-27 22:49:56,488 [INFO] Log directory: ./sample_workspace\logs\test_run_20260127_224956
+2026-01-27 22:49:56,488 [INFO] Starting test discovery in: .\tests\
+2026-01-27 22:49:56,544 [INFO] Found 16 matching test cases.
+2026-01-27 22:49:56,600 [INFO] Using schema version: 0.8 for .\tests\Diagnostic\diag_sample_log_regex_5.yaml
+2026-01-27 22:49:56,601 [INFO] Using schema directory: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8 for .\tests\Diagnostic\diag_sample_log_regex_5.yaml
+2026-01-27 22:49:56,601 [INFO] Using schema file: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8\scenario_recipe_schema.json for .\tests\Diagnostic\diag_sample_log_regex_5.yaml
+2026-01-27 22:49:56,601 [INFO] Validating .\tests\Diagnostic\diag_sample_log_regex_5.yaml against scenario schema...
+2026-01-27 22:49:56,603 [INFO] Validating .\tests\Diagnostic\diag_sample_log_regex_5.yaml against scenario schema...
+2026-01-27 22:49:56,603 [INFO] ✅ Scenario Schema is valid
+2026-01-27 22:49:56,603 [INFO] 🔍 Starting MAP Schema Validation...
+2026-01-27 22:49:56,603 [INFO] 📍 Resolved map file absolute path: ./sample_workspace/map_file.json
+2026-01-27 22:49:56,603 [INFO] 📍 Attempting to load map file from: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\map_file.json
+2026-01-27 22:49:56,603 [INFO] ✅ Scenario Schema is valid
+2026-01-27 22:49:56,603 [INFO] map_file detected in YAML: ./sample_workspace/map_file.json
+2026-01-27 22:49:56,603 [INFO] 
+🚀 Running Test: .\tests\Diagnostic\diag_sample_log_regex_5.yaml
+2026-01-27 22:49:56,618 [INFO] 🔧 OCP TV output file: ./sample_workspace\logs\test_run_20260127_224956\ocptv_DiagSampleLogRegex4_20260127_224956.json
+2026-01-27 22:49:56,619 [INFO] Test Metadata set: ID=DG_5S
+2026-01-27 22:49:56,619 [INFO] Running 1 steps in scenario: DiagSampleLogRegex4
+2026-01-27 22:49:56,619 [INFO] Running inline steps...
+2026-01-27 22:49:56,623 [INFO] 🚀 Test Run Started: DiagSampleLogRegex4
+2026-01-27 22:49:56,631 [INFO] ================= Started Executing Step SearchForRegexAssignDRCWithFields=================
+2026-01-27 22:49:56,633 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForRegexAssignDRCWithFields
+2026-01-27 22:49:56,633 [INFO] Executing step: SearchForRegexAssignDRCWithFields
+2026-01-27 22:49:56,633 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x000001DD60B00D50>
+2026-01-27 22:49:56,667 [INFO] Resolved relative path to absolute: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-01-27 22:49:59,679 [INFO] Log path: ./sample_workspace\logs\test_run_20260127_224956\AnalyzedLogFiles\analyzed_step_001.log
+2026-01-27 22:49:59,679 [INFO] Analyzing log: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-01-27 22:49:59,679 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2026-01-27 22:49:59,685 [INFO] ---------------- Applying Rule ----------------
+2026-01-27 22:49:59,685 [INFO] 🔍 Matched '(?P<Error_Code>ERR-(?=\d*[1-9])\d+)\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*(?P<Component_ID>[^\|]+)' → True → set error_code
+2026-01-27 22:49:59,687 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_5S': {'step_001': {'error_code': True}}}}
+2026-01-27 22:49:59,688 [INFO] ---------------- Applying Rule ----------------
+2026-01-27 22:49:59,688 [INFO] 🔍 Matched '(?P<Error_Code>FAIL-(?=\d*[1-9])\d+)\s*\|.*?\|.*?\|.*?\|(?P<Component_ID>[^\|]+)\|\s*(?P<Notes>.*?)(?=(\nFAIL-|$))' → True → set error_code
+2026-01-27 22:49:59,688 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_5S': {'step_001': {'error_code': True}}}}
+2026-01-27 22:49:59,689 [INFO] ---------------- Diagnostic Keys ----------------
+2026-01-27 22:49:59,689 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'ERR-00000000000011': [{'Error_Code': 'ERR-00000000000011', 'Component_ID': '0018_01_00.0                     '}, {'Error_Code': 'ERR-00000000000011', 'Component_ID': '0018_01_00.0                     '}], 'FAIL-000000000086': [{'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0008:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0019:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0009:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0018:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0008:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0008:05:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0019:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0019:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0009:02:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0009:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0018:11:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0018:11:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}], 'FAIL-000000000110': [{'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0018_11_00_0_VBIOS_version   ', 'Notes': "'GPU_00189_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0018_21_00_0_InfoROM_version ', 'Notes': "'GPU_00189_01_00_0_InfoROM_version': not found. expected '=/M215\\.0201\\.00\\..*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0008_015_00_0_VBIOS_version   ', 'Notes': "'GPU_00088_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0008_017_00_0_InfoROM_version ', 'Notes': "'GPU_00088_01_00_0_InfoROM_version': not found. expected '=/D777\\.0201\\.00\\..*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0009_017_00_0_VBIOS_version   ', 'Notes': "'GPU_00077_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0009_017_00_0_InfoROM_version ', 'Notes': "'GPU_00077_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0019_019_00_0_VBIOS_version   ', 'Notes': "'GPU_00177_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0019_019_00_0_InfoROM_version ', 'Notes': "'GPU_00177_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}]})
+2026-01-27 22:49:59,689 [DEBUG] ==================== Step Result SearchForRegexAssignDRCWithFields ====================
+2026-01-27 22:49:59,689 [DEBUG] 
+Scenario ID:        DG_5S
+Step ID:            step_001
+Step Name:          SearchForRegexAssignDRCWithFields
+Step Type:          log_analysis
+Status:             success
+Duration:           3.056 seconds
+Message:            Log analyzed successfully.
+2026-01-27 22:49:59,689 [DEBUG] =====================================================
+2026-01-27 22:49:59,689 [INFO] ✅ Diagnosis PASS: passed
+2026-01-27 22:49:59,689 [INFO] ✅ Diagnosis PASS: passed
+2026-01-27 22:49:59,698 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2026-01-27 22:49:59,698 [INFO] ================= Completed Executing Step SearchForRegexAssignDRCWithFields =================
+2026-01-27 22:49:59,700 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2026-01-27 22:49:59,700 [INFO] Finalizing continued steps...
+2026-01-27 22:49:59,700 [DEBUG] Finalizing continued steps in context: {}
+2026-01-27 22:49:59,700 [INFO] No continued steps to finalize.
+2026-01-27 22:49:59,700 [INFO] ✅ Test completed in 3.10 seconds
+2026-01-27 22:49:59,700 [INFO] ---------------------- Test Summary -------------------------
+2026-01-27 22:49:59,700 [INFO] [PASS] Step: SearchForRegexAssignDRCWithFields | Type: log_analysis | Time: 3.06s | Msg: Log analyzed successfully.
+2026-01-27 22:49:59,700 [INFO] 
+❌ Detected Diagnostic Issues:
+2026-01-27 22:49:59,700 [INFO] 
++--------------------+----------------+-----------+
+| Diagnostic Code    | Component_ID   | message   |
++====================+================+===========+
+| ERR-00000000000011 | 0018_01_00.0   |           |
++--------------------+----------------+-----------+
+| FAIL-000000000086  |                | Message   |
++--------------------+----------------+-----------+
+| FAIL-000000000110  |                | Message   |
++--------------------+----------------+-----------+
+2026-01-27 22:49:59,700 [INFO] 
+📊 Diagnostic Codes Summary:
+2026-01-27 22:49:59,700 [INFO] 
++--------------------+---------------+
+| Diagnostic Code    |   Occurrences |
++====================+===============+
+| ERR-00000000000011 |             1 |
++--------------------+---------------+
+| FAIL-000000000086  |             1 |
++--------------------+---------------+
+| FAIL-000000000110  |             1 |
++--------------------+---------------+
+2026-01-27 22:49:59,700 [INFO] 
+🔑 Final Context Keys:
+2026-01-27 22:49:59,700 [INFO] DG_5S = {'step_001': {'error_code': True, 'step_001': True}}
+2026-01-27 22:49:59,706 [INFO] Results saved to ./sample_workspace\logs\test_run_20260127_224956\test_results.json
+2026-01-27 22:49:59,706 [INFO] Building historical data index...
+2026-01-27 22:49:59,710 [INFO] Merging map data from './sample_workspace/map_file.json' into diagnostics for 'DiagSampleLogRegex4'
+2026-01-27 22:49:59,710 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,710 [DEBUG] Matched map entry for code 'ERR-00000000000011' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,710 [DEBUG] Updated entry for code 'ERR-00000000000011' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,710 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,710 [DEBUG] Matched map entry for code 'ERR-00000000000011' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,710 [DEBUG] Updated entry for code 'ERR-00000000000011' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,710 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,710 [DEBUG] Matched map entry for code 'ERR-00000000000011' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'ERR-00000000000011' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,711 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,711 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,711 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,713 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,713 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,713 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,713 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,713 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,713 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,713 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,713 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,713 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,713 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,713 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,713 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,713 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,713 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,713 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,714 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,714 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,714 [DEBUG] Exact match found for DRC value 1
+2026-01-27 22:49:59,714 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-01-27 22:49:59,714 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegex4' with merged fields
+2026-01-27 22:49:59,718 [INFO] Diagnostics saved to ./sample_workspace\logs\test_run_20260127_224956\diagnostics_result_codes.json
+2026-01-27 22:49:59,718 [INFO] 
++-----------------------------------+--------------+----------+----------------+----------------------------+
+| Step Name                         | Type         | Status   |   Duration (s) | Message                    |
++===================================+==============+==========+================+============================+
+| SearchForRegexAssignDRCWithFields | log_analysis | success  |           3.06 | Log analyzed successfully. |
++-----------------------------------+--------------+----------+----------------+----------------------------+
+2026-01-27 22:49:59,718 [INFO] ⏱️ Total execution time: 3.10s
+
+2026-01-27 22:49:59,718 [INFO] All tests executed successfully.

@@ -1,0 +1,28 @@
+{
+    "FAIL-0000000001145": [
+        {
+            "Flash execution failed": "Flash execution failed",
+            "DRC_count": "1",
+            "message": "Map data is unavailable",
+            "component": "Map data is unavailable",
+            "confidence": "Map data is unavailable",
+            "actions": "Map data is unavailable"
+        },
+        {
+            "Flash execution failed": "Flash execution failed",
+            "DRC_count": "1",
+            "message": "Map data is unavailable",
+            "component": "Map data is unavailable",
+            "confidence": "Map data is unavailable",
+            "actions": "Map data is unavailable"
+        },
+        {
+            "Flash execution failed": "Flash execution failed",
+            "DRC_count": "1",
+            "message": "Map data is unavailable",
+            "component": "Map data is unavailable",
+            "confidence": "Map data is unavailable",
+            "actions": "Map data is unavailable"
+        }
+    ]
+}

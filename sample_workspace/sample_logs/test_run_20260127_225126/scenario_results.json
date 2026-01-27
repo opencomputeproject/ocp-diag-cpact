@@ -1,0 +1,70 @@
+{
+    "DiagSampleLogRegex9": {
+        "headers": {
+            "test_id": "DG_9S",
+            "test_name": "DiagSampleLogRegex9",
+            "test_group": "Diag",
+            "tags": [
+                "Diag",
+                "Sample"
+            ],
+            "description": "",
+            "map_file": "./sample_workspace/map_file.json",
+            "scenario_path": ".\\tests\\Diagnostic\\diag_sample_log_path_regex_9.yaml"
+        },
+        "results": {
+            "step_details": [
+                {
+                    "scenario_id": "DG_9S",
+                    "step_id": "step_001",
+                    "step_name": "SearchForExactStringAssignDRC",
+                    "step_type": "log_analysis",
+                    "status": "success",
+                    "duration": 3.137,
+                    "message": "Log analyzed successfully."
+                },
+                {
+                    "scenario_id": "DG_9S",
+                    "step_id": "step_002",
+                    "step_name": "SearchForExactStringAssignDRC1",
+                    "step_type": "log_analysis",
+                    "status": "fail",
+                    "duration": 0.028,
+                    "message": "Log path is required for LogAnalyzer step."
+                }
+            ],
+            "status": "FAIL",
+            "start_timestamp": "2026-01-27 22:51:29",
+            "end_timestamp": "2026-01-27 22:51:29",
+            "duration": "00:00:00"
+        },
+        "diagnostic_result_codes": {
+            "FAIL-0000000001101": [
+                {
+                    "Flash execution failed": "Flash execution failed",
+                    "DRC_count": "1"
+                },
+                {
+                    "Flash execution failed": "Flash execution failed",
+                    "DRC_count": "1"
+                },
+                {
+                    "Flash execution failed": "Flash execution failed",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000000086": [
+                {
+                    "FAIL-000000000086": "FAIL-000000000086",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000000110": [
+                {
+                    "FAIL-000000000110": "FAIL-000000000110",
+                    "DRC_count": "1"
+                }
+            ]
+        }
+    }
+}

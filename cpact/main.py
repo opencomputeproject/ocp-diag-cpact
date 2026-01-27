@@ -56,6 +56,8 @@ from cpact.schema_checker.schema_factory import ExecutorFactory
 from cpact.core.orchestrator import Orchestrator
 from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.system_connections.connection_discovery import ConnectionDiscovery
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+
 
 
 # --------------------------------------------------------------------------------------
@@ -120,6 +122,7 @@ def discover_tests(
                 matched_tests.append(file_path)
 
             except Exception as exc:
+                CustomExceptionHandler.print_exception(exc)
                 logger.error(f"Failed to parse {file_path}: {exc}")
                 continue
 
@@ -176,7 +179,7 @@ def run_test(
 
     rc.print_summary()
     rc.dump_results(os.path.join(log_dir, "test_results.json"))
-    rc.dump_diagnostics(os.path.join(log_dir, "diagnostics_codes.json"))
+    # rc.dump_diagnostics(os.path.join(log_dir, "diagnostics_codes.json"))
 
     # Historical merging & standardized output
     filtered_current = rc.filter_historical_data(historical_data or [], rc.scenario_output)
@@ -189,6 +192,7 @@ def run_test(
         os.path.join(log_dir, "standardized_results.json"),
         standardized
     )
+    rc.dump_diagnostics(os.path.join(log_dir, "diagnostics_result_codes.json"), standardized)
     rc.print_summary_table()
     logger.info(f"⏱️ Total execution time: {elapsed_time:.2f}s\n")
 
@@ -595,6 +599,7 @@ def validate_schema(
             res = executor(resolved_schema_file, schema_dir).validate_schema(fp)
             results.append(bool(res))
         except Exception as exc:
+            CustomExceptionHandler.print_exception(exc)
             logger.error(f"❌ Validation error for {fp}: {exc}")
             results.append(False)
 

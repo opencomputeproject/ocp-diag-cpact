@@ -4,7 +4,7 @@ test_scenario:
   test_description: Sample Diagnostic recipe to search a regex string with assignment which is then called out as DRC.
   test_group: Diag
   schema_version: '0.8'
-  map_file: '{workspace_path}/map_file1.json'
+  map_file: '{workspace_path}/map_file.json'
   tags: [Diag, Sample]
   paths:
     workspace_path: ./sample_workspace
@@ -25,3 +25,4 @@ test_scenario:
 
 # Note:- Multiple instance of the same search string will still yield only one DRC.
 #        e.g. if the search string is found 3 times in the log, only one DRC will be assigned.
+#        Refer log path 'sample_workspace/sample_logs/test_run_20260127_224853' for more details.
