@@ -1,0 +1,108 @@
+{
+    "DiagSampleLogRegex10": {
+        "headers": {
+            "test_id": "DG_10S",
+            "test_name": "DiagSampleLogRegex10",
+            "test_group": "Diag",
+            "tags": [
+                "Diag",
+                "Sample"
+            ],
+            "description": "",
+            "map_file": "./sample_workspace/map_file.json",
+            "scenario_path": ".\\tests\\Diagnostic\\diag_sample_log_regex_10.yaml"
+        },
+        "results": {
+            "step_details": [
+                {
+                    "scenario_id": "DG_10S",
+                    "step_id": "step_001",
+                    "step_name": "SearchForRegexAssignDRCWithFields",
+                    "step_type": "log_analysis",
+                    "status": "success",
+                    "duration": 3.151,
+                    "message": "Log analyzed successfully."
+                }
+            ],
+            "status": "PASS",
+            "start_timestamp": "2026-02-03 09:29:31",
+            "end_timestamp": "2026-02-03 09:29:34",
+            "duration": "00:00:03"
+        },
+        "diagnostic_result_codes": {
+            "FAIL-000000600000": [
+                {
+                    "Error_Code": "FAIL-000000600000",
+                    "Component_ID": "DIMMQuantity                     ",
+                    "DRC_count": "1"
+                },
+                {
+                    "Error_Code": "FAIL-000000600000",
+                    "Component_ID": "DIMMBankQuantity                 ",
+                    "DRC_count": "1"
+                },
+                {
+                    "Error_Code": "FAIL-000000600000",
+                    "Component_ID": "DIMMSize                         ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600035": [
+                {
+                    "Error_Code": "FAIL-000000600035",
+                    "Component_ID": "DIMM_0_CPULocator                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600014": [
+                {
+                    "Error_Code": "FAIL-000000600014",
+                    "Component_ID": "DIMM_0_TotalWidth                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600033": [
+                {
+                    "Error_Code": "FAIL-000000600033",
+                    "Component_ID": "DIMM_0_DataWidth                 ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600043": [
+                {
+                    "Error_Code": "FAIL-000000600043",
+                    "Component_ID": "DIMM_0_Size                      ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600012": [
+                {
+                    "Error_Code": "FAIL-000000600012",
+                    "Component_ID": "DIMM_1_CPULocator                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600034": [
+                {
+                    "Error_Code": "FAIL-000000600034",
+                    "Component_ID": "DIMM_1_TotalWidth                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600001": [
+                {
+                    "Error_Code": "FAIL-000000600001",
+                    "Component_ID": "DIMM_1_DataWidth                 ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600023": [
+                {
+                    "Error_Code": "FAIL-000000600023",
+                    "Component_ID": "DIMM_1_Size                      ",
+                    "DRC_count": "1"
+                }
+            ]
+        }
+    }
+}

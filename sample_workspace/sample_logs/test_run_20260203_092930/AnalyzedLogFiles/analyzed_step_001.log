@@ -44,21 +44,21 @@ FAIL-000000000086  | Inventory       | inventory      | System    | 0018:11:00.0
 FAIL-000000000086  | Inventory       | inventory      | System    | 0018:11:00.0_Board ID            | Flash execution failed, please check command.
 FAIL-000000000000  | Inventory       | inventory      | System    | NUMA_NODE0_CPU                   | OK
 FAIL-000000000000  | Inventory       | inventory      | System    | NUMA_NODE1_CPU                   | OK
-FAIL-000000600000  | Inventory       | inventory      | System    | DIMMQuantity                     | DIMMQuantity : expected '=16'
-FAIL-000000600000  | Inventory       | inventory      | System    | DIMMBankQuantity                 | DIMMBankQuantity: expected '=8'
-FAIL-000000600000  | Inventory       | inventory      | System    | DIMMSize                         | DIMMSize: expected '=32768'
+FAIL-000000600000  | Inventory       | inventory      | System    | DIMMQuantity                     | OK
+FAIL-000000600000  | Inventory       | inventory      | System    | DIMMBankQuantity                 | OK
+FAIL-000000600000  | Inventory       | inventory      | System    | DIMMSize                         | OK
 FAIL-000000000000  | Inventory       | inventory      | System    | GPUNum                           | OK
 FAIL-000000000000  | Inventory       | inventory      | System    | CPU_Num                          | OK
 FAIL-000000000000  | Inventory       | inventory      | System    | CPU_Cores                        | OK
 FAIL-000000000000  | Inventory       | inventory      | System    | CPU_Version                      | OK
-FAIL-000000600035  | Inventory       | inventory      | System    | DIMM_0_CPULocator                | DIMM_0_CPULocator not found. expected '=CPU0'
-FAIL-000000600014  | Inventory       | inventory      | System    | DIMM_0_TotalWidth                | DIMM_0_TotalWidth not found. expected '=72'
-FAIL-000000600033  | Inventory       | inventory      | System    | DIMM_0_DataWidth                 | DIMM_0_DataWidth not found. expected '=64'
-FAIL-000000600043  | Inventory       | inventory      | System    | DIMM_0_Size                      | DIMM_0_Size not found. expected '=32768'
-FAIL-000000600012  | Inventory       | inventory      | System    | DIMM_1_CPULocator                | DIMM_1_CPULocator not found. expected '=CPU1'
-FAIL-000000600034  | Inventory       | inventory      | System    | DIMM_1_TotalWidth                | DIMM_1_TotalWidth not found. expected '=72'
-FAIL-000000600001  | Inventory       | inventory      | System    | DIMM_1_DataWidth                 | DIMM_1_DataWidth not found. expected '=64'
-FAIL-000000600023  | Inventory       | inventory      | System    | DIMM_1_Size                      | DIMM_1_Size not found. expected '=32768'
+FAIL-000000600035  | Inventory       | inventory      | System    | DIMM_0_CPULocator                | OK
+FAIL-000000600014  | Inventory       | inventory      | System    | DIMM_0_TotalWidth                | OK
+FAIL-000000600033  | Inventory       | inventory      | System    | DIMM_0_DataWidth                 | OK
+FAIL-000000600043  | Inventory       | inventory      | System    | DIMM_0_Size                      | OK
+FAIL-000000600012  | Inventory       | inventory      | System    | DIMM_1_CPULocator                | OK
+FAIL-000000600034  | Inventory       | inventory      | System    | DIMM_1_TotalWidth                | OK
+FAIL-000000600001  | Inventory       | inventory      | System    | DIMM_1_DataWidth                 | OK
+FAIL-000000600023  | Inventory       | inventory      | System    | DIMM_1_Size                      | OK
 FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0018_02_00_0_RetimerCount    | OK
 FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0018_11_00_0_VBIOS_version   | 'GPU_00189_01_00_0_VBIOS_version': not found. expected '=/.*/'
 FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0018_21_00_0_InfoROM_version | 'GPU_00189_01_00_0_InfoROM_version': not found. expected '=/M215\.0201\.00\..*/'

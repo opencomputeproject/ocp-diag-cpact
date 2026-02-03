@@ -929,6 +929,24 @@ class ResultCollector:
             # 3. No match found
             self.logger.debug(f"No exact or regex match found for code_key '{code_key}' in map_data")
             return None
+        
+        def _remove_code_key_from_entry(entry: Dict[str, Any], code_key: str) -> None:
+            """
+            Remove code_key if it appears as:
+            1) a key in entry
+            2) a value in entry (value == code_key)
+            Mutates entry in-place.
+            """
+            keys_to_remove = []
+
+            for k, v in entry.items():
+                if k == code_key:
+                    keys_to_remove.append(k)
+                elif isinstance(v, str) and v == code_key:
+                    keys_to_remove.append(k)
+
+            for k in keys_to_remove:
+                entry.pop(k, None)
         # iterate top-level blocks
         for top_key, current_block in list(current_data.items()):
             if not isinstance(current_block, dict):
@@ -950,7 +968,8 @@ class ResultCollector:
                 if not isinstance(code_entries, list):
                     self.logger.warning(f"Skipping code '{code_key}' in '{top_key}': entries not a list")
                     continue
-                map_entry_for_code = map_data.get(code_key)
+                map_entry_for_code = get_map_entry_for_code(map_data, code_key)
+                # map_entry_for_code = map_data.get(code_key)
                 if not map_entry_for_code:
                     for ent in code_entries:
                         ent.setdefault("message", "Map data is unavailable")
@@ -1020,5 +1039,6 @@ class ResultCollector:
                     entry.clear()
 
                     entry.update(merged_fields)
+                    _remove_code_key_from_entry(entry, code_key)
                     self.logger.debug(f"Updated entry for code '{code_key}' in '{top_key}' with merged fields")
         return current_data

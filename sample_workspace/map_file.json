@@ -39,5 +39,14 @@
                 {"2":"RMA nearest FRU"}
             ],
         "confidence":99
+    },
+    "^FAIL-\\d{0,}6\\d{0,}$": {
+        "message": "Generic Flash Failure",
+        "component": "Flash",
+        "actions": [
+            {"1": "Please check the command"},
+            {"5": "RMA nearest FRU"}
+        ],
+        "confidence": 80
     }
 } 

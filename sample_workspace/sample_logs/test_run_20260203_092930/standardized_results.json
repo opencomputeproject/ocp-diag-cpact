@@ -1,0 +1,141 @@
+{
+    "DiagSampleLogRegex10": {
+        "headers": {
+            "test_id": "DG_10S",
+            "test_name": "DiagSampleLogRegex10",
+            "test_group": "Diag",
+            "tags": [
+                "Diag",
+                "Sample"
+            ],
+            "description": "",
+            "map_file": "./sample_workspace/map_file.json",
+            "scenario_path": ".\\tests\\Diagnostic\\diag_sample_log_regex_10.yaml"
+        },
+        "results": {
+            "step_details": [
+                {
+                    "scenario_id": "DG_10S",
+                    "step_id": "step_001",
+                    "step_name": "SearchForRegexAssignDRCWithFields",
+                    "step_type": "log_analysis",
+                    "status": "success",
+                    "duration": 3.151,
+                    "message": "Log analyzed successfully."
+                }
+            ],
+            "status": "PASS",
+            "start_timestamp": "2026-02-03 09:29:31",
+            "end_timestamp": "2026-02-03 09:29:34",
+            "duration": "00:00:03"
+        },
+        "diagnostic_result_codes": {
+            "FAIL-000000600000": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMMQuantity                     ",
+                    "DRC_count": "1"
+                },
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMMBankQuantity                 ",
+                    "DRC_count": "1"
+                },
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMMSize                         ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600035": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_0_CPULocator                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600014": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_0_TotalWidth                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600033": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_0_DataWidth                 ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600043": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_0_Size                      ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600012": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_1_CPULocator                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600034": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_1_TotalWidth                ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600001": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_1_DataWidth                 ",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600023": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "Component_ID": "DIMM_1_Size                      ",
+                    "DRC_count": "1"
+                }
+            ]
+        }
+    }
+}
