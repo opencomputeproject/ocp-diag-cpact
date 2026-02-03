@@ -21,9 +21,6 @@ test_scenario:
     diagnostic_analysis:
     - search_string: (Flash execution failed)
       diagnostic_result_code: FAIL-0000000001101
-      parameter_to_set: error_code
-    - diagnostic_search_string: ((?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))
-      parameter_to_set: partnerdiag_fault_analysis
 
 # Note:- Multiple instance of the same search string will still yield only one DRC.
 #        e.g. if the search string is found 3 times in the log, only one DRC will be assigned.

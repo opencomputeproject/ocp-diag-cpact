@@ -37,7 +37,7 @@ test_scenario:
     connection_type: Local
     connection: local
     step_type: invoke_scenario
-    scenario_path: '{scenario_path}/Diagnostic/diag_sample_log_regex_nested_7.yaml'
+    scenario_path: '{scenario_path}/Diagnostic/diag_sample_log_regex_6.yaml'
 
 # Note:- Combination of DRCs and associated fields are unique.
 #        e.g. if the search string is found 3 times in the log with different
