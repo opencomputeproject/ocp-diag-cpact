@@ -28,6 +28,7 @@ Usage:
     Automatically logs outcomes and updates diagnostic and result tracking.
 ===========================================================================
 """
+
 import time
 
 from cpact.executor.command_executor import CommandExecutor
@@ -87,9 +88,7 @@ class StepExecutor:
         """
         entry_criteria = self.step_details.get("entry_criteria")
         test_id = self.context.get("test_id")
-        diagnostic_keys = (
-            self.context.get_parameters_to_set()
-        )
+        diagnostic_keys = self.context.get_parameters_to_set()
         if entry_criteria and not self.evaluator.evaluate(
             entry_criteria, diagnostic_keys
         ):
@@ -97,7 +96,9 @@ class StepExecutor:
                 f"[SKIP] Entry criteria '{entry_criteria}' not met. Skipping step. {diagnostic_keys}"
             )
             ResultCollector().get_instance().add_step_result(
-                scenario_name=self.context.get("scenario_parent", self.context.get("test_name")),
+                scenario_name=self.context.get(
+                    "scenario_parent", self.context.get("test_name")
+                ),
                 scenario_id=self.scenario_id,
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
@@ -172,11 +173,15 @@ class StepExecutor:
         )
         output, status, message = executor.execute()
         if self.step_details["step_type"] == "invoke_scenario":
-            parent_scenario = ".".join(self.context.get("scenario_parent").split(".")[:-1])
+            parent_scenario = ".".join(
+                self.context.get("scenario_parent").split(".")[:-1]
+            )
             self.context.set("scenario_parent", parent_scenario)
         if not validate_continue:
             ResultCollector().get_instance().add_step_result(
-                scenario_name=self.context.get("scenario_parent", self.context.get("test_name")),
+                scenario_name=self.context.get(
+                    "scenario_parent", self.context.get("test_name")
+                ),
                 scenario_id=self.scenario_id,
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
@@ -194,12 +199,12 @@ class StepExecutor:
             tc_id=self.scenario_id,
             step_id=self.step_details["step_id"],
             key=self.step_details["step_id"],
-            value=True if status else False
+            value=True if status else False,
         )
         ResultCollector.get_instance().add_diagnostic_keys(
             tc_id=self.scenario_id,
             step_id=self.step_details["step_id"],
             key=self.step_details["step_id"],
-            value=True if status else False
+            value=True if status else False,
         )
         return output, status, message

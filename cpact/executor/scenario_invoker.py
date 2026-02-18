@@ -26,6 +26,7 @@ Usage:
     Define `scenario_path` in the step to specify the external scenario file.
 =============================================================================
 """
+
 import time
 from datetime import datetime
 from cpact.result_builder.result_builder import ResultCollector
@@ -37,7 +38,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 class ScenarioInvoker:
-    parent_scenario=""
+    parent_scenario = ""
+
     def __init__(
         self,
         scenario_step: tv.step,
@@ -60,7 +62,6 @@ class ScenarioInvoker:
         self.context = context
         self.thread_executor = thread_executor
         self.validate_continue = validate_continue
-        
 
     def execute(self) -> tuple[str, bool, str]:
         """
@@ -72,6 +73,7 @@ class ScenarioInvoker:
         from cpact.core.scenario_runner import (
             ScenarioRunner,
         )  # Delayed import to avoid circular import
+
         scenario_output = {}
         scenario_path = self.step.get("scenario_path")
         if not scenario_path:
@@ -80,7 +82,9 @@ class ScenarioInvoker:
         scenario_data, _ = resolve_paths_in_yaml(
             scenario_data["test_scenario"], scenario_data.get("paths", {})
         )
-        parent_scenario = f"{self.context.get('scenario_parent')}.{scenario_data.get('test_name')}"
+        parent_scenario = (
+            f"{self.context.get('scenario_parent')}.{scenario_data.get('test_name')}"
+        )
         start_time = time.time()
         self.context.set("scenario_parent", parent_scenario)
         runner = ScenarioRunner(
@@ -93,7 +97,9 @@ class ScenarioInvoker:
 
         end_time = time.time()
         duration = end_time - start_time
-        start_timestamp = datetime.fromtimestamp(start_time).strftime("%Y-%m-%d %H:%M:%S")
+        start_timestamp = datetime.fromtimestamp(start_time).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         end_timestamp = datetime.fromtimestamp(end_time).strftime("%Y-%m-%d %H:%M:%S")
 
         # Convert duration to HH:MM:SS
@@ -116,6 +122,6 @@ class ScenarioInvoker:
                 "description": scenario_data.get("description", ""),
                 "map_file": scenario_data.get("map_file", ""),
                 "scenario_path": scenario_path,
-            }
+            },
         )
         return output, status, message

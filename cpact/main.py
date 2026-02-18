@@ -1,4 +1,3 @@
-
 """
 Copyright (c) 2025 Open Compute Project
 Licensed under the MIT License.
@@ -39,8 +38,10 @@ Usage:
 """
 
 import argparse
+from email.mime import text
 import json
 import os
+import textwrap
 import time
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
@@ -59,6 +60,18 @@ from cpact.system_connections.connection_discovery import ConnectionDiscovery
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
 
 
+import sys
+
+# detect terminal vs file
+ENABLE_COLOR = sys.stdout.isatty()
+
+try:
+    from colorama import Fore, Style, init
+
+    init(autoreset=True)
+except:
+    ENABLE_COLOR = False
+
 
 # --------------------------------------------------------------------------------------
 # Discovery
@@ -66,7 +79,7 @@ from cpact.utils.custom_exception_handler import CustomExceptionHandler
 def discover_tests(
     test_dir: str,
     filters: Optional[argparse.Namespace],
-    logger: Optional[TestLogger] = None
+    logger: Optional[TestLogger] = None,
 ) -> List[str]:
     """
     Discover all supported test files (YAML/YML) recursively and filter by test metadata.
@@ -136,7 +149,7 @@ def run_test(
     file_path: str,
     workspace: str,
     logger: Optional[TestLogger] = None,
-    historical_data: Optional[List[str]] = None
+    historical_data: Optional[List[str]] = None,
 ) -> None:
     """
     Run a single test scenario from the given file path.
@@ -182,17 +195,19 @@ def run_test(
     # rc.dump_diagnostics(os.path.join(log_dir, "diagnostics_codes.json"))
 
     # Historical merging & standardized output
-    filtered_current = rc.filter_historical_data(historical_data or [], rc.scenario_output)
+    filtered_current = rc.filter_historical_data(
+        historical_data or [], rc.scenario_output
+    )
     rc.dump_custom_scenario_output(
-        os.path.join(log_dir, "scenario_results.json"),
-        filtered_current
+        os.path.join(log_dir, "scenario_results.json"), filtered_current
     )
     standardized = rc.filter_map_file(filtered_current)
     rc.dump_custom_scenario_output(
-        os.path.join(log_dir, "standardized_results.json"),
-        standardized
+        os.path.join(log_dir, "standardized_results.json"), standardized
     )
-    rc.dump_diagnostics(os.path.join(log_dir, "diagnostics_result_codes.json"), standardized)
+    rc.dump_diagnostics(
+        os.path.join(log_dir, "diagnostics_result_codes.json"), standardized
+    )
     rc.print_summary_table()
     logger.info(f"⏱️ Total execution time: {elapsed_time:.2f}s\n")
 
@@ -226,7 +241,9 @@ def list_tests(test_files: List[str], logger: Optional[TestLogger] = None) -> No
             # Keep both error lines from original
             logger.error(f"❌ Invalid test scenario in {test_file}. Skipping.")
             logger.error(f"❌ No test scenario found in {test_file}. Skipping.")
-            skipped_tests.append([test_file, "No test scenario found or invalid format"])
+            skipped_tests.append(
+                [test_file, "No test scenario found or invalid format"]
+            )
             continue
 
         test_scenario = scenario_doc["test_scenario"]
@@ -246,13 +263,15 @@ def list_tests(test_files: List[str], logger: Optional[TestLogger] = None) -> No
     logger.info("=" * 60)
     if skipped_tests:
         logger.info(f"⚠️ Skipped {len(skipped_tests)} invalid test scenarios:")
-        logger.info("\n" + tabulate(skipped_tests, headers=skipped_header, tablefmt="grid"))
+        logger.info(
+            "\n" + tabulate(skipped_tests, headers=skipped_header, tablefmt="grid")
+        )
 
 
 def list_scenarios_with_connections(
     test_files: List[str],
     connections: Dict[str, Any],
-    logger: Optional[TestLogger] = None
+    logger: Optional[TestLogger] = None,
 ) -> List[List[Any]]:
     """
     List all discovered test scenarios along with their connection status in a tabular format.
@@ -267,7 +286,9 @@ def list_scenarios_with_connections(
     """
     logger = logger or TestLogger().get_logger()
 
-    def get_scenario_connection_details(scenario_data: Dict[str, Any]) -> List[Tuple[str, str]]:
+    def get_scenario_connection_details(
+        scenario_data: Dict[str, Any],
+    ) -> List[Tuple[str, str]]:
         """
         Extract (connection, connection_type) tuples from scenario and nested scenario steps.
 
@@ -295,8 +316,7 @@ def list_scenarios_with_connections(
         return details
 
     def check_scenario_connections(
-        scenario_details: List[Tuple[str, str]],
-        conn_config: Dict[str, Any]
+        scenario_details: List[Tuple[str, str]], conn_config: Dict[str, Any]
     ) -> bool:
         """
         Validate that all required connections exist and are non-empty in the given config.
@@ -317,7 +337,14 @@ def list_scenarios_with_connections(
                 return False
         return True
 
-    headers = ["Test ID", "Test Name", "Test Group", "Tags", "Description", "Executable"]
+    headers = [
+        "Test ID",
+        "Test Name",
+        "Test Group",
+        "Tags",
+        "Description",
+        "Executable",
+    ]
     rows: List[List[Any]] = []
 
     for test_file in test_files:
@@ -348,9 +375,7 @@ def list_scenarios_with_connections(
 # Connection discovery & stats
 # --------------------------------------------------------------------------------------
 def discover_and_test_connections(
-    config: Dict[str, Any],
-    timeout: int = 10,
-    export_csv: bool = False
+    config: Dict[str, Any], timeout: int = 10, export_csv: bool = False
 ) -> Dict[str, Any]:
     """
     Discover and test all connections from config.
@@ -370,9 +395,15 @@ def discover_and_test_connections(
 
     # Discover all connections
     discovery_result = discovery.discover_all_connections()
-    print(f"📊 Found {discovery_result['total_combinations']} possible connection combinations:")
-    print(f"   • Connection Names: {', '.join(discovery_result['available_connection_names'])}")
-    print(f"   • Connection Types: {', '.join(discovery_result['available_connection_types'])}")
+    print(
+        f"📊 Found {discovery_result['total_combinations']} possible connection combinations:"
+    )
+    print(
+        f"   • Connection Names: {', '.join(discovery_result['available_connection_names'])}"
+    )
+    print(
+        f"   • Connection Types: {', '.join(discovery_result['available_connection_types'])}"
+    )
 
     # Test all connections
     print(f"\n🧪 TESTING CONNECTIVITY (timeout: {timeout}s per test)...")
@@ -399,7 +430,7 @@ def discover_and_test_connections(
 
 
 def calculate_connection_statistics(
-    test_results: List[Dict[str, Any]]
+    test_results: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
     """
     Calculate detailed statistics from test results.
@@ -421,7 +452,9 @@ def calculate_connection_statistics(
     error_count = sum(1 for r in test_results if r.get("status") == "ERROR")
 
     # Stats by connection type
-    type_stats: Dict[str, Dict[str, int]] = defaultdict(lambda: {"total": 0, "success": 0, "failed": 0})
+    type_stats: Dict[str, Dict[str, int]] = defaultdict(
+        lambda: {"total": 0, "success": 0, "failed": 0}
+    )
     for r in test_results:
         t = r.get("connection_type", "UNKNOWN")
         type_stats[t]["total"] += 1
@@ -431,7 +464,9 @@ def calculate_connection_statistics(
             type_stats[t]["failed"] += 1
 
     # Stats by connection name
-    name_stats: Dict[str, Dict[str, int]] = defaultdict(lambda: {"total": 0, "success": 0, "failed": 0})
+    name_stats: Dict[str, Dict[str, int]] = defaultdict(
+        lambda: {"total": 0, "success": 0, "failed": 0}
+    )
     for r in test_results:
         n = r.get("connection_name", "UNKNOWN")
         name_stats[n]["total"] += 1
@@ -442,8 +477,10 @@ def calculate_connection_statistics(
 
     # Timing stats for successful results with numeric total_time
     successful_times = [
-        float(r["total_time"]) for r in test_results
-        if r.get("status") == "SUCCESS" and isinstance(r.get("total_time"), (int, float))
+        float(r["total_time"])
+        for r in test_results
+        if r.get("status") == "SUCCESS"
+        and isinstance(r.get("total_time"), (int, float))
     ]
     if successful_times:
         avg_time = sum(successful_times) / len(successful_times)
@@ -476,6 +513,7 @@ def calculate_connection_statistics(
 # Schema validation
 # --------------------------------------------------------------------------------------
 
+
 def get_versioned_schema_dir(schema_type: str, schema_version: str) -> str:
     """
     Get the default schema file path based on schema type and current version.
@@ -487,22 +525,18 @@ def get_versioned_schema_dir(schema_type: str, schema_version: str) -> str:
     """
 
     schema_dir = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "spec",
-        "schema"
+        os.path.dirname(os.path.dirname(__file__)), "spec", "schema"
     )
     schema_dirs = os.listdir(schema_dir)
     if schema_version and schema_version in schema_dirs:
-        return os.path.join(
-            schema_dir,
-            schema_version
-        )
+        return os.path.join(schema_dir, schema_version)
     latest_schema_version = sorted(schema_dirs)[-1]
-    
+
     return os.path.join(
         schema_dir,
         latest_schema_version,
     )
+
 
 def get_schema_file_path(
     schema_dir: str,
@@ -518,16 +552,14 @@ def get_schema_file_path(
     Returns:
         Path to the schema file.
     """
-    return os.path.join(
-        schema_dir,
-        f"{schema_type}_recipe_schema.json"
-    )
+    return os.path.join(schema_dir, f"{schema_type}_recipe_schema.json")
+
 
 def validate_schema(
     schema_type: str,
     schema_file: Optional[List[str]],
     file_or_dir: str,
-    logger: Optional[TestLogger]
+    logger: Optional[TestLogger],
 ) -> bool:
     """
     Validate the given data file(s) against the specified schema type.
@@ -562,8 +594,8 @@ def validate_schema(
     else:
         matched_files = [file_or_dir]
 
-
     results: List[bool] = []
+    report: List[Dict[str, str]] = []
     for fp in matched_files:
         if not os.path.isfile(fp):
             logger.error(f"❌ Not a file: {fp}")
@@ -580,7 +612,9 @@ def validate_schema(
                 results.append(False)
                 continue
             schema_version = fp_data.get("test_scenario", {}).get("schema_version")
-            logger.info(f"Using schema version: {schema_version or '-latest-'} for {fp}")
+            logger.info(
+                f"Using schema version: {schema_version or '-latest-'} for {fp}"
+            )
             schema_dir = get_versioned_schema_dir(schema_type, schema_version)
             logger.info(f"Using schema directory: {schema_dir} for {fp}")
             resolved_schema_file = (
@@ -595,15 +629,120 @@ def validate_schema(
             logger.info(f"Validating {fp} against {schema_type} schema...")
             factory = ExecutorFactory().get_instance(resolved_schema_file)
             executor = factory.get_executor(schema_type)
-
-            res = executor(resolved_schema_file, schema_dir).validate_schema(fp)
+            schema_executor = executor(resolved_schema_file, schema_dir)
+            res = schema_executor.validate_schema(fp)
+            report.append(
+                ResultCollector.get_instance().get_schema_validation_results()
+            )
+            ResultCollector.get_instance().reset_schema_validation_results()
             results.append(bool(res))
         except Exception as exc:
             CustomExceptionHandler.print_exception(exc)
             logger.error(f"❌ Validation error for {fp}: {exc}")
             results.append(False)
 
+    print_validation_report(report, logger)
+    ResultCollector.get_instance().generate_schema_report(
+        report,
+        os.path.join(
+            TestLogger().get_log_dir(), f"{schema_type}_schema_validation_report"
+        ),
+        output_type="json",
+    )
     return all(results)
+
+
+def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) -> None:
+    """
+    Print a formatted validation report to console and log file.
+    This function takes a list of validation report sections and displays them in a
+    formatted table with color-coded severity levels. The report is printed to both
+    the console logger and saved to a text file in the log directory.
+    Args:
+        report (List[Dict[str, str]]): A list of report sections, where each section
+            contains multiple rows. Each row is a dictionary with keys like "Category",
+            "Colateral", "Status", "Message", "Path", and "Line".
+        logger (TestLogger): The logger instance used to output the formatted report
+            and manage log file paths.
+    Returns:
+        None
+    Behavior:
+        - Attempts to import colorama for colored output. Falls back to plain text if unavailable.
+        - Wraps text in cells to 30 characters width for readability.
+        - Color-codes severity levels: ERROR (red), WARNING (yellow), INFO/PASSED (cyan).
+        - Groups report sections with visual breaks.
+        - Displays the table using tabulate in grid format.
+        - Saves the report (without colors) to "schema_validation_report.txt" in the log directory.
+        - Prints "No issues found." if the report is empty.
+    Raises:
+        None (gracefully handles missing colorama dependency)
+    """
+    try:
+        from colorama import Fore, Style, init
+
+        init(autoreset=True)
+        COLOR = True
+    except:
+        COLOR = False
+
+    def color_severity(sev: str) -> str:
+        if not COLOR:
+            return sev
+
+        sev_upper = str(sev).upper()
+        if sev_upper == "ERROR":
+            return Fore.RED + sev + Style.RESET_ALL
+        elif sev_upper == "WARNING":
+            return Fore.YELLOW + sev + Style.RESET_ALL
+        elif sev_upper == "INFO" or sev_upper == "PASSED" or sev_upper == "SUCCESS":
+            return Fore.CYAN + sev + Style.RESET_ALL
+        return sev
+
+    def wrap_text(text, width=30):
+        if text is None:
+            return ""
+        return "\n".join(textwrap.wrap(str(text), width))
+
+    if not report:
+        print("No issues found.")
+        return
+
+    all_rows = []
+    group_breaks = []
+
+    for section in report:
+        first = True
+        for row in section:
+            r = row.copy()
+            for k in r:
+                r[k] = wrap_text(r[k], 30)
+            if "Status" in r:
+                r["Status"] = color_severity(r["Status"])
+            if not first:
+                if "Category" in r:
+                    r["Category"] = ""
+                if "Colateral" in r:
+                    r["Colateral"] = ""
+            first = False
+            all_rows.append(r)
+        group_breaks.append(len(all_rows))
+    table_lines = tabulate(all_rows, headers="keys", tablefmt="grid")
+
+    logger.info(
+        f"""
+================================================================
+                    VALIDATION REPORT
+================================================================
+{table_lines}
+================================================================
+                """
+    )
+    log_path = os.path.join(TestLogger().get_log_dir(), "schema_validation_report.txt")
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write("VALIDATION REPORT\n")
+        f.write("=" * 80 + "\n")
+        f.write(table_lines)
+        f.write("\n" + "=" * 80 + "\n")
 
 
 # --------------------------------------------------------------------------------------
@@ -616,18 +755,53 @@ def main() -> None:
     print("Starting framework initialization...\n")
 
     parser = argparse.ArgumentParser(description="YAML-Based Test Executor")
-    parser.add_argument("--test_dir", type=str, required=False, help="Path to the root tests directory")
-    parser.add_argument("--workspace", type=str, required=False, help="Directory for logs, JSON, and results")
+    parser.add_argument(
+        "--test_dir", type=str, required=False, help="Path to the root tests directory"
+    )
+    parser.add_argument(
+        "--workspace",
+        type=str,
+        required=False,
+        help="Directory for logs, JSON, and results",
+    )
     parser.add_argument("--test_id", nargs="+", help="Filter by test_id")
     parser.add_argument("--test_name", type=str, help="Filter by test_name")
     parser.add_argument("--test_group", type=str, help="Filter by test_group")
     parser.add_argument("--tags", nargs="+", help="Filter by tags")
-    parser.add_argument("--conn_config", "-cc", type=str, help="Path to the connection config file")
-    parser.add_argument("--list", "-l", action="store_true", help="List all available tests without running them")
-    parser.add_argument("--discover_connections", "-dc", action="store_true", help="List all available connections without running tests")
-    parser.add_argument("--list_scenarios_with_connections", "-lsc", action="store_true", help="List all scenarios with connections without running tests")
-    parser.add_argument("--list_scenarios", "-ls", action="store_true", help="List all scenarios without running tests")
-    parser.add_argument("--run_with_discover_connections", "-rdc", default=False, action="store_true", help="Discover and test all connections before running tests")
+    parser.add_argument(
+        "--conn_config", "-cc", type=str, help="Path to the connection config file"
+    )
+    parser.add_argument(
+        "--list",
+        "-l",
+        action="store_true",
+        help="List all available tests without running them",
+    )
+    parser.add_argument(
+        "--discover_connections",
+        "-dc",
+        action="store_true",
+        help="List all available connections without running tests",
+    )
+    parser.add_argument(
+        "--list_scenarios_with_connections",
+        "-lsc",
+        action="store_true",
+        help="List all scenarios with connections without running tests",
+    )
+    parser.add_argument(
+        "--list_scenarios",
+        "-ls",
+        action="store_true",
+        help="List all scenarios without running tests",
+    )
+    parser.add_argument(
+        "--run_with_discover_connections",
+        "-rdc",
+        default=False,
+        action="store_true",
+        help="Discover and test all connections before running tests",
+    )
     parser.add_argument(
         "--schema_check",
         nargs="+",
@@ -638,9 +812,23 @@ def main() -> None:
             "SCHEMA_FILE: Optional path to schema file (uses default if omitted)"
         ),
     )
-    parser.add_argument("--run_with_schema_check", dest="run_with_schema_check", action="store_true", help="Enable schema check")
-    parser.add_argument("--no-schema-check", dest="run_with_schema_check", action="store_false", help="Disable schema check")
-    parser.add_argument("--historical_data", nargs="+", help="List of previously ran output files for calculating result.")
+    parser.add_argument(
+        "--run_with_schema_check",
+        dest="run_with_schema_check",
+        action="store_true",
+        help="Enable schema check",
+    )
+    parser.add_argument(
+        "--no-schema-check",
+        dest="run_with_schema_check",
+        action="store_false",
+        help="Disable schema check",
+    )
+    parser.add_argument(
+        "--historical_data",
+        nargs="+",
+        help="List of previously ran output files for calculating result.",
+    )
     parser.set_defaults(run_with_schema_check=True)
     args = parser.parse_args()
 
@@ -697,12 +885,16 @@ def main() -> None:
     # Optional: discover/test connections
     if args.discover_connections:
         logger.info("Discovering and testing all connections...")
-        results = discover_and_test_connections(conn_config, timeout=30, export_csv=False)
+        results = discover_and_test_connections(
+            conn_config, timeout=30, export_csv=False
+        )
         logger.info(f"Discovery results: {results['discovery']}")
         logger.info(f"Test results: {results['test_results']}")
         logger.info(f"Statistics: {results['statistics']}")
         if not args.run_with_discover_connections:
-            logger.info("Skipping test execution as --discover_connections was specified.")
+            logger.info(
+                "Skipping test execution as --discover_connections was specified."
+            )
             return
 
     # Prepare connection factory for execution phase
@@ -713,7 +905,12 @@ def main() -> None:
 
     if args.run_with_schema_check:
         for matched_file in matched_files:
-            ok = validate_schema(schema_type="scenario", schema_file=None, file_or_dir=matched_file, logger=logger)
+            ok = validate_schema(
+                schema_type="scenario",
+                schema_file=None,
+                file_or_dir=matched_file,
+                logger=logger,
+            )
             if not ok:
                 logger.error(f"❌ Recipe Schema Check Failed!!! for {matched_file}")
                 factory.close_all_connections()
@@ -736,4 +933,5 @@ def main() -> None:
 if __name__ == "__main__":
     main()
     import sys
+
     sys.exit(0)

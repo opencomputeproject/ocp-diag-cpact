@@ -160,8 +160,8 @@ class CommandExecutor(BaseExecutor):
                 f"Started executing command: {command} on connection: {connection_name} with type: {connection_type}",
             )
             result = connection.execute_command(
-            command,
-            mode=ExecutionMode.SYNCHRONOUS,
+                command,
+                mode=ExecutionMode.SYNCHRONOUS,
             )
 
             stdout = result.stdout or ""

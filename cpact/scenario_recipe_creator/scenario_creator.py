@@ -123,7 +123,7 @@ class SchemaLoader(QWidget):
         default_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "spec",
-            "schema"
+            "schema",
         )
         path, _ = QFileDialog.getOpenFileName(
             self, "Open Schema", default_path, "JSON Files (*.json)"

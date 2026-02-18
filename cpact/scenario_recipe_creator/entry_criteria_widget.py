@@ -31,6 +31,7 @@ Usage:
     Call `result()` to retrieve the structured output.
 ===============================================================================
 """
+
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLineEdit,

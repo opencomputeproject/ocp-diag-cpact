@@ -3,6 +3,7 @@ import traceback
 import datetime
 import linecache
 
+
 class CustomExceptionHandler:
     @staticmethod
     def format_exception(exc: Exception) -> str:
@@ -48,4 +49,3 @@ class CustomExceptionHandler:
     @staticmethod
     def print_exception(exc: Exception):
         print(CustomExceptionHandler.format_exception(exc), file=sys.stderr)
-    

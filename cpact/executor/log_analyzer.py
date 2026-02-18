@@ -27,6 +27,7 @@ Usage:
     Define `diagnostic_analysis` rules in the step to enable pattern-based evaluation.
 ===========================================================================
 """
+
 import re
 import os
 import time
@@ -72,7 +73,7 @@ class LogAnalyzer(BaseExecutor):
                 False,
                 f"Connection '{connection_name}' of type '{conn_type}' not found.",
             )
-        
+
         self.scenario_step.add_log(
             LogSeverity.INFO,
             f"Using connection: {connection_name} of type: {conn_type}",
@@ -81,16 +82,19 @@ class LogAnalyzer(BaseExecutor):
         log_path = self.step.get("log_analysis_path")
         log_file_path = self.get_log_file(log_path)
         log_dir = TestLogger().get_log_dir()
-        log_path = os.path.join(log_dir, "AnalyzedLogFiles", f"analyzed_{self.step.get('step_id', 'default')}.log")
+        log_path = os.path.join(
+            log_dir,
+            "AnalyzedLogFiles",
+            f"analyzed_{self.step.get('step_id', 'default')}.log",
+        )
 
         if not os.path.exists(log_file_path) or not log_file_path:
             self.logger.error("Log path is required for LogAnalyzer step.")
             self.scenario_step.add_log(
                 LogSeverity.ERROR, "Log path is required for LogAnalyzer step."
             )
-            print("Log path is required for LogAnalyzer step.")
             return None, False, "Log path is required for LogAnalyzer step."
-        
+
         log_content = ""
         with open(log_file_path, "r", encoding="utf-8") as file:
             log_content = file.read()
@@ -98,7 +102,7 @@ class LogAnalyzer(BaseExecutor):
         check = connection.download_file(log_file_path, log_path)
 
         time.sleep(3)
-        
+
         self.logger.info(f"Log path: {log_path}")
         self.scenario_step.add_log(LogSeverity.INFO, f"Log path: {log_path}")
         self.logger.info(f"Analyzing log: {log_file_path}")
@@ -164,7 +168,7 @@ class LogAnalyzer(BaseExecutor):
                 - Exact absolute or relative file paths.
                 - The placeholder `"current_log_dir"` to reference the current log directory.
                 - A regex expression wrapped inside `Regex(...)` to dynamically match paths.
-                
+
                 Examples:
                     - `"../sample_workspace/logs/test_run_Regex([\\d+\\w+\\s+]*)/test_run.log"`
                     - `"../sample_workspace/test_run_Regex([\\d+\\w+\\s+]*).log"`
@@ -201,7 +205,9 @@ class LogAnalyzer(BaseExecutor):
             path_pattern = os.path.join(log_dir, "command_outputs", file_part)
 
             self.logger.info(f"Resolved log path: {path_pattern}")
-            self.scenario_step.add_log(LogSeverity.INFO, f"Resolved log path: {path_pattern}")
+            self.scenario_step.add_log(
+                LogSeverity.INFO, f"Resolved log path: {path_pattern}"
+            )
 
         # -------------------------------------------------------------------------
         # 🧩 2. Resolve relative paths
@@ -209,7 +215,9 @@ class LogAnalyzer(BaseExecutor):
         if not os.path.isabs(path_pattern):
             path_pattern = os.path.abspath(path_pattern)
             self.logger.info(f"Resolved relative path to absolute: {path_pattern}")
-            self.scenario_step.add_log(LogSeverity.INFO, f"Resolved relative path to absolute: {path_pattern}")
+            self.scenario_step.add_log(
+                LogSeverity.INFO, f"Resolved relative path to absolute: {path_pattern}"
+            )
 
         # -------------------------------------------------------------------------
         # 🧩 3. Detect Regex(...) in path
@@ -226,8 +234,8 @@ class LogAnalyzer(BaseExecutor):
 
         # Extract regex inside parentheses
         regex_expr = regex_match.group(1)
-        pre_regex = path_pattern[:regex_match.start()]
-        post_regex = path_pattern[regex_match.end():]
+        pre_regex = path_pattern[: regex_match.start()]
+        post_regex = path_pattern[regex_match.end() :]
 
         # Find the directory to start searching
         search_dir = pre_regex
@@ -240,12 +248,20 @@ class LogAnalyzer(BaseExecutor):
             return ""
 
         self.logger.info(f"Searching under base directory: {search_dir}")
-        self.scenario_step.add_log(LogSeverity.INFO, f"Searching under base directory: {search_dir}")
+        self.scenario_step.add_log(
+            LogSeverity.INFO, f"Searching under base directory: {search_dir}"
+        )
 
         # -------------------------------------------------------------------------
         # 🧩 4. Build regex for relative path
         # -------------------------------------------------------------------------
-        regex_path = pre_regex[len(search_dir) + 1:] + regex_expr + (os.sep if self.is_known_file_extension(post_regex) else "") + os.sep + post_regex
+        regex_path = (
+            pre_regex[len(search_dir) + 1 :]
+            + regex_expr
+            + (os.sep if self.is_known_file_extension(post_regex) else "")
+            + os.sep
+            + post_regex
+        )
         regex_path = re.sub(r"//+", "/", regex_path)  # clean slashes
         matched_files = []
         for dirpath, _, filenames in os.walk(search_dir):
@@ -266,13 +282,14 @@ class LogAnalyzer(BaseExecutor):
 
         matched_files.sort(key=lambda f: os.path.getmtime(f), reverse=True)
         latest = os.path.abspath(matched_files[0])
-        ts = datetime.fromtimestamp(os.path.getmtime(latest)).strftime("%Y-%m-%d %H:%M:%S")
+        ts = datetime.fromtimestamp(os.path.getmtime(latest)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
         msg = f"✅ Latest matching file: {latest} (Modified: {ts})"
         self.logger.info(msg)
         self.scenario_step.add_log(LogSeverity.INFO, msg)
         return latest
-
 
     def is_regex_path(self, path: str) -> bool:
         """
@@ -297,7 +314,6 @@ class LogAnalyzer(BaseExecutor):
         """
         regex_chars = set("*+?[](){}|^$")
         return any(ch in path for ch in regex_chars)
-
 
     def is_known_file_extension(self, ext: str) -> bool:
         """

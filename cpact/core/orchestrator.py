@@ -146,11 +146,7 @@ class Orchestrator:
         self.logger.info(
             f"Running {len(steps)} steps in scenario: {scenario.get('test_name')}"
         )
-        scenario_output = {
-            "status":"",
-            "start_timestamp":"",
-            "end_timestamp":""
-        }
+        scenario_output = {"status": "", "start_timestamp": "", "end_timestamp": ""}
         start_time = time.time()
         if steps:
             self.logger.info(f"Running inline steps...")
@@ -167,7 +163,9 @@ class Orchestrator:
                     name=f"Step: ID:{step.get('step_id', 'Unnamed Step')}_{step.get('step_name', 'Unnamed Step')}"
                 )
                 scenario_step.__setattr__("step_details", step)
-                self.logger.info(f"================= Started Executing Step {step.get('step_name', 'Unnamed Step')}=================")
+                self.logger.info(
+                    f"================= Started Executing Step {step.get('step_name', 'Unnamed Step')}================="
+                )
                 with scenario_step.scope():
                     start_time = time.time()
                     self.context.set("start_time", start_time)
@@ -188,7 +186,9 @@ class Orchestrator:
                             verdict="failed",
                         )
                         # if not step.get("continue", False):
-                        self.logger.info(f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} =================")
+                        self.logger.info(
+                            f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} ================="
+                        )
                         run_status = False
                         break
                         # raise Exception(f"Step execution failed: {message}")
@@ -197,12 +197,14 @@ class Orchestrator:
                         message=message,
                         verdict="passed",
                     )
-                self.logger.info(f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} =================")
+                self.logger.info(
+                    f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} ================="
+                )
         if not run_status:
             run.end(status=TestStatus.ERROR, result=TestResult.FAIL)
         else:
             run.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
-        
+
         self.logger.info("Finalizing continued steps...")
         final_results = self.finalize_all_continued_steps(self.context)
         if not final_results:
@@ -223,10 +225,11 @@ class Orchestrator:
                 docker_executor.stop_container()
             self.logger.info("All Docker containers stopped.")
 
-
         end_time = time.time()
         duration = end_time - start_time
-        start_timestamp = datetime.fromtimestamp(start_time).strftime("%Y-%m-%d %H:%M:%S")
+        start_timestamp = datetime.fromtimestamp(start_time).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         end_timestamp = datetime.fromtimestamp(end_time).strftime("%Y-%m-%d %H:%M:%S")
 
         # Convert duration to HH:MM:SS
@@ -249,8 +252,7 @@ class Orchestrator:
                 "description": scenario.get("description", ""),
                 "map_file": scenario.get("map_file", ""),
                 "scenario_path": self.scenario_path,
-
-            }
+            },
         )
 
     def finalize_all_continued_steps(self, context: Context) -> dict:

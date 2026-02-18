@@ -30,6 +30,7 @@ Usage:
     Call `disconnect()` to close the session when done.
 ===============================================================================
 """
+
 import requests
 from typing import Dict, Any
 from requests.auth import HTTPBasicAuth

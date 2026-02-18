@@ -66,7 +66,13 @@ from PyQt5.QtCore import pyqtSignal
 from scenario_recipe_creator.step_widget import StepDialog
 from scenario_recipe_creator.docker_widget import DockerDialog
 from scenario_recipe_creator.schema_order_parser import SchemaOrderParser
-from scenario_recipe_creator.constants import show_error, make_button, APP_ICON, NumberedListWidget, TOOLBAR_QSS
+from scenario_recipe_creator.constants import (
+    show_error,
+    make_button,
+    APP_ICON,
+    NumberedListWidget,
+    TOOLBAR_QSS,
+)
 
 # ============================= CONSTANTS =============================
 
@@ -295,7 +301,6 @@ class RecipeCreator(QMainWindow):
         toggle_action.setCheckable(True)  # makes it behave like a checkbox
         self._toolbar.addAction(toggle_action)
         toggle_action.toggled.connect(self._toggle_autosave)
-
 
         load_autosave_action = QAction(QIcon(), "Load AutoSave", self)
         load_autosave_action.triggered.connect(self._choose_autosave_file)

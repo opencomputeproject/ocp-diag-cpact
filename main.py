@@ -1,4 +1,3 @@
-
 """
 Copyright (c) 2025 Open Compute Project
 Licensed under the MIT License.

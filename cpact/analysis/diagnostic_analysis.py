@@ -132,15 +132,17 @@ class DiagnosticAnalysis(BaseAnalysis):
                 step_id=self.step_id,
                 codes=diagnostic_result_codes,
                 message="Found codes: ",
-                parent_scenario=context.get("scenario_parent", context.get("test_name"))
+                parent_scenario=context.get(
+                    "scenario_parent", context.get("test_name")
+                ),
             )
             ResultCollector.get_instance().add_scenario_output(
                 scenario_name=context.get("scenario_parent", context.get("test_name")),
-                diag_codes=diagnostic_result_codes
+                diag_codes=diagnostic_result_codes,
             )
         self.logger.info("---------------- Diagnostic Keys ----------------")
         return diagnostics_map
-    
+
     def search_and_manage(
         self, regex_key: str, log_data: str, entry: dict, diagnostics_map: dict
     ) -> dict:
@@ -193,11 +195,9 @@ class DiagnosticAnalysis(BaseAnalysis):
                 if len(all_groups) == 1:
                     group_data = {all_groups[0]: all_groups[0]}
                     d[all_groups[0]] = all_groups[0]
-                    print("All Groups:", all_groups[0])
                 else:
                     for idx, group in enumerate(all_groups):
                         if group:
-                            print(f"Group {idx}:", group)
                             d[group] = group
                 if d:
                     group_data = d

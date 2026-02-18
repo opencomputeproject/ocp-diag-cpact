@@ -27,14 +27,19 @@ Usage:
 ===============================================================================
 """
 
+import os
 from jsonschema import Draft7Validator
+from tabulate import tabulate
+from typing import List, Dict
 
 from cpact.schema_checker.base_schema import BaseSchema
+from cpact.result_builder.result_builder import ResultCollector
 
 
 class ConfigSchemaValidator(BaseSchema):
     def __init__(self, schema: dict, schema_dir: str) -> None:
         super().__init__(schema, schema_dir)
+        self.report: List[BaseSchema.ReportRow] = []
 
     def validate_schema(self, data_file: str) -> None:
         """
@@ -48,13 +53,28 @@ class ConfigSchemaValidator(BaseSchema):
 
         if not errors:
             self.logger.info("✅ Config Schema is valid")
+            rc = ResultCollector().get_instance()
+            rc.add_schema_validation_result(
+                category="Config Schema",
+                colateral=os.path.basename(data_file),
+                status="SUCCESS",
+                message="Config Schema is valid",
+                path="",
+            )
             return True
 
         self.logger.info("❌ Validation error")
         for error in errors:
             path = " : ".join(str(p) for p in error.absolute_path)
-            self.logger.info(f" * {error.message}")
+            rc = ResultCollector().get_instance()
+            rc.add_schema_validation_result(
+                category="Config Schema",
+                file=os.path.basename(data_file),
+                severity="ERROR",
+                message=error.message,
+                path=path,
+            )
             if path:
-                self.logger.info(f"   Path: {path}")
+                self.logger.debug(f"   Path: {path}")
             self.logger.info("\n")
         return False

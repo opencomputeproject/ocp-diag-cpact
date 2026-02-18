@@ -28,6 +28,7 @@ Usage:
     Override `validate_schema()` to define validation behavior.
 ===============================================================================
 """
+
 import json
 import yaml
 from abc import ABC, abstractmethod

@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple, Any
 
 _PLACEHOLDER_RE = re.compile(r"\{([^{}]+)\}")
 
+
 class PathResolutionError(Exception):
     pass
 
@@ -62,7 +63,9 @@ def _resolve_env_var(token: str) -> Optional[str]:
     return os.environ.get(var)
 
 
-def _resolve_placeholder(token: str, paths: Dict[str, Any]) -> Tuple[Optional[str], str, bool]:
+def _resolve_placeholder(
+    token: str, paths: Dict[str, Any]
+) -> Tuple[Optional[str], str, bool]:
     # Environment placeholder
     if token.startswith("env:"):
         val = _resolve_env_var(token)
@@ -72,9 +75,9 @@ def _resolve_placeholder(token: str, paths: Dict[str, Any]) -> Tuple[Optional[st
     return (val if isinstance(val, str) else None), f"paths[{token}]", True
 
 
-def _replace_placeholders_in_string(s: str, paths: Dict[str, Any],
-                                    unresolved_acc: List[Dict[str, str]],
-                                    context: str) -> Tuple[str, int]:
+def _replace_placeholders_in_string(
+    s: str, paths: Dict[str, Any], unresolved_acc: List[Dict[str, str]], context: str
+) -> Tuple[str, int]:
 
     resolved_count = 0
 
@@ -85,11 +88,13 @@ def _replace_placeholders_in_string(s: str, paths: Dict[str, Any],
         val, reason, is_required = _resolve_placeholder(token, paths)
 
         if val is None:
-            unresolved_acc.append({
-                "placeholder": token,
-                "context": context,
-                "reason": reason,
-            })
+            unresolved_acc.append(
+                {
+                    "placeholder": token,
+                    "context": context,
+                    "reason": reason,
+                }
+            )
             return m.group(0)
 
         resolved_count += 1
@@ -108,10 +113,7 @@ def resolve_paths_in_yaml(
     if not isinstance(paths, dict):
         raise ValueError("'paths' must be a dictionary")
 
-    report = {
-        "resolved_count": 0,
-        "unresolved": []
-    }
+    report = {"resolved_count": 0, "unresolved": []}
 
     def walk(node: Any, ctx: str):
         if isinstance(node, dict):
@@ -125,7 +127,9 @@ def resolve_paths_in_yaml(
             return node
 
         if isinstance(node, str):
-            new_s, count = _replace_placeholders_in_string(node, paths, report["unresolved"], ctx)
+            new_s, count = _replace_placeholders_in_string(
+                node, paths, report["unresolved"], ctx
+            )
             report["resolved_count"] += count
             return new_s
 
@@ -144,7 +148,10 @@ def resolve_paths_in_yaml(
     report["unresolved"] = uniq
 
     if raise_on_unresolved and report["unresolved"]:
-        msgs = [f"{u['placeholder']} ({u['reason']}) at {u['context']}" for u in report["unresolved"]]
+        msgs = [
+            f"{u['placeholder']} ({u['reason']}) at {u['context']}"
+            for u in report["unresolved"]
+        ]
         raise PathResolutionError("Unresolved placeholders: " + "; ".join(msgs))
     return yaml_data, report
 

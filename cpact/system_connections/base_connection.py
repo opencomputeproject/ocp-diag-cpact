@@ -27,6 +27,7 @@ Usage:
     Use `TestLogger` for consistent logging across connection types.
 ===============================================================================
 """
+
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Union
 

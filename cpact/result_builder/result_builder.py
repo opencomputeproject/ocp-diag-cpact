@@ -31,6 +31,8 @@ Usage:
     Use `dump_results()` or `dump_diagnostics()` to export data.
 ===========================================================================
 """
+
+import csv
 import os
 import re
 from collections import defaultdict
@@ -45,16 +47,26 @@ import pandas as pd
 import textwrap
 from collections.abc import Mapping, Sequence
 from typing import Any, Dict, List, Optional, Union
-from typing import Any, Dict, FrozenSet, Iterable, Mapping, Optional, List, Sequence, Tuple, Type
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    Mapping,
+    Optional,
+    List,
+    Sequence,
+    Tuple,
+    Type,
+)
 from copy import deepcopy
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
 
 
-
 class ResultCollector:
-    _instance = None # Singleton instance
-    _lock = threading.Lock() # Lock for thread-safe singleton creation
+    _instance = None  # Singleton instance
+    _lock = threading.Lock()  # Lock for thread-safe singleton creation
 
     def __init__(self) -> None:
         """
@@ -84,12 +96,65 @@ class ResultCollector:
         Returns:
             None
         """
+        self.report: List = []
         self.step_results = []  # Each step's result (status, duration, msg, etc.)
         self.keys_to_set = {}  # Key-value pairs from output analysis
         self.diagnostics = []  # All diagnostic matches
         self.diagnostics_codes = []  # Diagnostic codes collected
         self.step_index = {}  # Mapping: step_name -> index in step_results list
         self.scenario_output = {}
+
+    def add_schema_validation_result(
+        self,
+        category: str,
+        colateral: str,
+        status: str,
+        message: str = "",
+        path: str = "",
+        **kwargs: dict,
+    ) -> None:
+        """
+        Adds a result entry for a schema validation step.
+        This is a specialized method that can be used to record results specific to schema validation steps.
+        Args:
+            scenario_id (str): The identifier for the scenario.
+            step_id (str): The identifier for the step.
+            step_name (str): The name of the step.
+            step_type (str): The type of the step (e.g., "schema_validation").
+            status (str): The status of the step (e.g., "pass", "fail", "skip").
+            duration (float): The duration taken to execute the step in seconds.
+            message (str): An optional message providing additional information about the step result.
+            **kwargs (dict): Additional key-value pairs to include in the result entry.
+        Returns:
+            None
+        """  # This method can have custom handling for schema validation results if needed.
+        # For now, it simply calls add_step_result to maintain consistency.
+        self.report.append(
+            {
+                "Category": category,
+                "Colateral": colateral,
+                "Status": status,
+                "Message": message,
+                "Path": path,
+                **kwargs,
+            }
+        )
+
+    def reset_schema_validation_results(self) -> None:
+        """
+        Resets the schema validation results collected so far.
+        Returns:
+            None
+        """
+        self.report = []
+
+    def get_schema_validation_results(self) -> List[Dict[str, Any]]:
+        """
+        Retrieves all schema validation results collected so far.
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries representing schema validation results.
+        """
+        return self.report
 
     def add_step_result(
         self,
@@ -131,9 +196,10 @@ class ResultCollector:
             result[k] = copy.deepcopy(v)
         self.step_index[step_id] = len(self.step_results)
         self.step_results.append(result)
-        self.add_scenario_output(scenario_name=scenario_name,
-                                 step_output=result)
-        self.logger.debug(f"==================== Step Result {step_name} ====================")
+        self.add_scenario_output(scenario_name=scenario_name, step_output=result)
+        self.logger.debug(
+            f"==================== Step Result {step_name} ===================="
+        )
         self.logger.debug(
             f"\n"
             f"{'Scenario ID:':<20}{scenario_id}\n"
@@ -165,8 +231,12 @@ class ResultCollector:
     #     self.context_keys[key] = value
 
     def add_diagnostic(
-        self, scenario_id: str, step_id: str, codes: list[str], message: str = "",
-        parent_scenario: str = ""
+        self,
+        scenario_id: str,
+        step_id: str,
+        codes: list[str],
+        message: str = "",
+        parent_scenario: str = "",
     ) -> None:
         """
         Adds a diagnostic entry with associated codes and message.
@@ -180,7 +250,8 @@ class ResultCollector:
         """
         existing = next(
             (
-                d for d in self.diagnostics
+                d
+                for d in self.diagnostics
                 if d["parent_scenario"] == parent_scenario
                 and d["scenario_id"] == scenario_id
                 and d["step_id"] == step_id
@@ -192,7 +263,9 @@ class ResultCollector:
             # Merge codes into existing entry
             for code_key, code_value in codes.items():
                 if code_key in existing["codes"]:
-                    if isinstance(existing["codes"][code_key], list) and isinstance(code_value, list):
+                    if isinstance(existing["codes"][code_key], list) and isinstance(
+                        code_value, list
+                    ):
                         existing["codes"][code_key].extend(code_value)
                     else:
                         existing["codes"][code_key] = {"Message": code_value}
@@ -211,7 +284,9 @@ class ResultCollector:
             )
         self.diagnostics_codes.extend(codes)
 
-    def _extend_or_set(self, target: Dict[str, Any], key: str, value: Any, dedupe: bool = False) -> None:
+    def _extend_or_set(
+        self, target: Dict[str, Any], key: str, value: Any, dedupe: bool = False
+    ) -> None:
         """
         Merge value into target[key].
         - If both existing and new values are lists -> extend (optionally dedupe).
@@ -222,7 +297,11 @@ class ResultCollector:
                 # extend while avoiding duplicates (preserves original order)
                 seen = set(target[key])
                 for item in value:
-                    tup = item if not isinstance(item, dict) else tuple(sorted(item.items()))
+                    tup = (
+                        item
+                        if not isinstance(item, dict)
+                        else tuple(sorted(item.items()))
+                    )
                     if tup not in seen:
                         target[key].append(item)
                         seen.add(tup)
@@ -230,7 +309,6 @@ class ResultCollector:
                 target[key].extend(value)
         else:
             target[key] = deepcopy(value)
-
 
     def add_scenario_output(
         self,
@@ -240,7 +318,7 @@ class ResultCollector:
         diag_codes: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         *,
-        dedupe_diag_entries: bool = False
+        dedupe_diag_entries: bool = False,
     ) -> None:
         """
         Add or merge outputs for a scenario.
@@ -264,10 +342,8 @@ class ResultCollector:
         if scenario_name not in self.scenario_output:
             self.scenario_output[scenario_name] = {
                 "headers": {},
-                "results": {
-                    "step_details": []
-                },
-                "diagnostic_result_codes": {}
+                "results": {"step_details": []},
+                "diagnostic_result_codes": {},
             }
 
         entry = self.scenario_output[scenario_name]
@@ -300,22 +376,23 @@ class ResultCollector:
                     entry["diagnostic_result_codes"],
                     code_key,
                     deepcopy(code_value),
-                    dedupe=dedupe_diag_entries
+                    dedupe=dedupe_diag_entries,
                 )
 
-
-    def dump_scenario_output(self, file_path:str) -> None:
+    def dump_scenario_output(self, file_path: str) -> None:
         import json
+
         with open(file_path, "w") as f:
             json.dump(self.scenario_output, f, indent=4)
         self.logger.info(f"Results saved to {file_path}")
 
-    def dump_custom_scenario_output(self, file_path:str, scenario_output: str) -> None:
+    def dump_custom_scenario_output(self, file_path: str, scenario_output: str) -> None:
         import json
+
         with open(file_path, "w") as f:
             json.dump(scenario_output, f, indent=4)
         # self.logger.info(f"Results for scenario '{scenario_output}' saved to {file_path}")
-    
+
     def add_diagnostic_keys(
         self, tc_id: str, step_id: str, key: str, value: object
     ) -> None:
@@ -446,6 +523,7 @@ class ResultCollector:
         """
         import json
         import re
+
         if not dump_data:
             data = self.filter_unique_diagnostics(self.diagnostics)
             with open(file_path, "w") as f:
@@ -455,7 +533,6 @@ class ResultCollector:
             with open(file_path, "w") as f:
                 json.dump(data, f, indent=4)
         self.logger.info(f"Diagnostics saved to {file_path}")
-
 
     def find_first_key(self, data: Any, target_key: str) -> Optional[Any]:
         """
@@ -476,14 +553,15 @@ class ResultCollector:
                 if found is not None:
                     return found
 
-        elif isinstance(data, Sequence) and not isinstance(data, (str, bytes, bytearray)):
+        elif isinstance(data, Sequence) and not isinstance(
+            data, (str, bytes, bytearray)
+        ):
             for item in data:
                 found = self.find_first_key(item, target_key)
                 if found is not None:
                     return found
 
         return None
-
 
     def build_drc_summary(self, report: Mapping[str, Any]) -> Dict[str, Dict[str, Any]]:
         """
@@ -684,7 +762,9 @@ class ResultCollector:
                     return None
         return None
 
-    def filter_historical_data(self, historical_data_files: Iterable[str], current_data: Dict[str, Any]) -> Dict[str, Any]:
+    def filter_historical_data(
+        self, historical_data_files: Iterable[str], current_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Update current_data in memory by scanning historical_data_files and incrementing DRC_count.
 
@@ -698,21 +778,29 @@ class ResultCollector:
         """
 
         # Build index: top_key -> diag_code -> signature -> count
-        hist_index: Dict[str, Dict[str, Dict[FrozenSet[Tuple[str, str]], int]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+        hist_index: Dict[str, Dict[str, Dict[FrozenSet[Tuple[str, str]], int]]] = (
+            defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+        )
         self.logger.info("Building historical data index...")
         for hist_path in historical_data_files:
             try:
                 with open(hist_path, "r", encoding="utf-8") as fh:
                     hist_obj = json.load(fh)
             except Exception:
-                self.logger.warning(f"Failed to read/parse historical data file: {hist_path}")
+                self.logger.warning(
+                    f"Failed to read/parse historical data file: {hist_path}"
+                )
                 # skip unreadable/malformed files (optional: log)
                 continue
             # We expect structure like your sample: top-level keys -> dicts that contain "diagnostic_result_codes"
             # Fallbacks: if the file itself is directly diagnostic_result_codes map, handle that too.
             self.logger.info(f"Processing historical data file: {hist_path}")
             candidates = []
-            if isinstance(hist_obj, dict) and "diagnostic_result_codes" in hist_obj and isinstance(hist_obj["diagnostic_result_codes"], dict):
+            if (
+                isinstance(hist_obj, dict)
+                and "diagnostic_result_codes" in hist_obj
+                and isinstance(hist_obj["diagnostic_result_codes"], dict)
+            ):
                 # e.g. { "<name>": { "diagnostic_result_codes": {...} }, ... } not likely here but handle cleanly
                 # If the file is a single block with diagnostic_result_codes at top, treat that as unnamed.
                 # We'll assign it under an empty key so it doesn't match named current_data keys (only named ones will match).
@@ -720,7 +808,11 @@ class ResultCollector:
             elif isinstance(hist_obj, dict):
                 # find nested blocks that have diagnostic_result_codes
                 for top_key, top_val in hist_obj.items():
-                    if isinstance(top_val, dict) and "diagnostic_result_codes" in top_val and isinstance(top_val["diagnostic_result_codes"], dict):
+                    if (
+                        isinstance(top_val, dict)
+                        and "diagnostic_result_codes" in top_val
+                        and isinstance(top_val["diagnostic_result_codes"], dict)
+                    ):
                         candidates.append((top_key, top_val["diagnostic_result_codes"]))
                 # fallback: maybe the file itself maps diag_code -> [..]
                 if not candidates:
@@ -739,23 +831,33 @@ class ResultCollector:
                         sig = self._make_signature(entry)
                         hist_index[top_key][diag_code][sig] += 1
         # with open("hist_index_debug.json", "w", encoding="utf-8") as debug_fh:
-            # json.dump({k: {dk: {str(sk): v for sk, v in dct.items()} for dk, dct in dm.items()} for k, dm in hist_index.items()}, debug_fh, indent=4)
+        # json.dump({k: {dk: {str(sk): v for sk, v in dct.items()} for dk, dct in dm.items()} for k, dm in hist_index.items()}, debug_fh, indent=4)
         # Now process current_data and apply increments using hist_index
         for top_key, current_block in current_data.items():
             # try to find diagnostic_result_codes inside current_block (similar to your original code)
             diag_map = {}
-            if isinstance(current_block, dict) and "diagnostic_result_codes" in current_block and isinstance(current_block["diagnostic_result_codes"], dict):
+            if (
+                isinstance(current_block, dict)
+                and "diagnostic_result_codes" in current_block
+                and isinstance(current_block["diagnostic_result_codes"], dict)
+            ):
                 diag_map = current_block["diagnostic_result_codes"]
-                hist_sub_index = hist_index.get(top_key, {})  # use same top_key to match historical blocks
+                hist_sub_index = hist_index.get(
+                    top_key, {}
+                )  # use same top_key to match historical blocks
             elif isinstance(current_block, dict):
                 # maybe current_block itself is diag_map (fallback)
                 maybe = {k: v for k, v in current_block.items() if isinstance(v, list)}
                 if maybe:
                     diag_map = maybe
-                    hist_sub_index = hist_index.get("", {})  # fallback to unnamed block index
+                    hist_sub_index = hist_index.get(
+                        "", {}
+                    )  # fallback to unnamed block index
                 else:
                     # nothing to do for this top_key
-                    self.logger.debug(f"No diagnostic_result_codes found for top-level key '{top_key}', skipping.")
+                    self.logger.debug(
+                        f"No diagnostic_result_codes found for top-level key '{top_key}', skipping."
+                    )
                     continue
             else:
                 self.logger.debug(f"Top-level key '{top_key}' is not a dict, skipping.")
@@ -786,7 +888,9 @@ class ResultCollector:
 
         return current_data
 
-    def get_action_for_drc(self, actions_obj: Any, drc_value: int) -> Tuple[Optional[int], Optional[Any]]:
+    def get_action_for_drc(
+        self, actions_obj: Any, drc_value: int
+    ) -> Tuple[Optional[int], Optional[Any]]:
         """
         Accepts either:
         - actions_obj as a list of dicts: [{"1":"..."}, {"5":"..."}]
@@ -825,16 +929,22 @@ class ResultCollector:
                         except Exception:
                             continue
             else:
-                self.logger.debug(f"Unknown actions_obj type: {type(actions_obj)}, returning (None, None)")
+                self.logger.debug(
+                    f"Unknown actions_obj type: {type(actions_obj)}, returning (None, None)"
+                )
                 # unknown type
                 return None, None
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
-            self.logger.debug("Exception occurred while processing actions_obj, returning (None, None)")
+            self.logger.debug(
+                "Exception occurred while processing actions_obj, returning (None, None)"
+            )
             return None, None
 
         if not action_map:
-            self.logger.debug("No valid actions found in actions_obj, returning (None, None)")
+            self.logger.debug(
+                "No valid actions found in actions_obj, returning (None, None)"
+            )
             return None, None
 
         available_keys = sorted(action_map.keys())
@@ -852,7 +962,9 @@ class ResultCollector:
 
         # 3. fallback: smallest key
         smallest = available_keys[0]
-        self.logger.debug(f"Fallback to smallest action key {smallest} for DRC value {drc_value}")
+        self.logger.debug(
+            f"Fallback to smallest action key {smallest} for DRC value {drc_value}"
+        )
         return smallest, deepcopy(action_map[smallest])
 
     def filter_map_file(self, current_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -864,7 +976,9 @@ class ResultCollector:
         # cache map file JSON by resolved path
         map_cache: Dict[str, Optional[Dict[str, Any]]] = {}
 
-        def _load_map_file(scenario_path: str, map_file_path: str) -> Optional[Dict[str, Any]]:
+        def _load_map_file(
+            scenario_path: str, map_file_path: str
+        ) -> Optional[Dict[str, Any]]:
             if not map_file_path:
                 return None
             try:
@@ -882,7 +996,9 @@ class ResultCollector:
             try:
                 with open(resolved_map_file, "r", encoding="utf-8") as fh:
                     data = json.load(fh)
-                    map_cache[resolved_map_file] = data if isinstance(data, dict) else {}
+                    map_cache[resolved_map_file] = (
+                        data if isinstance(data, dict) else {}
+                    )
             except Exception:
                 map_cache[resolved_map_file] = None
             return map_cache[resolved_map_file]
@@ -902,34 +1018,41 @@ class ResultCollector:
                     return int(float(raw))
                 except Exception:
                     return 1
-        def get_map_entry_for_code(map_data: Dict[str, Any], code_key: str) -> Optional[Union[Dict[str, Any], List[Any]]]:
+
+        def get_map_entry_for_code(
+            map_data: Dict[str, Any], code_key: str
+        ) -> Optional[Union[Dict[str, Any], List[Any]]]:
             """
             Search map_data for a matching entry:
             1. First, try exact match for code_key.
             2. If not found, try regex matching against map keys.
             3. Return the matched entry or None.
             """
-            
+
             # 1. Try exact match first
             if code_key in map_data:
                 return map_data[code_key]
-            
+
             # 2. Try regex matching
             for map_key, map_value in map_data.items():
                 try:
                     # Treat map_key as a regex pattern
                     if re.match(map_key, code_key):
-                        self.logger.debug(f"Regex match found: '{map_key}' matched code_key '{code_key}'")
+                        self.logger.debug(
+                            f"Regex match found: '{map_key}' matched code_key '{code_key}'"
+                        )
                         return map_value
                 except re.error:
                     # If map_key is not a valid regex, skip it
                     self.logger.debug(f"Invalid regex pattern in map: '{map_key}'")
                     continue
-            
+
             # 3. No match found
-            self.logger.debug(f"No exact or regex match found for code_key '{code_key}' in map_data")
+            self.logger.debug(
+                f"No exact or regex match found for code_key '{code_key}' in map_data"
+            )
             return None
-        
+
         def _remove_code_key_from_entry(entry: Dict[str, Any], code_key: str) -> None:
             """
             Remove code_key if it appears as:
@@ -947,6 +1070,7 @@ class ResultCollector:
 
             for k in keys_to_remove:
                 entry.pop(k, None)
+
         # iterate top-level blocks
         for top_key, current_block in list(current_data.items()):
             if not isinstance(current_block, dict):
@@ -960,13 +1084,19 @@ class ResultCollector:
             map_data = _load_map_file(scenario_path, map_file_path)
             if not map_data:
                 # no valid map file for this block
-                self.logger.warning(f"Skipping map merge for '{top_key}': no valid map file at '{map_file_path}'")
+                self.logger.warning(
+                    f"Skipping map merge for '{top_key}': no valid map file at '{map_file_path}'"
+                )
                 continue
-            self.logger.info(f"Merging map data from '{map_file_path}' into diagnostics for '{top_key}'")
+            self.logger.info(
+                f"Merging map data from '{map_file_path}' into diagnostics for '{top_key}'"
+            )
             # iterate diag codes
             for code_key, code_entries in diag_codes.items():
                 if not isinstance(code_entries, list):
-                    self.logger.warning(f"Skipping code '{code_key}' in '{top_key}': entries not a list")
+                    self.logger.warning(
+                        f"Skipping code '{code_key}' in '{top_key}': entries not a list"
+                    )
                     continue
                 map_entry_for_code = get_map_entry_for_code(map_data, code_key)
                 # map_entry_for_code = map_data.get(code_key)
@@ -976,13 +1106,17 @@ class ResultCollector:
                         ent.setdefault("component", "Map data is unavailable")
                         ent.setdefault("confidence", "Map data is unavailable")
                         ent.setdefault("actions", "Map data is unavailable")
-                    self.logger.debug(f"No map entry for code '{code_key}' in '{top_key}'")
+                    self.logger.debug(
+                        f"No map entry for code '{code_key}' in '{top_key}'"
+                    )
                     continue
                 # normalize map entries into a list of dicts (so below logic is uniform)
                 if isinstance(map_entry_for_code, dict):
                     map_entries_list = [map_entry_for_code]
                 elif isinstance(map_entry_for_code, list):
-                    map_entries_list = [m for m in map_entry_for_code if isinstance(m, dict)]
+                    map_entries_list = [
+                        m for m in map_entry_for_code if isinstance(m, dict)
+                    ]
                     if not map_entries_list:
                         continue
                 else:
@@ -1007,7 +1141,9 @@ class ResultCollector:
                             matched_map_base = map_base
                             matched_action_key = key
                             matched_action_value = val
-                            self.logger.debug(f"Matched map entry for code '{code_key}' with DRC_count={drc_count} using action key={key}")
+                            self.logger.debug(
+                                f"Matched map entry for code '{code_key}' with DRC_count={drc_count} using action key={key}"
+                            )
                             break
                         # if map_base has no actions but has other fields, we may still use the map_base later
                         # (so don't continue searching forever). We'll prefer map_base with actions when present.
@@ -1040,5 +1176,43 @@ class ResultCollector:
 
                     entry.update(merged_fields)
                     _remove_code_key_from_entry(entry, code_key)
-                    self.logger.debug(f"Updated entry for code '{code_key}' in '{top_key}' with merged fields")
+                    self.logger.debug(
+                        f"Updated entry for code '{code_key}' in '{top_key}' with merged fields"
+                    )
         return current_data
+
+    def generate_schema_report(
+        self, report: List[dict], output_file: str, output_type: str = "json"
+    ) -> None:
+        """
+        Generate and export a schema report to specified file format(s).
+        This method writes a list of dictionaries to either JSON, CSV, or both formats.
+        The output file(s) will be created with the appropriate extension based on the
+        output_type parameter.
+        Args:
+            report (List[dict]): A list of dictionaries containing the report data to be exported.
+            output_file (str): The base path and filename for the output file(s), without extension.
+            output_type (str, optional): The desired output format. Defaults to "json".
+                - "json": Exports to JSON format only
+                - "csv": Exports to CSV format only
+                - "both": Exports to both JSON and CSV formats
+        Returns:
+            None
+        Raises:
+            IOError: If the file cannot be written to the specified output path.
+            KeyError: If CSV export is requested and report list is empty or contains inconsistent keys.
+        Example:
+            >>> report = [{"name": "test", "status": "pass"}, {"name": "test2", "status": "fail"}]
+            >>> self.generate_schema_report(report, "/path/to/output", "both")
+            # Creates: /path/to/output.json and /path/to/output.csv
+        """
+
+        if output_type in ("json", "both"):
+            with open(f"{output_file}.json", "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2)
+
+        if output_type in ("csv", "both"):
+            with open(f"{output_file}.csv", "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=report[0].keys())
+                writer.writeheader()
+                writer.writerows(report)

@@ -28,6 +28,7 @@ Usage:
     Automatically logs structured output and verdicts via OCP TV.
 ===========================================================================
 """
+
 from concurrent.futures import ThreadPoolExecutor
 from cpact.core.context import Context
 from cpact.core.step_executor import StepExecutor

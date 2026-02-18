@@ -36,6 +36,7 @@ Usage:
     Use `reset_instance()` or `close_all_connections()` to clean up resources.
 ===============================================================================
 """
+
 import threading
 from typing import Dict, Any
 
