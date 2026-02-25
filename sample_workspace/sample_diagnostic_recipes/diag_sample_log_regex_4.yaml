@@ -1,0 +1,30 @@
+test_scenario:
+  test_id: DG_4S
+  test_name: DiagSampleLogRegex4
+  test_description: Search for a string or regex string and assign a DRC. But DRC not in map file.
+  test_group: Diag
+  schema_version: '0.8'
+  map_file: '{workspace_path}/map_file.json'
+  tags: [Diag, Sample]
+  paths:
+    workspace_path: ./sample_workspace
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForRegexAssignDRCWithFields
+    step_description: Search for a regex string in log and assign a DRC with associated fields.
+    connection_type: Local
+    connection: local
+    step_type: log_analysis
+    log_analysis_path: '{workspace_path}/test_run.log'
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (Flash execution failed)
+      diagnostic_result_code: FAIL-0000000001145
+      parameter_to_set: error_code
+    - diagnostic_search_string: FAIL-00000000001X
+      parameter_to_set: error_code
+
+# Note:- DRC not found in map file.
+#        e.g. if the DRC 'FAIL-0000000001145' is
+#        not found in the map file, it will be reported as 'DRC Not Found in Map File'.
+#        Refer log path 'sample_workspace/sample_logs/test_run_20260127_224918' for more details.

@@ -59,19 +59,30 @@ from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.system_connections.connection_discovery import ConnectionDiscovery
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
 
+# import sys
 
-import sys
+# # detect terminal vs file
+# ENABLE_COLOR = sys.stdout.isatty()
 
-# detect terminal vs file
-ENABLE_COLOR = sys.stdout.isatty()
+# try:
+#     from colorama import Fore, Style, init
 
-try:
-    from colorama import Fore, Style, init
+#     init(autoreset=True)
+# except:
+#     ENABLE_COLOR = False
 
-    init(autoreset=True)
-except:
-    ENABLE_COLOR = False
+# def color_severity(sev: str) -> str:
+#     if not ENABLE_COLOR:
+#         return sev
 
+#     sev_upper = str(sev).upper()
+#     if sev_upper == "ERROR":
+#         return Fore.RED + sev + Style.RESET_ALL
+#     elif sev_upper == "WARNING":
+#         return Fore.YELLOW + sev + Style.RESET_ALL
+#     elif sev_upper == "INFO" or sev_upper == "PASSED" or sev_upper == "SUCCESS":
+#         return Fore.CYAN + sev + Style.RESET_ALL
+#     return sev
 
 # --------------------------------------------------------------------------------------
 # Discovery
@@ -677,26 +688,6 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
     Raises:
         None (gracefully handles missing colorama dependency)
     """
-    try:
-        from colorama import Fore, Style, init
-
-        init(autoreset=True)
-        COLOR = True
-    except:
-        COLOR = False
-
-    def color_severity(sev: str) -> str:
-        if not COLOR:
-            return sev
-
-        sev_upper = str(sev).upper()
-        if sev_upper == "ERROR":
-            return Fore.RED + sev + Style.RESET_ALL
-        elif sev_upper == "WARNING":
-            return Fore.YELLOW + sev + Style.RESET_ALL
-        elif sev_upper == "INFO" or sev_upper == "PASSED" or sev_upper == "SUCCESS":
-            return Fore.CYAN + sev + Style.RESET_ALL
-        return sev
 
     def wrap_text(text, width=30):
         if text is None:
@@ -717,7 +708,7 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
             for k in r:
                 r[k] = wrap_text(r[k], 30)
             if "Status" in r:
-                r["Status"] = color_severity(r["Status"])
+                r["Status"] = ResultCollector.get_instance().color_severity(r["Status"])
             if not first:
                 if "Category" in r:
                     r["Category"] = ""
@@ -728,6 +719,7 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
         group_breaks.append(len(all_rows))
     table_lines = tabulate(all_rows, headers="keys", tablefmt="grid")
 
+
     logger.info(
         f"""
 ================================================================
@@ -737,11 +729,12 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
 ================================================================
                 """
     )
+    
     log_path = os.path.join(TestLogger().get_log_dir(), "schema_validation_report.txt")
     with open(log_path, "w", encoding="utf-8") as f:
         f.write("VALIDATION REPORT\n")
         f.write("=" * 80 + "\n")
-        f.write(table_lines)
+        f.write(ResultCollector().clean_ansi(table_lines))
         f.write("\n" + "=" * 80 + "\n")
 
 

@@ -1,0 +1,41 @@
+{
+    "DiagSampleLogRegex1": {
+        "headers": {
+            "test_id": "DG_1S",
+            "test_name": "DiagSampleLogRegex1",
+            "test_group": "Diag",
+            "tags": [
+                "Diag",
+                "Sample"
+            ],
+            "description": "",
+            "map_file": "./sample_workspace/map_file.json",
+            "scenario_path": ".\\sample_workspace\\sample_diagnostic_recipes\\diag_sample_log_regex_1.yaml"
+        },
+        "results": {
+            "step_details": [
+                {
+                    "scenario_id": "DG_1S",
+                    "step_id": "step_001",
+                    "step_name": "SearchForExactStringAssignDRC",
+                    "step_type": "log_analysis",
+                    "status": "Success",
+                    "duration": 3.049,
+                    "message": "Log analyzed successfully."
+                }
+            ],
+            "status": "PASS",
+            "start_timestamp": "2026-02-25 09:06:04",
+            "end_timestamp": "2026-02-25 09:06:07",
+            "duration": "00:00:03"
+        },
+        "diagnostic_result_codes": {
+            "FAIL-0000000001101": [
+                {
+                    "Flash execution failed": "Flash execution failed",
+                    "DRC_count": "1"
+                }
+            ]
+        }
+    }
+}

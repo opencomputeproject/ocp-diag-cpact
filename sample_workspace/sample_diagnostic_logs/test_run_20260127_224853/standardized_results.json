@@ -1,0 +1,134 @@
+{
+    "DiagSampleLogRegex3": {
+        "headers": {
+            "test_id": "DG_3S",
+            "test_name": "DiagSampleLogRegex3",
+            "test_group": "Diag",
+            "tags": [
+                "Diag",
+                "Sample"
+            ],
+            "description": "",
+            "map_file": "./sample_workspace/map_file.json",
+            "scenario_path": ".\\sample_workspace\\sample_diagnostic_recipes\\diag_sample_log_regex_3.yaml"
+        },
+        "results": {
+            "step_details": [
+                {
+                    "scenario_id": "DG_3S",
+                    "step_id": "step_001",
+                    "step_name": "SearchForRegexAssignDRC",
+                    "step_type": "log_analysis",
+                    "status": "Success",
+                    "duration": 3.053,
+                    "message": "Log analyzed successfully."
+                }
+            ],
+            "status": "PASS",
+            "start_timestamp": "2026-02-25 09:07:37",
+            "end_timestamp": "2026-02-25 09:07:40",
+            "duration": "00:00:03"
+        },
+        "diagnostic_result_codes": {
+            "FAIL-000000000086": [
+                {
+                    "message": "Flash execution failed",
+                    "component": "Flash",
+                    "confidence": 99,
+                    "actions": "Do Nothing - Pl ease check command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600000": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600035": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600014": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600033": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600043": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600012": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600034": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600001": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000600023": [
+                {
+                    "message": "Generic Flash Failure",
+                    "component": "Flash",
+                    "confidence": 80,
+                    "actions": "Please check the command",
+                    "DRC_count": "1"
+                }
+            ],
+            "FAIL-000000000110": [
+                {
+                    "message": "GPU Version Not Found.",
+                    "component": "Flash",
+                    "confidence": 99,
+                    "actions": "Please reinstall Firmware",
+                    "DRC_count": "1"
+                }
+            ]
+        }
+    }
+}

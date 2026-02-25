@@ -1,0 +1,26 @@
+test_scenario:
+  test_id: DG_1S
+  test_name: DiagSampleLogRegex1
+  test_description: Sample Diagnostic recipe for searching a string or regex string in log and assign a DRC.
+  test_group: Diag
+  schema_version: '0.8'
+  map_file: '{workspace_path}/map_file.json'
+  tags: [Diag, Sample]
+  paths:
+    workspace_path: ./sample_workspace
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForExactStringAssignDRC
+    step_description: Search for exact string in log and assign a DRC.
+    connection_type: Local
+    connection: local
+    step_type: log_analysis
+    log_analysis_path: '{workspace_path}/test_run.log'
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (Flash execution failed)
+      diagnostic_result_code: FAIL-0000000001101
+
+# Note:- Multiple instance of the same search string will still yield only one DRC.
+#        e.g. if the search string is found 3 times in the log, only one DRC will be assigned.
+#        Refer log path 'sample_workspace/sample_logs/test_run_20260127_224714' for more details.

@@ -64,6 +64,18 @@ from cpact.utils.logger_utils import TestLogger
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
 
 
+import sys
+# detect terminal vs file
+ENABLE_COLOR = sys.stdout.isatty()
+try:
+    from colorama import Fore, Style, init
+
+    init(autoreset=True)
+except:
+    ENABLE_COLOR = False
+
+
+
 class ResultCollector:
     _instance = None  # Singleton instance
     _lock = threading.Lock()  # Lock for thread-safe singleton creation
@@ -475,7 +487,7 @@ class ResultCollector:
                 [
                     r.get("step_name", ""),
                     r.get("step_type", ""),
-                    r.get("status", ""),
+                    self.color_severity(r.get("status", "")),
                     f"{r.get('duration', 0):.2f}",
                     (
                         self.shorten_string(r.get("message", ""), max_length=50)
@@ -1209,10 +1221,29 @@ class ResultCollector:
 
         if output_type in ("json", "both"):
             with open(f"{output_file}.json", "w", encoding="utf-8") as f:
-                json.dump(report, f, indent=2)
+                json.dump([self.clean_ansi(entry) for entry in report], f, indent=2)
 
         if output_type in ("csv", "both"):
             with open(f"{output_file}.csv", "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=report[0].keys())
                 writer.writeheader()
-                writer.writerows(report)
+                writer.writerows([self.clean_ansi(entry) for entry in report])
+    
+    def clean_ansi(self, text):
+        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+        if isinstance(text, list):
+            return [ansi_escape.sub('', str(t)) for t in text]
+        return ansi_escape.sub('', str(text))
+    
+    def color_severity(self, sev: str) -> str:
+        if not ENABLE_COLOR:
+            return sev
+
+        sev_upper = str(sev).upper()
+        if sev_upper in ("FAIL", "FAILED", "FAILURE", "ERROR"):
+            return Fore.RED + sev + Style.RESET_ALL
+        elif sev_upper == "WARNING":
+            return Fore.YELLOW + sev + Style.RESET_ALL
+        elif sev_upper in ("INFO", "PASSED", "SUCCESS"):
+            return Fore.CYAN + sev + Style.RESET_ALL
+        return sev

@@ -1,0 +1,44 @@
+test_scenario:
+  test_id: DG_8S
+  test_name: DiagSampleLogRegex8
+  test_description: Sample Diagnostic recipe for searching a log file and path with regex pattern.
+  test_group: Diag
+  schema_version: '0.8'
+  map_file: '{workspace_path}/map_file.json'
+  tags: [Diag, Sample]
+  paths:
+    workspace_path: ./sample_workspace
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForExactStringAssignDRC
+    step_description: Search for log file with regex pattern.
+    connection_type: Local
+    connection: local
+    step_type: log_analysis
+    log_analysis_path: '{workspace_path}/test_run_Regex([\d+\w+\s+]*).log'
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (Flash execution failed)
+      diagnostic_result_code: FAIL-0000000001101
+      parameter_to_set: error_code
+    - diagnostic_search_string: ((?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))
+      parameter_to_set: partnerdiag_fault_analysis
+
+  - step_id: step_002
+    step_name: SearchForExactStringAssignDRC1
+    step_description: Search for log path with regex pattern.
+    connection_type: Local
+    connection: local
+    step_type: log_analysis
+    log_analysis_path: '{workspace_path}/sample_diagnostic_logs/test_run_Regex([\d+\w+\s+]*)/test_run.log'
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (Flash execution failed)
+      diagnostic_result_code: FAIL-0000000001101
+      parameter_to_set: error_code
+    - diagnostic_search_string: ((?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))
+      parameter_to_set: partnerdiag_fault_analysis
+
+# Note:- Multiple instance of the same search string will still yield only one DRC.
+#        e.g. if the search string is found 3 times in the log, only one DRC will be assigned.
+#        Refer log path 'sample_workspace/sample_logs/test_run_20260127_225126' for more details.

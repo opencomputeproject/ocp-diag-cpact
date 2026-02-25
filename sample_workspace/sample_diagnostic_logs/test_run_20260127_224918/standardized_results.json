@@ -1,0 +1,61 @@
+{
+    "DiagSampleLogRegex4": {
+        "headers": {
+            "test_id": "DG_4S",
+            "test_name": "DiagSampleLogRegex4",
+            "test_group": "Diag",
+            "tags": [
+                "Diag",
+                "Sample"
+            ],
+            "description": "",
+            "map_file": "./sample_workspace/map_file.json",
+            "scenario_path": ".\\sample_workspace\\sample_diagnostic_recipes\\diag_sample_log_regex_4.yaml"
+        },
+        "results": {
+            "step_details": [
+                {
+                    "scenario_id": "DG_4S",
+                    "step_id": "step_001",
+                    "step_name": "SearchForRegexAssignDRCWithFields",
+                    "step_type": "log_analysis",
+                    "status": "Success",
+                    "duration": 3.053,
+                    "message": "Log analyzed successfully."
+                }
+            ],
+            "status": "PASS",
+            "start_timestamp": "2026-02-25 09:08:23",
+            "end_timestamp": "2026-02-25 09:08:27",
+            "duration": "00:00:03"
+        },
+        "diagnostic_result_codes": {
+            "FAIL-0000000001145": [
+                {
+                    "Flash execution failed": "Flash execution failed",
+                    "DRC_count": "1",
+                    "message": "Map data is unavailable",
+                    "component": "Map data is unavailable",
+                    "confidence": "Map data is unavailable",
+                    "actions": "Map data is unavailable"
+                },
+                {
+                    "Flash execution failed": "Flash execution failed",
+                    "DRC_count": "1",
+                    "message": "Map data is unavailable",
+                    "component": "Map data is unavailable",
+                    "confidence": "Map data is unavailable",
+                    "actions": "Map data is unavailable"
+                },
+                {
+                    "Flash execution failed": "Flash execution failed",
+                    "DRC_count": "1",
+                    "message": "Map data is unavailable",
+                    "component": "Map data is unavailable",
+                    "confidence": "Map data is unavailable",
+                    "actions": "Map data is unavailable"
+                }
+            ]
+        }
+    }
+}

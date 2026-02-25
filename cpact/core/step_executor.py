@@ -103,7 +103,7 @@ class StepExecutor:
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
                 step_type=self.step_details["step_type"],
-                status="skip",
+                status="Skip",
                 duration=0,
                 message="Entry criteria not met",
                 details={"entry_criteria": entry_criteria, "keys": diagnostic_keys},
@@ -186,14 +186,14 @@ class StepExecutor:
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
                 step_type=self.step_details["step_type"],
-                status="success" if status else "fail",
+                status="Success" if status else "Failed",
                 duration=time.time() - self.context.get("start_time"),
                 message=message,
             )
             self.scenario_step.add_diagnosis(
                 diagnosis_type=DiagnosisType.FAIL if not status else DiagnosisType.PASS,
                 message=message,
-                verdict="passed" if status else "failed",
+                verdict="Passed" if status else "Failed",
             )
         self.context.update_diagnostic_context(
             tc_id=self.scenario_id,
