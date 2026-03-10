@@ -5,10 +5,14 @@
 
   "additionalProperties": {
     "type": "object",
-    "required": ["message", "component", "actions", "confidence"],
+    "required": ["message", "component", "actions", "confidence", "severity"],
     "properties": {
       "message": { "type": "string" },
       "component": { "type": "string" },
+      "severity": {
+        "type": "string",
+        "enum": ["NonFatal", "Critical", "Fatal"]
+      },
       "search_strings": {
         "type": "array",
         "items": { "type": "string" }
