@@ -8,7 +8,8 @@
                 {"1":"Do Nothing - Please check command"},
                 {"5":"RMA nearest FRU"}
             ],
-        "confidence":99
+        "confidence":99,
+        "severity":"Fatal"
     },
     "FAIL-000000000086":{
         "message":"Flash execution failed",
@@ -18,7 +19,8 @@
                 {"1":"Do Nothing - Pl ease check command"},
                 {"5":"RMA nearest FRU"}
             ],
-        "confidence":99
+        "confidence":99,
+        "severity":"Critical"
     },
     "FAIL-000000000110":{
         "message":"GPU Version Not Found.",
@@ -28,7 +30,8 @@
                 {"1":"Please reinstall Firmware"},
                 {"5":"RMA nearest FRU"}
             ],
-        "confidence":99
+        "confidence":99,
+        "severity":"Critical"
     },
     "FAIL-000000000123":{
         "message":"GPU Version Not Found.123",
@@ -38,7 +41,8 @@
                 {"1":"Please reinstall Firmware123"},
                 {"2":"RMA nearest FRU"}
             ],
-        "confidence":99
+        "confidence":99,
+        "severity":"Fatal"
     },
     "^FAIL-\\d{0,}6\\d{0,}$": {
         "message": "Generic Flash Failure",
@@ -47,6 +51,7 @@
             {"1": "Please check the command"},
             {"5": "RMA nearest FRU"}
         ],
-        "confidence": 80
+        "confidence": 80,
+        "severity": "NonFatal"
     }
 } 
