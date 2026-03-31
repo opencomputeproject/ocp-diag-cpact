@@ -37,6 +37,7 @@ Usage:
 ===============================================================================
 """
 
+import sys
 import argparse
 from email.mime import text
 import json
@@ -738,6 +739,15 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
         f.write("\n" + "=" * 80 + "\n")
 
 
+def get_final_results() -> bool:
+    rc = ResultCollector().get_instance()
+    step_results = rc.get_step_results()
+
+    return not any(
+        step.get("status") in {"FAIL", "fail", "error", "ERROR"}
+        for step in step_results
+    )
+
 # --------------------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------------------
@@ -822,6 +832,12 @@ def main() -> None:
         nargs="+",
         help="List of previously ran output files for calculating result.",
     )
+    parser.add_argument(
+        "--run_all_scenarios",
+        "-ras",
+        action="store_true",
+        help="Run all scenarios without filtering",
+    )
     parser.set_defaults(run_with_schema_check=True)
     args = parser.parse_args()
 
@@ -847,16 +863,26 @@ def main() -> None:
     logger.info(f"Starting test discovery in: {test_dir}")
 
     # Initial discovery (no filters) for listing-only flows
-    all_tests_list = discover_tests(test_dir, None, logger=logger)
-    logger.info(f"Found {len(all_tests_list)} matching test cases.")
-    if all_tests_list:
-        if args.list_scenarios or args.list:
-            list_tests(all_tests_list, logger=logger)
+    if (args.test_group or args.test_id or args.test_name or args.tags) and (args.list_scenarios or args.list):
+        logger.info(
+            "Note: --list will show all discovered tests without applying filters."
+        )
+        all_tests_list = discover_tests(test_dir, args, logger=logger)
+        if not all_tests_list:
+            logger.warning("⚠️ No matching test cases found.")
             return
-
-    if not all_tests_list:
-        logger.warning("⚠️ No matching test cases found.")
+        list_tests(all_tests_list, logger=logger)
+        logger.info(f"Found {len(all_tests_list)} matching test cases.")
         return
+    elif args.list_scenarios or args.list:
+        all_tests_list = discover_tests(test_dir, None, logger=logger)
+        if not all_tests_list:
+            logger.warning("⚠️ No matching test cases found.")
+            return
+        logger.info(f"Found {len(all_tests_list)} matching test cases.")
+        list_tests(all_tests_list, logger=logger)
+        return
+
 
     # Schema check mode (explicit)
     if args.schema_check:
@@ -870,7 +896,7 @@ def main() -> None:
     conn_config: Dict[str, Any] = {}
     if args.conn_config:
         if not os.path.exists(args.conn_config):
-            logger.error(f"❌ Connection config file not found: {args.conn_config}")
+            logger.error(f"❌ Test result: FAIL, Connection config file not found: {args.conn_config}")
             return
         with open(args.conn_config, "r", encoding="utf-8") as cf:
             conn_config = json.load(cf)
@@ -892,9 +918,11 @@ def main() -> None:
 
     # Prepare connection factory for execution phase
     factory = ConnectionFactory.get_instance(conn_config)
-
-    # Re-discover using filters for actual execution set
-    matched_files = discover_tests(test_dir, args, logger=logger)
+    if args.run_all_scenarios:
+        logger.info("Running all scenarios without filtering.")
+        matched_files = discover_tests(test_dir, None, logger=logger)
+    else:
+        matched_files = discover_tests(test_dir, args, logger=logger)
 
     if args.run_with_schema_check:
         for matched_file in matched_files:
@@ -907,7 +935,8 @@ def main() -> None:
             if not ok:
                 logger.error(f"❌ Recipe Schema Check Failed!!! for {matched_file}")
                 factory.close_all_connections()
-                return
+                logger.error("❌ Final Test Result: FAIL")
+                sys.exit(1)
 
     print("Matched Files are: ", matched_files)
     for file_path in matched_files:
@@ -921,7 +950,13 @@ def main() -> None:
 
     factory.close_all_connections()
     logger.info("All tests executed successfully.")
-
+    result = get_final_results()
+    logger.info(f"Final Test Result: {'PASS' if result else 'FAIL'}")
+    import logging
+    if not result:
+        logging.shutdown()
+        sys.exit(1)
+    logging.shutdown()
 
 if __name__ == "__main__":
     main()

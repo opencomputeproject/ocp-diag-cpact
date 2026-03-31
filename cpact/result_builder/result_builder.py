@@ -446,7 +446,14 @@ class ResultCollector:
             "keys": self.keys_to_set,
             "steps": self.step_results,
         }
-
+    def get_step_results(self) -> List[Dict[str, Any]]:
+        """
+        Retrieves the list of step results collected so far.
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries representing step results.
+        """
+        return self.step_results
+    
     def print_summary(self) -> None:
         """
         Prints a summary of the collected results including step results and diagnostics.
