@@ -62,8 +62,8 @@ class DiagnosticAnalysis(BaseAnalysis):
         Returns:
             list: A list of diagnostic findings or results.
         """
-        diagnostics_map = defaultdict(list)
         for rule in self.rules:
+            diagnostics_map = defaultdict(list)
             self.logger.info("---------------- Applying Rule ----------------")
             search_string = rule.get("search_string")
             diagnostic_result_code = rule.get("diagnostic_result_code")
@@ -85,6 +85,7 @@ class DiagnosticAnalysis(BaseAnalysis):
                 continue
             pattern = search_string or diagnostic_search_string
             parameter_to_set = rule.get("parameter_to_set")
+            diagnostic_result_codes = []
             diagnostic_result_codes = self.search_and_manage(
                 regex_key=pattern,
                 log_data=output,
