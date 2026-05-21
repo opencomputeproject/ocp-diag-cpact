@@ -43,8 +43,6 @@ from time import time
 from zipfile import Path
 from tabulate import tabulate
 import pprint
-import pandas as pd
-import textwrap
 from collections.abc import Mapping, Sequence
 from typing import Any, Dict, List, Optional, Union
 from typing import (
@@ -1039,37 +1037,58 @@ class ResultCollector:
                     return 1
 
         def get_map_entry_for_code(
-            map_data: Dict[str, Any], code_key: str
-        ) -> Optional[Union[Dict[str, Any], List[Any]]]:
+            map_data: Dict[str, Any],
+            code_key: str
+        ) -> Optional[Union[Dict[str, Any], list]]:
             """
-            Search map_data for a matching entry:
-            1. First, try exact match for code_key.
-            2. If not found, try regex matching against map keys.
-            3. Return the matched entry or None.
+            Search map_data for a matching entry.
+
+            Priority:
+            1. Exact match
+            2. Regex pattern match
+            3. Return None if no match
             """
 
-            # 1. Try exact match first
-            if code_key in map_data:
-                return map_data[code_key]
+            drcs = map_data.get("DRCs", {})
 
-            # 2. Try regex matching
-            for map_key, map_value in map_data.items():
-                try:
-                    # Treat map_key as a regex pattern
-                    if re.match(map_key, code_key):
-                        self.logger.debug(
-                            f"Regex match found: '{map_key}' matched code_key '{code_key}'"
-                        )
-                        return map_value
-                except re.error:
-                    # If map_key is not a valid regex, skip it
-                    self.logger.debug(f"Invalid regex pattern in map: '{map_key}'")
+            # for drc in drcs:
+            if code_key in drcs:
+                self.logger.debug(
+                    f"Exact match found for code_key '{code_key}'"
+                )
+                return drcs[code_key]
+
+            # for drc in drcs:
+            for map_key, map_value in drcs.items():
+
+                # Skip obvious non-regex exact keys
+                # (optional optimization)
+                if not any(ch in map_key for ch in "^$[](){}+*?|\\"):
                     continue
 
-            # 3. No match found
+                try:
+                    self.logger.debug(
+                        f"Trying regex match: pattern='{map_key}' "
+                        f"against code_key='{code_key}'"
+                    )
+
+                    if re.fullmatch(map_key, code_key):
+                        self.logger.debug(
+                            f"Regex match found: '{map_key}' "
+                            f"matched '{code_key}'"
+                        )
+                        return map_value
+
+                except re.error as exc:
+                    self.logger.debug(
+                        f"Invalid regex pattern '{map_key}': {exc}"
+                    )
+                    continue
+
             self.logger.debug(
-                f"No exact or regex match found for code_key '{code_key}' in map_data"
+                f"No exact or regex match found for code_key '{code_key}'"
             )
+
             return None
 
         def _remove_code_key_from_entry(entry: Dict[str, Any], code_key: str) -> None:

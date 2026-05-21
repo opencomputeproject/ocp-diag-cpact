@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.8",
+  "schema_revision": "0.8",
+  "DRCs": {
+    "110110": {
+      "message": "Operation completed successfully",
+      "component": "PCIe",
+      "severity": "Critical",
+      "actions": {
+        "1": "Investigate stress test failure and retry",
+
+        "2": "Check PCIe connectivity and device stability"
+      },
+      "confidence": 95
+    },
+    "110100": {
+      "message": "No CPU devices were found in the system",
+      "component": "CPU",
+      "severity": "Fatal",
+      "actions": {
+        "1": "Check if CPU devices are properly connected",
+        "2": "Verify BIOS/firmware settings",
+        "3": "RMA nearest FRU if issue persists"
+      },
+      "confidence": 99
+    },
+    "^\\d+$": {
+      "message": "Generic Failure Detected",
+      "component": "Diagnostics",
+      "severity": "NonFatal",
+      "actions": {
+        "1": "Share details with CPU supplier to provide next steps"
+      },
+      "confidence": 80
+    }
+  }
+}

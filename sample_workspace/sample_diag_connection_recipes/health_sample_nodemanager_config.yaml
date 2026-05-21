@@ -21,4 +21,21 @@ test_scenario:
     loop: 1
     validator_type: regex
     expected_output: |
+        "Device Index": {
+          "(?<>)<\d+>": {
+              "Device Name": {
+                  "(\w+)": {
+                      "Test": {
+                          "(?test)(\w+)": [
+                              {
+                                  "Error": "(\d+)",
+                                  "Error Description": "Operation completed successfully",
+                                  "Warning": "N/A",
+                                  "Status": "FAIL"
+                              }
+                          ]
+                        }
+                      }
+                    }
+
         "@odata.id": "/redfish/v1"

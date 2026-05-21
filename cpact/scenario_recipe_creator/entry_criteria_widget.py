@@ -48,7 +48,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtCore import Qt
 
-from constants import ExpandingTextEdit
+from cpact.scenario_recipe_creator.constants import ExpandingTextEdit
 
 
 class EntryCriteriaDialog(QDialog):

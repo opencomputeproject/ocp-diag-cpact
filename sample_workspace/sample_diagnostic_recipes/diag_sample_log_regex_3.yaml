@@ -18,8 +18,8 @@ test_scenario:
     log_analysis_path: '{workspace_path}/test_run.log'
     validator_type: regex
     diagnostic_analysis:
-    - search_string: (?P<Error_Code>(?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))
-      diagnostic_result_code: Error_Code
+    - search_string: (?P<DRC>(?<!\S)FAIL-(?=\d*[1-9])\d+(?!\S))
+      diagnostic_result_code: DRC
       parameter_to_set: error_code
 
 # Note:- Multiple instance of the same search string will still yield only one DRC.

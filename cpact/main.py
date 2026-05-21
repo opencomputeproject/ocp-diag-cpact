@@ -59,6 +59,7 @@ from cpact.core.orchestrator import Orchestrator
 from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.system_connections.connection_discovery import ConnectionDiscovery
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
+from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
 
 # import sys
 
@@ -780,6 +781,14 @@ def main() -> None:
         action="store_true",
         help="List all available tests without running them",
     )
+
+    parser.add_argument(
+        "--run_scenario_creator",
+        "-rsc",
+        action="store_true",
+        help="Open scenario creator window",
+    )
+
     parser.add_argument(
         "--discover_connections",
         "-dc",
@@ -840,7 +849,9 @@ def main() -> None:
     )
     parser.set_defaults(run_with_schema_check=True)
     args = parser.parse_args()
-
+    if args.run_scenario_creator:
+        ScenarioCreator()
+        return
     test_dir = args.test_dir or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests"
     )

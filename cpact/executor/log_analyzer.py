@@ -115,12 +115,13 @@ class LogAnalyzer(BaseExecutor):
         )  # Log first 100 characters for brevity
 
         diagnostic_analysis = self.step.get("diagnostic_analysis")
+        validator_type = self.step.get("validator_type", "regex")
         if diagnostic_analysis:
             analyzer_cls = AnalysisFactory.get_analyzer("diagnostic_analysis")
             analyzer = analyzer_cls(
                 diagnostic_analysis, step_id=self.step.get("step_id")
             )
-            diag_result = analyzer.analyze(log_content, self.context)
+            diag_result = analyzer.analyze(log_content, self.context, validator_type)
             self.logger.info(f"[LogAnalyzer] Diagnostic Analysis: {diag_result}")
             self.scenario_step.add_log(
                 LogSeverity.INFO, f"[LogAnalyzer] Diagnostic Analysis: {diag_result}"
