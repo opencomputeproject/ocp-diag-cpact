@@ -6,7 +6,7 @@
     "schema_version": {
       "type": "string"
     },
-    "schema_revision": {
+    "map_revision": {
       "type": "string"
     },
     "DRCs": {
@@ -56,6 +56,6 @@
       }
     }
   },
-  "required": ["schema_version", "schema_revision", "DRCs"],
+  "required": ["schema_version", "map_revision", "DRCs"],
   "additionalProperties": false
 }

@@ -1,6 +1,6 @@
 {
   "schema_version": "0.8",
-  "schema_revision": "0.8",
+  "map_revision": "0.8",
   "DRCs": {
     "110110": {
       "message": "Operation completed successfully",

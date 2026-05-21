@@ -1,6 +1,6 @@
 {
   "schema_version": "0.8",
-  "schema_revision": "0.8",
+  "map_revision": "0.8",
   "DRCs": {
     "ERR-00000000000011": {
       "message": "Flash execution failed",
