@@ -4,10 +4,10 @@ test_scenario:
   test_description: Extract device information from a JSON file using regex patterns to search for device index, name, and test results, then assign a diagnostic result code based on extracted error values.
   test_group: Diag
   schema_version: '0.8'
-  map_file: '{workspace_path}/TestSummaryMap.json'
+  map_file: '{workspace_path}/json_regex_map.json'
   tags: [Diag, Sample]
   paths:
-    workspace_path: ./sample_workspace
+    workspace_path: ./sample_workspace/0.8
   test_steps:
   - step_id: step_001
     step_name: SearchForRegexAssignDRCWithFields
@@ -15,7 +15,7 @@ test_scenario:
     connection_type: Local
     connection: local
     step_type: log_analysis
-    log_analysis_path: '{workspace_path}/DiagTestSummaryReport.json'
+    log_analysis_path: '{workspace_path}/diag_sample_json_test_run.json'
     validator_type: json_regex
     diagnostic_analysis:
     - search_string: |
@@ -44,4 +44,4 @@ test_scenario:
 # Note:- Extract device information from a JSON file using regex patterns to search for 
 #        device index, name, and test results, then assign a diagnostic result code 
 #        based on extracted error values.
-#        Refer log path 'sample_workspace/sample_logs/test_run_20260521_223749' for more details.2
+#        Refer log path 'sample_workspace/0.8/sample_diagnostic_logs/sample_logs/test_run_20260521_223749' for more details.2
