@@ -34,16 +34,18 @@ import re
 import time
 import traceback
 import subprocess
-from core.context import Context
+from cpact.core.context import Context
 from concurrent.futures import ThreadPoolExecutor
-from executor.base_executor import BaseExecutor
-from analysis.analysis_factory import AnalysisFactory
-from system_connections.connection_factory import ConnectionFactory
-from system_connections.constants import ExecutionMode
-from utils.docker_executor import DockerExecutor
-from utils.logger_utils import TestLogger
-from utils.validator import Validator
-from result_builder.result_builder import ResultCollector
+from cpact.executor.base_executor import BaseExecutor
+from cpact.analysis.analysis_factory import AnalysisFactory
+from cpact.system_connections.connection_factory import ConnectionFactory
+from cpact.system_connections.constants import ExecutionMode
+from cpact.utils.docker_executor import DockerExecutor
+from cpact.utils.logger_utils import TestLogger
+from cpact.utils.validator import Validator
+from cpact.result_builder.result_builder import ResultCollector
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
@@ -115,6 +117,12 @@ class CommandExecutor(BaseExecutor):
                     "Connection name or type not provided in step data.",
                 )
                 return "", False, "Connection name or type not provided in step data."
+            cwd = os.getcwd()
+            self.logger.info(f"Current working directory before execution: {cwd}")
+            self.scenario_step.add_log(
+                LogSeverity.INFO,
+                f"Current working directory before execution: {cwd}",
+            )
             self.logger.info(
                 f"Executing command: {command} on connection: {connection_name} with type: {connection_type}"
             )
@@ -138,6 +146,12 @@ class CommandExecutor(BaseExecutor):
                     False,
                     f"Failed to connect to {connection_name} of type {connection_type}.",
                 )
+            cwd = os.getcwd()
+            self.logger.info(f"Current working directory before execution: {cwd}")
+            self.scenario_step.add_log(
+                LogSeverity.INFO,
+                f"Current working directory before execution: {cwd}",
+            )
             self.logger.info(
                 f"Started executing command: {command} on connection: {connection_name} with type: {connection_type}"
             )
@@ -149,13 +163,31 @@ class CommandExecutor(BaseExecutor):
                 command,
                 mode=ExecutionMode.SYNCHRONOUS,
             )
-            output = result.stdout
-            if not output:
-                self.logger.error(f"Command execution failed: {command}")
+
+            stdout = result.stdout or ""
+            stderr = getattr(result, "stderr", "") or ""
+            exit_code = getattr(result, "returncode", None)
+
+            output = stdout
+
+            # 🔍 Log exit code
+            self.logger.info(f"Command exit code: {exit_code}")
+
+            # 🔍 Log stdout
+            if stdout:
+                self.logger.info(f"Command stdout:\n{stdout}")
+
+            # 🔍 Log stderr (CRITICAL for tar failures)
+            if stderr:
+                self.logger.error(f"Command stderr:\n{stderr}")
+
+            # ❌ Fail properly
+            if exit_code not in (0, None):
                 self.scenario_step.add_log(
-                    LogSeverity.ERROR, f"Command execution failed: {command}"
+                    LogSeverity.ERROR,
+                    f"Command failed with exit code {exit_code}. Stderr:\n{stderr}",
                 )
-                return "", False, "Command execution failed."
+                return stdout, False, f"Command failed with exit code {exit_code}"
             log_dir = TestLogger().get_log_dir()
             output_dir = os.path.join(log_dir, "command_outputs")
             os.makedirs(output_dir, exist_ok=True)
@@ -201,12 +233,14 @@ class CommandExecutor(BaseExecutor):
                 )
             return output, True, "Command executed successfully and output validated."
         except AssertionError as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Output validation failed: {e}")
             self.logger.error(f"Output validation failed: {e}")
             return output, False, str(e)
         except KeyError as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Key error during command execution: {e}")
@@ -215,6 +249,7 @@ class CommandExecutor(BaseExecutor):
             )
             return "", False, f"Key error during command execution: {str(e)}"
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Command execution failed: {str(e)}")
@@ -284,6 +319,7 @@ class CommandExecutor(BaseExecutor):
 
             return output, status, message
         except AssertionError as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Output validation failed: {e}")
@@ -292,6 +328,7 @@ class CommandExecutor(BaseExecutor):
             )
             return output, False, str(e)
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Command execution failed: {e}")
@@ -474,6 +511,7 @@ class CommandExecutor(BaseExecutor):
             return {"status": "pass", "message": f"Validated continued step: {step_id}"}
 
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"Error validating continued step {step_id}: {e}")
             self.scenario_step.add_log(
                 LogSeverity.ERROR,

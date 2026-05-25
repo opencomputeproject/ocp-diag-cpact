@@ -31,6 +31,7 @@ Usage:
     Call `result()` to retrieve the structured output.
 ===============================================================================
 """
+
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLineEdit,
@@ -47,7 +48,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtCore import Qt
 
-from constants import ExpandingTextEdit
+from cpact.scenario_recipe_creator.constants import ExpandingTextEdit
 
 
 class EntryCriteriaDialog(QDialog):

@@ -34,9 +34,11 @@ Usage:
 import json
 import re
 from collections import defaultdict, OrderedDict
-from analysis.base_analysis import BaseAnalysis
-from result_builder.result_builder import ResultCollector
-from core.context import Context
+from cpact.analysis.base_analysis import BaseAnalysis
+from cpact.result_builder.result_builder import ResultCollector
+from cpact.core.context import Context
+from cpact.utils.json_validator import JSONValidator
+
 from typing import Any, Type
 
 
@@ -53,17 +55,18 @@ class DiagnosticAnalysis(BaseAnalysis):
         super().__init__(rules, step_id=step_id)
         self.rules = rules
 
-    def analyze(self, output: Any, context: Type[Context]) -> dict:
+    def analyze(self, output: Any, context: Type[Context], validator_type: str) -> dict:
         """
         Analyze the given output based on the initialized rules and context.
         Args:
             output (str): The output string to be analyzed.
             context: The context object to update with diagnostic information.
+            validator_type (str): The type of validator to use for analysis.
         Returns:
             list: A list of diagnostic findings or results.
         """
-        diagnostics_map = defaultdict(list)
         for rule in self.rules:
+            diagnostics_map = defaultdict(list)
             self.logger.info("---------------- Applying Rule ----------------")
             search_string = rule.get("search_string")
             diagnostic_result_code = rule.get("diagnostic_result_code")
@@ -85,12 +88,26 @@ class DiagnosticAnalysis(BaseAnalysis):
                 continue
             pattern = search_string or diagnostic_search_string
             parameter_to_set = rule.get("parameter_to_set")
-            diagnostic_result_codes = self.search_and_manage(
-                regex_key=pattern,
-                log_data=output,
-                entry=rule,
-                diagnostics_map=diagnostics_map,
-            )
+            diagnostic_result_codes = []
+            if validator_type == "json_regex":
+                self.logger.info(f"🔍 Validating output as JSON with pattern: {pattern}")
+                json_data = json.loads(output)
+                json_pattern  = json.loads(pattern)
+                diagnostic_result_codes = JSONValidator().match_pattern(
+                    pattern=json_pattern, data=json_data, groups={}, ignore_case=True
+                )
+                diagnostic_result_codes = self.format_json(diagnostic_result_codes, rule)
+                self.logger.info(f"🔍 Extracted diagnostic codes from JSON: {diagnostic_result_codes}")
+                # diagnostic_result_codes = json.
+            else:
+                self.logger.info(f"🔍 Applying regex pattern: {pattern}")
+                diagnostic_result_codes = self.search_and_manage(
+                    regex_key=pattern,
+                    log_data=output,
+                    entry=rule,
+                    diagnostics_map=diagnostics_map,
+                )
+                self.logger.info(f"🔍 Extracted diagnostic codes: {diagnostic_result_codes}")
             if parameter_to_set:
                 self.logger.info(
                     f"🔍 Matched '{pattern}' → {True if  diagnostic_result_codes else False} → set {parameter_to_set}"
@@ -132,10 +149,17 @@ class DiagnosticAnalysis(BaseAnalysis):
                 step_id=self.step_id,
                 codes=diagnostic_result_codes,
                 message="Found codes: ",
+                parent_scenario=context.get(
+                    "scenario_parent", context.get("test_name")
+                ),
+            )
+            ResultCollector.get_instance().add_scenario_output(
+                scenario_name=context.get("scenario_parent", context.get("test_name")),
+                diag_codes=diagnostic_result_codes,
             )
         self.logger.info("---------------- Diagnostic Keys ----------------")
         return diagnostics_map
-    
+
     def search_and_manage(
         self, regex_key: str, log_data: str, entry: dict, diagnostics_map: dict
     ) -> dict:
@@ -184,14 +208,14 @@ class DiagnosticAnalysis(BaseAnalysis):
             if matched_groups:
                 group_data = matched_groups
             else:
-                d = []
+                d = {}
                 if len(all_groups) == 1:
-                    group_data = all_groups[0]
-                    d.append(all_groups[0])
+                    group_data = {all_groups[0]: all_groups[0]}
+                    d[all_groups[0]] = all_groups[0]
                 else:
                     for idx, group in enumerate(all_groups):
                         if group:
-                            d.append(group)
+                            d[group] = group
                 if d:
                     group_data = d
             if diagnostic_result_code not in diagnostics_map:
@@ -199,3 +223,39 @@ class DiagnosticAnalysis(BaseAnalysis):
             if group_data and group_data not in diagnostics_map[diagnostic_result_code]:
                 diagnostics_map[diagnostic_result_code].append(group_data)
         return dict(diagnostics_map)
+
+    def format_json(self, output: str, entry: dict) -> Any:
+        """
+        Validate if the output string is a valid JSON and return the parsed object.
+        Args:
+            output (str): The output string to validate.
+            entry (dict): The diagnostic rule entry containing additional information.
+        Returns:
+            Any: The parsed JSON object if valid, otherwise None.
+        """
+        try:
+            diagnostic_result_codes_dict = {}
+
+            for res in output:
+                # Get the diagnostic_result_code key name from entry
+                diag_key = entry.get("diagnostic_result_code")
+
+                if not diag_key:
+                    continue
+
+                # Get actual diagnostic code value
+                diagnostic_result_code = res.get(diag_key, diag_key)
+
+                # Create list if key not present
+                if diagnostic_result_code not in diagnostic_result_codes_dict:
+                    diagnostic_result_codes_dict[diagnostic_result_code] = []
+
+                # Append full dict
+                diagnostic_result_codes_dict[diagnostic_result_code].append(res)
+
+            return diagnostic_result_codes_dict
+
+        except json.JSONDecodeError:
+            self.logger.warning("Output is not a valid JSON.")
+            return {}
+                

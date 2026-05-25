@@ -1,0 +1,340 @@
+{
+    "diagnostic_codes": [
+        "110110",
+        "110100"
+    ],
+    "diagnostics": [
+        {
+            "parent_scenario": "DiagSampleLogRegex10",
+            "scenario_id": "DG_10S",
+            "step_id": "step_001",
+            "codes": {
+                "110110": [
+                    {
+                        "device_index": "0",
+                        "device_name": "PCIe",
+                        "test": "pcie stress test",
+                        "error": "110110",
+                        "status": "fail"
+                    }
+                ],
+                "110100": [
+                    {
+                        "device_index": "1",
+                        "device_name": "(empty)",
+                        "test": "Debug Commands",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "1",
+                        "device_name": "(empty)",
+                        "test": "Device Enumeration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "1",
+                        "device_name": "(empty)",
+                        "test": "Firmware Status Check",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "1",
+                        "device_name": "(empty)",
+                        "test": "Notification Registration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "1",
+                        "device_name": "(empty)",
+                        "test": "Open and Initialize Devices",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "1",
+                        "device_name": "(empty)",
+                        "test": "Telemetry Queries",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "2",
+                        "device_name": "(empty)",
+                        "test": "Debug Commands",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "2",
+                        "device_name": "(empty)",
+                        "test": "Device Enumeration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "2",
+                        "device_name": "(empty)",
+                        "test": "Firmware Status Check",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "2",
+                        "device_name": "(empty)",
+                        "test": "Notification Registration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "2",
+                        "device_name": "(empty)",
+                        "test": "Open and Initialize Devices",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "2",
+                        "device_name": "(empty)",
+                        "test": "Telemetry Queries",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "3",
+                        "device_name": "(empty)",
+                        "test": "Debug Commands",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "3",
+                        "device_name": "(empty)",
+                        "test": "Device Enumeration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "3",
+                        "device_name": "(empty)",
+                        "test": "Firmware Status Check",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "3",
+                        "device_name": "(empty)",
+                        "test": "Notification Registration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "3",
+                        "device_name": "(empty)",
+                        "test": "Open and Initialize Devices",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "3",
+                        "device_name": "(empty)",
+                        "test": "Telemetry Queries",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "4",
+                        "device_name": "(empty)",
+                        "test": "Debug Commands",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "4",
+                        "device_name": "(empty)",
+                        "test": "Device Enumeration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "4",
+                        "device_name": "(empty)",
+                        "test": "Firmware Status Check",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "4",
+                        "device_name": "(empty)",
+                        "test": "Notification Registration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "4",
+                        "device_name": "(empty)",
+                        "test": "Open and Initialize Devices",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "4",
+                        "device_name": "(empty)",
+                        "test": "Telemetry Queries",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "5",
+                        "device_name": "(empty)",
+                        "test": "Debug Commands",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "5",
+                        "device_name": "(empty)",
+                        "test": "Device Enumeration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "5",
+                        "device_name": "(empty)",
+                        "test": "Firmware Status Check",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "5",
+                        "device_name": "(empty)",
+                        "test": "Notification Registration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "5",
+                        "device_name": "(empty)",
+                        "test": "Open and Initialize Devices",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "5",
+                        "device_name": "(empty)",
+                        "test": "Telemetry Queries",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "6",
+                        "device_name": "(empty)",
+                        "test": "Debug Commands",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "6",
+                        "device_name": "(empty)",
+                        "test": "Device Enumeration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "6",
+                        "device_name": "(empty)",
+                        "test": "Firmware Status Check",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "6",
+                        "device_name": "(empty)",
+                        "test": "Notification Registration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "6",
+                        "device_name": "(empty)",
+                        "test": "Open and Initialize Devices",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "6",
+                        "device_name": "(empty)",
+                        "test": "Telemetry Queries",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "7",
+                        "device_name": "(empty)",
+                        "test": "Debug Commands",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "7",
+                        "device_name": "(empty)",
+                        "test": "Device Enumeration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "7",
+                        "device_name": "(empty)",
+                        "test": "Firmware Status Check",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "7",
+                        "device_name": "(empty)",
+                        "test": "Notification Registration",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "7",
+                        "device_name": "(empty)",
+                        "test": "Open and Initialize Devices",
+                        "error": "110100",
+                        "status": "FAIL"
+                    },
+                    {
+                        "device_index": "7",
+                        "device_name": "(empty)",
+                        "test": "Telemetry Queries",
+                        "error": "110100",
+                        "status": "FAIL"
+                    }
+                ]
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_10S": {
+            "step_001": {
+                "error": true,
+                "step_001": true
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_10S",
+            "step_id": "step_001",
+            "step_name": "SearchForRegexAssignDRCWithFields",
+            "step_type": "log_analysis",
+            "status": "Success",
+            "duration": 3.285,
+            "message": "Log analyzed successfully."
+        }
+    ]
+}

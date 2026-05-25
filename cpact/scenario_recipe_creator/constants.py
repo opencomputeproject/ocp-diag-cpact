@@ -354,8 +354,8 @@ class ExpandingTextEdit(QTextEdit):
         """
         Initializes the custom QTextEdit widget with adjustable height constraints.
         This constructor sets up the minimum and maximum height for the text edit widget, configures
-        line wrapping to fit the widget's width, disables the vertical scroll bar, 
-        and connects the text change event to automatically adjust the widget's height. 
+        line wrapping to fit the widget's width, disables the vertical scroll bar,
+        and connects the text change event to automatically adjust the widget's height.
         It also schedules an initial height adjustment after the widget is created.
         Args:
             min_height (int, optional): The minimum height of the text edit widget. Defaults to 60.
@@ -442,8 +442,9 @@ class HoverPushButton(QPushButton):
                 None
     """
 
-
-    def __init__(self, *args: Any, lift_px: int = 4, anim_ms: int = 120, **kwargs: Any) -> None:
+    def __init__(
+        self, *args: Any, lift_px: int = 4, anim_ms: int = 120, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
         self._lift_px = lift_px
         self._anim_ms = anim_ms

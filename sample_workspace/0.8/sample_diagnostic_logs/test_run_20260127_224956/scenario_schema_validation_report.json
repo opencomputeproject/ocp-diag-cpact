@@ -1,0 +1,6 @@
+[
+  [
+    "{'Category': 'Scenario Schema', 'Colateral': 'diag_sample_log_regex_5.yaml', 'Status': 'SUCCESS', 'Message': 'Scenario schema is valid', 'Path': ''}",
+    "{'Category': 'Map Schema', 'Colateral': 'map_file.json', 'Status': 'SUCCESS', 'Message': 'Map schema is valid', 'Path': ''}"
+  ]
+]

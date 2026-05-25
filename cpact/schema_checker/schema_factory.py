@@ -31,11 +31,12 @@ Usage:
     Use `reset_instance()` to clear the factory state when needed.
 ===============================================================================
 """
+
 import threading
 from typing import Dict, Any
 
-from schema_checker.validate_config_schema import ConfigSchemaValidator
-from schema_checker.validate_scenario_schema import ScenarioSchemaValidator
+from cpact.schema_checker.validate_config_schema import ConfigSchemaValidator
+from cpact.schema_checker.validate_scenario_schema import ScenarioSchemaValidator
 
 
 EXECUTOR_MAP = {
@@ -49,7 +50,7 @@ class ExecutorFactory:
     _instance = None
     _lock = threading.Lock()
 
-    def __new__(cls, config: Dict[str, Any] = None) -> "ExecutorFactory":
+    def __new__(cls, schema: Dict[str, Any] = None) -> "ExecutorFactory":
         """Implement Singleton pattern (optional - can be disabled)"""
         if not cls._instance:
             with cls._lock:

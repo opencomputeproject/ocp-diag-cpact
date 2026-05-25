@@ -36,15 +36,16 @@ Usage:
     Use `reset_instance()` or `close_all_connections()` to clean up resources.
 ===============================================================================
 """
+
 import threading
 from typing import Dict, Any
 
-from system_connections.base_connection import ConnectionInterface
-from system_connections.local_connection import LocalConnection
-from system_connections.ssh_connection import SSHConnection
-from system_connections.redfish_connection import RedfishConnection
-from system_connections.tunnel_connection import TunneledRedfishConnection
-from system_connections.tunnel_connection import TunnelConnection
+from cpact.system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.local_connection import LocalConnection
+from cpact.system_connections.ssh_connection import SSHConnection
+from cpact.system_connections.redfish_connection import RedfishConnection
+from cpact.system_connections.tunnel_connection import TunneledRedfishConnection
+from cpact.system_connections.tunnel_connection import TunnelConnection
 
 
 class ConnectionFactory:

@@ -34,7 +34,8 @@ from typing import Any, Type, List
 
 class Context:
     """
-    Context is a singleton class that provides a centralized storage and management system for shared data, diagnostic contexts, diagnostic codes, and continued steps within the application.
+    Context is a singleton class that provides a centralized storage and management system for shared data, 
+    diagnostic contexts, diagnostic codes, and continued steps within the application.
     Attributes:
         data (dict): General-purpose key-value store for application-wide data.
         diagnostic_context (dict): Stores test case-wise diagnostic context keys and their associated values.
@@ -55,7 +56,7 @@ class Context:
 
     """
 
-    _instance = None # Singleton instance
+    _instance = None  # Singleton instance
 
     def __init__(self):
         self.data = {}
@@ -209,7 +210,7 @@ class Context:
             dict: A dictionary containing the diagnostic context.
         """
         return self.diagnostic_context
-    
+
     def get_parameters_to_set(self) -> dict:
         """
         Retrieves the diagnostic context.
