@@ -26,7 +26,7 @@ https://github.com/MeritedHobbit/Cloud-Processor-Accessibility-Compliance-Tool.g
     d. Inbuilt tunnel creation option (to bypass ,say, a Rack manager)
 3. YAML based compliance scenario definitions 
     a. Internally leverages python
-    b. Grouping of compliance scenarios per domain - like RAS, Debug, FWUpdate, Telemetry etc
+    b. Grouping of compliance scenarios per domain - like RAS, Debug, FWUpdate, Telemetry  etc
     c. Yaml based scenario sequencing (along with expectations) 
     d. Dynamic compliance scenario discovery
         i. Connectivity based scenario listing
@@ -92,6 +92,10 @@ You can run test cases using various filters like test ID, test name, group, tag
 | `--tags`                  | Run test case(s) by Tag(s) (comma-separated).                                         |
 | `--test_dir`              | Path to the directory containing input test definitions or scenarios.                 |
 | `--workspace`             | Path to the workspace where logs, temporary files, and results will be stored.        |
+| `--run_all_scenarios`     | Run All scenarios.                                                                    |
+| `--run_scenario_creator`  | Run scenario creator GUI.                                                             |
+| `--no-schema-check`       | Skip schema check while running recipes.                                              |
+| `--historical_data`       | Option to provide the historical data. Like previously ran recipe results.            |
 | `--schema_check`          | Specifies the mode of schema validation. Use scenario for validating scenario YAMLs.  |
 |  `<test_yaml>`            | Path to the YAML file defining the test scenario to be validated or executed.         |
 | `<schema_json>`           | Path to the JSON schema file used for validating the test YAML.                       |
@@ -152,6 +156,11 @@ You can run test cases using various filters like test ID, test name, group, tag
 - **Run Testcases with schema_check_scenario**
   ```
   python main.py --test_dir ..\path\to\tests --workspace ..\path\to\workspace --schema_check scenario ..\path\to\YAML_schema ..\path\to\schema_recipe.json <schema_recipe_.jsonfile>
+  ```
+
+  - **Run all scenarios**
+  ```
+  python main.py --test_dir ..\path\to\tests --workspace ..\path\to\workspace --conn_config ..\path\to\config_file --run_all_scenarios
   ```
 
 ## 📡 Connection Management
@@ -365,6 +374,7 @@ ___
 |   ├── `scenario_creator.py`       | Utility for programmatically creating test scenarios.                                         |
 |   ├── `scenario_parser.py`        | Parses scenario YAML files into executable objects.                                           |
 |   ├── `ssh_tunnel.py`             | Sets up and manages SSH tunnels.                                                              |
+|   ├── `json_validator.py`         | Validate json regex                                                                           |
 | `workspace/`              | Workspace management and related logic                                                                | 
 | `main.py`                 | Entry point for initializing the application.                                                         |
 | `spec`                    | Specifiaction and schema definations.                                                                 |  
