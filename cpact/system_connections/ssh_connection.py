@@ -33,6 +33,7 @@ Usage:
     Use `disconnect()` to clean up resources and close the connection.
 ===============================================================================
 """
+
 import time
 import uuid
 import queue
@@ -43,8 +44,8 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List, Any
 
-from system_connections.base_connection import ConnectionInterface
-from system_connections.constants import (
+from cpact.system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.constants import (
     ExecutionMode,
     TaskStatus,
     TaskResult,

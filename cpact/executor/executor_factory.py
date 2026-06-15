@@ -29,10 +29,12 @@ Usage:
     Instantiate the returned class with scenario step and context to execute the step.
 ===========================================================================
 """
-from executor.command_executor import CommandExecutor
-from executor.log_analyzer import LogAnalyzer
-from executor.scenario_invoker import ScenarioInvoker
+
+from cpact.executor.command_executor import CommandExecutor
+from cpact.executor.log_analyzer import LogAnalyzer
+from cpact.executor.scenario_invoker import ScenarioInvoker
 from typing import Type
+
 
 class ExecutorFactory:
     EXECUTOR_MAP = {
@@ -42,7 +44,9 @@ class ExecutorFactory:
     }
 
     @staticmethod
-    def get_executor(step_type: str) -> Type[CommandExecutor | LogAnalyzer | ScenarioInvoker]:
+    def get_executor(
+        step_type: str,
+    ) -> Type[CommandExecutor | LogAnalyzer | ScenarioInvoker]:
         """
         Returns the executor class based on the step type.
         Args:

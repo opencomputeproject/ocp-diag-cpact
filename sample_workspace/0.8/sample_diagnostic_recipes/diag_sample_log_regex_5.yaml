@@ -1,0 +1,34 @@
+test_scenario:
+  test_id: DG_5S
+  test_name: DiagSampleLogRegex4
+  test_description: Search for a regex string with multiple assignment of which one of them is called out as DRC and the others are associated fields. 
+  test_group: Diag
+  schema_version: '0.8'
+  map_file: '{workspace_path}/map_file.json'
+  tags: [Diag, Sample]
+  paths:
+    workspace_path: ./sample_workspace/0.8
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForRegexAssignDRCWithFields
+    step_description: Search for a regex string in log and assign a DRC with associated fields.
+    connection_type: Local
+    connection: local
+    step_type: log_analysis
+    log_analysis_path: '{workspace_path}/diag_sample_test_run.log'
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (?P<Error_Code>ERR-(?=\d*[1-9])\d+)\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*(?P<Component_ID>[^\|]+)
+      diagnostic_result_code: Error_Code
+      parameter_to_set: error_code
+
+    - search_string: (?P<Error_Code>FAIL-(?=\d*[1-9])\d+)\s*\|.*?\|.*?\|.*?\|(?P<Component_ID>[^\|]+)\|\s*(?P<Notes>.*?)(?=(\nFAIL-|$))
+      diagnostic_result_code: Error_Code
+      parameter_to_set: error_code
+
+
+
+  #Note:- Multiple instance of the same search string will still yield only one DRC.
+  #       e.g. if the search string is found 3 times in the log,
+  #       only one DRC will be assigned.
+  #       Refer log path 'sample_workspace/0.8/sample_diagnostic_logs/sample_logs/test_run_20260127_224956' for more details.

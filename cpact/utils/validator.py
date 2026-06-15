@@ -26,6 +26,7 @@ Example usage:
     Validator.search("expected text", "actual content", use_regex=True, use_fuzzy=True)
 ===============================================================================
 """
+
 import re
 from difflib import SequenceMatcher
 from typing import Any, Tuple, Union

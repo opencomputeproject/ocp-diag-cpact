@@ -60,12 +60,12 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 
-from constants import make_button, show_error
-from diagnostic_analysis_widget import DiagnosticAnalysisDialog
-from output_analysis_widget import OutputAnalysisDialog
-from entry_criteria_widget import EntryCriteriaDialog
+from cpact.scenario_recipe_creator.constants import make_button, show_error
+from cpact.scenario_recipe_creator.diagnostic_analysis_widget import DiagnosticAnalysisDialog
+from cpact.scenario_recipe_creator.output_analysis_widget import OutputAnalysisDialog
+from cpact.scenario_recipe_creator.entry_criteria_widget import EntryCriteriaDialog
 from PyQt5.QtCore import QTimer
-from constants import NumberedListWidget
+from cpact.scenario_recipe_creator.constants import NumberedListWidget
 
 
 class StepDialog(QDialog):

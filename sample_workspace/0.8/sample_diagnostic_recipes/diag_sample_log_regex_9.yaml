@@ -1,0 +1,29 @@
+test_scenario:
+  test_id: DG_9S
+  test_name: DiagSampleLogRegex9
+  test_description: Search for a string or regex string and assign a DRC. But DRC in map file as regex.
+  test_group: Diag
+  schema_version: '0.8'
+  map_file: '{workspace_path}/map_file.json'
+  tags: [Diag, Sample]
+  paths:
+    workspace_path: ./sample_workspace/0.8
+  test_steps:
+  - step_id: step_001
+    step_name: SearchForRegexAssignDRCWithFields
+    step_description: Search for a string or regex string and assign a DRC. But DRC in map file as regex.
+    connection_type: Local
+    connection: local
+    step_type: log_analysis
+    log_analysis_path: '{workspace_path}/diag_sample_test_run.log'
+    validator_type: regex
+    diagnostic_analysis:
+    - search_string: (?P<Error_Code>FAIL-(?=\d{0,6}6)\d+)\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*(?P<Component_ID>[^\|]+)
+      diagnostic_result_code: Error_Code
+      parameter_to_set: error_code
+
+# Note:- DRC not found in map file. But the Regex is there in the map file.
+#        In this test case, the DRC is extracted using regex from the map file.
+#        e.g. if the DRC 'FAIL-0000006000012' is
+#        not found in the map file, But we can extract from map file using regex present in the map file.
+#        Refer log path 'sample_workspace/0.8/sample_diagnostic_logs/sample_logs/test_run_20260203_092930' for more details.2

@@ -41,7 +41,7 @@ from PyQt5.QtWidgets import (
     QFormLayout,
     QCheckBox,
 )
-from constants import ExpandingTextEdit
+from cpact.scenario_recipe_creator.constants import ExpandingTextEdit
 
 
 class OutputAnalysisDialog(QDialog):
