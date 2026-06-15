@@ -56,7 +56,7 @@ requests-unixsocket==0.3.0
 responses==0.25.3
 rich==13.9.4
 rpds-py==0.24.0
-setuptools==75.6.0
+setuptools==78.1.1
 six==1.17.0
 sshtunnel==0.4.0
 StringGenerator==0.4.4
