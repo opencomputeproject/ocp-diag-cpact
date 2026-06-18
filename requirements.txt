@@ -16,7 +16,7 @@ Flask-RESTful==0.3.10
 gevent==24.11.1
 greenlet==3.1.1
 grequests==0.7.0
-idna==3.10
+idna==3.15
 iniconfig==2.0.0
 itsdangerous==2.2.0
 Jinja2==3.1.4
