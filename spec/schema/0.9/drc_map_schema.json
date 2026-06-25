@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Diagnostic Error Map Schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "map_revision": {
+      "type": "string"
+    },
+    "DRCs": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "object",
+          "required": [
+            "message",
+            "component",
+            "severity",
+            "confidence"
+          ],
+          "oneOf": [
+            {
+              "required": [
+                "action"
+              ],
+              "not": {
+                "required": [
+                  "actions"
+                ]
+              }
+            },
+            {
+              "required": [
+                "actions"
+              ],
+              "not": {
+                "required": [
+                  "action"
+                ]
+              }
+            }
+          ],
+          "properties": {
+            "message": {
+              "type": "string"
+            },
+            "component": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "PROCESSOR",
+                    "MEMORY",
+                    "PCI_E",
+                    "PCI_E_ENDPOINT",
+                    "FIRMWARE",
+                    "DMAR",
+                    "CXL",
+                    "CXL_ENDPOINT",
+                    "SOCKET_INTERCONNECT"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
+              ]
+            },
+            "severity": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "FATAL",
+                    "RECOVERABLE",
+                    "CORRECTED",
+                    "INFORMATIONAL"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
+              ]
+            },
+            "category": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "SDE",
+                    "SW",
+                    "CE",
+                    "UC",
+                    "AER",
+                    "CORE_DUMP",
+                    "HANG",
+                    "EXCEPTION",
+                    "PERFORMANCE"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
+              ]
+            },
+            "action": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "SHUFFLE",
+                    "REPLACE",
+                    "RETEST",
+                    "RESEAT",
+                    "DO_NOTHING",
+                    "INJECT_ERROR",
+                    "COLD_REBOOT_WITH_DELAY",
+                    "WARM_REBOOT",
+                    "AC_POWER_CYCLE",
+                    "FURTHER_TRIAGE_NEEDED"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
+              ],
+              "description": "Recommended action to take for this diagnostic result code"
+            },
+            "urgency": {
+              "type": "boolean",
+              "description": "Indicates if this issue requires immediate attention"
+            },
+            "search_strings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "deprecated": true
+            },
+            "actions": {
+              "type": "object",
+              "patternProperties": {
+                "^[0-9]+$": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "confidence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Confidence level (0-100) that the DRC correctly identifies the root cause."
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "map_revision",
+    "DRCs"
+  ],
+  "additionalProperties": false
+}
