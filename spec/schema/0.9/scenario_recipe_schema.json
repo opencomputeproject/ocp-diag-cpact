@@ -1,0 +1,495 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test Scenario Spec",
+  "type": "object",
+  "properties": {
+    "test_scenario": {
+      "type": "object",
+      "properties": {
+        "test_name": {
+          "type": "string",
+          "description": "Name of the test"
+        },
+        "test_group": {
+          "type": "string",
+          "description": "Grouping/category of the test"
+        },
+        "test_description": {
+          "type": "string",
+          "description": "Description of the test"
+        },
+        "recipe_metadata": {
+          "type": "object",
+          "description": "Complete recipe metadata including versioning, classification, execution requirements, and outputs",
+          "properties": {
+            "recipe_id": {
+              "type": "string",
+              "description": "Unique global identifier for the recipe"
+            },
+            "recipe_version": {
+              "type": "string",
+              "description": "Supplier-defined version of the recipe"
+            },
+            "supplier_id": {
+              "type": "string",
+              "description": "Identifier of the supplier providing the recipe"
+            },
+            "platform_id": {
+              "type": "string",
+              "description": "Identifier of the target CPU or platform family"
+            },
+            "schema_version": {
+              "type": "string",
+              "description": "Version of the recipe schema used"
+            },
+            "integrity_hash": {
+              "type": "string",
+              "description": "Cryptographic hash to verify recipe integrity prior to execution"
+            },
+            "class_code": {
+              "type": "string",
+              "description": "Lifecycle stage (manufacturing, rack screening, fleet deployment)"
+            },
+            "subclass_code": {
+              "type": "string",
+              "description": "Diagnostic intent (BAT, burn-in, aging, repro)"
+            },
+            "data_sensitivity": {
+              "type": "string",
+              "description": "Sensitivity classification of collected data"
+            },
+            "connection_type": {
+              "type": "string",
+              "enum": [
+                "Local",
+                "Inband",
+                "RackManager",
+                "NodeManager",
+                "both"
+              ],
+              "description": "Access path (in-band, out-of-band, or both)"
+            },
+            "execution_target": {
+              "type": "string",
+              "description": "Component executing the recipe (host OS, BMC)"
+            },
+            "os_environment_type": {
+              "type": "string",
+              "enum": [
+                "BAREMETAL",
+                "VM",
+                "CONTAINER"
+              ],
+              "description": "Execution context (BAREMETAL, VM, CONTAINER)"
+            },
+            "nominal_execution_time": {
+              "type": "integer",
+              "description": "Estimated execution duration in seconds"
+            },
+            "package_size_mb": {
+              "type": "integer",
+              "description": "Size of diagnostic tools package in MB"
+            },
+            "tools_package_ref": {
+              "type": "string",
+              "description": "Reference to diagnostic tools package"
+            },
+            "map_file": {
+              "type": "string",
+              "description": "Reference to DRC-to-action mapping file"
+            },
+            "firmware_version_min": {
+              "type": "string",
+              "description": "Minimum required firmware version"
+            },
+            "output_format": {
+              "type": "string",
+              "enum": [
+                "OCPTV",
+                "JSON_LOG",
+                "DRC"
+              ],
+              "description": "Supported output format (OCPTV, JSON_LOG, DRC)"
+            },
+            "drc_definitions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of DRCs emitted by this recipe"
+            },
+            "log_path": {
+              "type": "string",
+              "description": "Log location (no hardcoded absolute paths)"
+            },
+            "platform_configuration": {
+              "type": "string",
+              "description": "Platform settings (BIOS, SMT, sockets)"
+            },
+            "feature_flags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Required CPU/platform features"
+            },
+            "system_requirements": {
+              "type": "string",
+              "description": "Minimum resource requirements"
+            },
+            "security_constraints": {
+              "type": "string",
+              "description": "Security/privilege constraints"
+            },
+            "execution_access_level": {
+              "type": "string",
+              "description": "Required execution privilege level"
+            },
+            "extended_outputs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Additional outputs (logs, debug artifacts)"
+            },
+            "vendor_extensions": {
+              "type": "object",
+              "description": "Supplier-specific extensions (must not override standard fields)"
+            }
+          },
+          "required": [
+            "recipe_id",
+            "recipe_version",
+            "supplier_id",
+            "platform_id",
+            "schema_version",
+            "integrity_hash",
+            "class_code",
+            "subclass_code",
+            "data_sensitivity",
+            "connection_type",
+            "execution_target",
+            "os_environment_type",
+            "nominal_execution_time",
+            "package_size_mb",
+            "tools_package_ref",
+            "map_file",
+            "firmware_version_min",
+            "output_format",
+            "drc_definitions",
+            "log_path"
+          ],
+          "additionalProperties": false
+        },
+        "paths": {
+          "type": "object",
+          "items": {
+            "type": "object",
+            "patternProperties": {
+              "^[A-Za-z0-9]+$": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "docker": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "container_name": {
+                "type": "string"
+              },
+              "container_image": {
+                "type": "string"
+              },
+              "shell": {
+                "type": "string"
+              },
+              "container_location": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "remote"
+                ]
+              },
+              "connection_type": {
+                "type": "string",
+                "enum": [
+                  "Local",
+                  "Inband",
+                  "RackManager",
+                  "NodeManager",
+                  "both"
+                ]
+              },
+              "connection": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "redfish",
+                  "ssh"
+                ]
+              },
+              "use_sudo": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "container_name",
+              "container_image",
+              "connection_type",
+              "connection"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step_id": {
+                "type": "string"
+              },
+              "step_name": {
+                "type": "string"
+              },
+              "step_description": {
+                "type": "string"
+              },
+              "entry_criteria": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "expression": {
+                      "type": "string"
+                    },
+                    "entry_criteria_note": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "expression"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "container_name": {
+                "type": "string"
+              },
+              "connection_type": {
+                "type": "string",
+                "enum": [
+                  "Local",
+                  "Inband",
+                  "RackManager",
+                  "NodeManager",
+                  "both"
+                ]
+              },
+              "connection": {
+                "type": "string",
+                "enum": [
+                  "local",
+                  "redfish",
+                  "ssh"
+                ]
+              },
+              "step_type": {
+                "type": "string",
+                "enum": [
+                  "command_execution",
+                  "log_analysis",
+                  "invoke_scenario"
+                ]
+              }
+            },
+            "required": [
+              "step_id",
+              "step_name",
+              "step_type",
+              "connection_type",
+              "connection"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "step_type": {
+                      "const": "command_execution"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "step_command": {
+                      "type": "string"
+                    },
+                    "use_sudo": {
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "body": {},
+                    "headers": {},
+                    "duration": {
+                      "type": "integer"
+                    },
+                    "continue": {
+                      "type": "boolean"
+                    },
+                    "loop": {
+                      "type": "integer"
+                    },
+                    "validator_type": {
+                      "type": "string"
+                    },
+                    "expected_output": {
+                      "type": "string"
+                    },
+                    "expected_output_path": {
+                      "type": "string"
+                    },
+                    "output_analysis": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "regex": {
+                            "type": "string"
+                          },
+                          "parameter_to_set": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "regex",
+                          "parameter_to_set"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "step_command",
+                    "validator_type"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "step_type": {
+                      "const": "log_analysis"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "log_analysis_path": {
+                      "type": "string"
+                    },
+                    "validator_type": {
+                      "type": "string"
+                    },
+                    "diagnostic_analysis": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "search_string": {
+                                "type": "string"
+                              },
+                              "diagnostic_result_code": {
+                                "type": "string"
+                              },
+                              "parameter_to_set": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "search_string",
+                              "diagnostic_result_code"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "diagnostic_search_string": {
+                                "type": "string"
+                              },
+                              "parameter_to_set": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "diagnostic_search_string"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "log_analysis_path",
+                    "validator_type"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "step_type": {
+                      "const": "invoke_scenario"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "scenario_path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "scenario_path"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "test_name",
+        "test_group",
+        "test_steps",
+        "recipe_metadata"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "test_scenario"
+  ],
+  "additionalProperties": false
+}

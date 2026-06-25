@@ -1,0 +1,32 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/opencomputeproject/ocp-diag-core/error",
+    "title": "Error",
+    "description": "TODO: link to md doc",
+    "properties": {
+        "symptom": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "message": {
+            "description": "TODO: link to md doc",
+            "type": "string"
+        },
+        "softwareInfoIds": {
+            "description": "TODO: link to md doc",
+            "$comment": "this may need additional schema to make it an ID",
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+	"sourceLocation": {
+	    "description": "SourceLocation information for debugging or tracing program execution. See sourceLocation in https://github.com/opencomputeproject/ocp-diag-core/blob/main/json_spec/README.md#error",
+	    "$ref": "/opencomputeproject/ocp-diag-core/sourceLocation"
+	}
+    },
+    "required": [
+        "symptom"
+    ],
+    "additionalProperties": false
+}
