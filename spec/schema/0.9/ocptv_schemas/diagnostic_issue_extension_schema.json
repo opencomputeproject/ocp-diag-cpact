@@ -1,0 +1,237 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://your-org/diagnostic-issue-extension/v1",
+    "title": "DiagnosticIssue",
+    "description": "OCPTV extension schema for structured diagnostic issues. Carried as testStepArtifact.extension with name='DiagnosticIssue'.",
+    "type": "object",
+    "properties": {
+        "@type": {
+            "const": "DiagnosticIssue"
+        },
+        "@version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+$",
+            "description": "Schema version of this extension, e.g. '1.0'."
+        },
+        "issueId": {
+            "type": "string",
+            "description": "Unique identifier for this issue within the test run."
+        },
+        "drc": {
+            "type": "string",
+            "pattern": "^[A-Z]+-ERR-[0-9]+$",
+            "description": "Debug Result Code identifying the issue signature, e.g. 'INTEL-ERR-00001'."
+        },
+        "message": {
+            "type": "string",
+            "description": "Human-readable description of the issue."
+        },
+        "component": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": [
+                        "PROCESSOR",
+                        "MEMORY",
+                        "PCI_E",
+                        "PCI_E_ENDPOINT",
+                        "FIRMWARE",
+                        "DMAR",
+                        "CXL",
+                        "CXL_ENDPOINT",
+                        "SOCKET_INTERCONNECT"
+                    ]
+                },
+                {
+                    "type": "string",
+                    "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
+            ],
+            "description": "Hardware or firmware component class affected by this issue."
+        },
+        "severity": {
+            "type": "string",
+            "enum": [
+                "FATAL",
+                "RECOVERABLE",
+                "CORRECTED",
+                "INFORMATIONAL"
+            ],
+            "description": "Severity of the issue. Aligns with CPER ErrorSeverity hierarchy."
+        },
+        "action": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": [
+                        "SHUFFLE",
+                        "REPLACE",
+                        "RETEST",
+                        "RESEAT",
+                        "DO_NOTHING",
+                        "INJECT_ERROR",
+                        "COLD_REBOOT_WITH_DELAY",
+                        "WARM_REBOOT",
+                        "AC_POWER_CYCLE",
+                        "FURTHER_TRIAGE_NEEDED"
+                    ]
+                },
+                {
+                    "type": "string",
+                    "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
+            ],
+            "description": "Recommended remediation action for this issue."
+        },
+        "confidence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Confidence level (0-100) that the DRC correctly identifies the root cause."
+        },
+        "category": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": [
+                        "SDE",
+                        "SW",
+                        "CE",
+                        "UC",
+                        "AER",
+                        "CORE_DUMP",
+                        "HANG",
+                        "EXCEPTION",
+                        "PERFORMANCE"
+                    ]
+                },
+                {
+                    "type": "string",
+                    "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
+            ],
+            "description": "Category string further classifying the issue within the component."
+        },
+        "urgency": {
+            "type": "boolean",
+            "description": "True if immediate action is required; false if the issue can be scheduled."
+        },
+        "locations": {
+            "type": "array",
+            "description": "List of affected hardware locations. Each entry can reference hardware by human-readable description, by hardwareInfoId (matching dutInfo.hardwareInfos[*].hardwareInfoId), or both.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable location description, e.g. 'Socket 0', 'PCIe Slot 2 / 0000:65:00.0', 'DIMM SOCKET_1/mc2/CH1/SLOT0'."
+                    },
+                    "hardwareInfoId": {
+                        "type": "string",
+                        "description": "Reference to a hardwareInfo entry in dutInfo, e.g. 'cpu-0', 'dimm-s0-mc0-ch0', 'nvme-0', 'nic-0'."
+                    }
+                },
+                "minProperties": 1,
+                "additionalProperties": false
+            },
+            "minItems": 1
+        }
+    },
+    "required": [
+        "@type",
+        "@version",
+        "issueId",
+        "drc",
+        "message",
+        "component",
+        "severity",
+        "action",
+        "confidence",
+        "category",
+        "urgency",
+        "locations"
+    ],
+    "additionalProperties": false,
+    "examples": [
+        {
+            "@type": "DiagnosticIssue",
+            "@version": "1.0",
+            "issueId": "issue-001",
+            "drc": "INTEL-ERR-00001",
+            "message": "Processor SDE failure detected. Replace failing processor.",
+            "component": "PROCESSOR",
+            "severity": "FATAL",
+            "action": "REPLACE",
+            "confidence": 95,
+            "category": "SDE",
+            "urgency": true,
+            "locations": [
+                {
+                    "label": "Socket 0",
+                    "hardwareInfoId": "cpu-0"
+                },
+                {
+                    "label": "Socket 1",
+                    "hardwareInfoId": "cpu-1"
+                }
+            ]
+        },
+        {
+            "@type": "DiagnosticIssue",
+            "@version": "1.0",
+            "issueId": "issue-002",
+            "drc": "INTEL-ERR-00020",
+            "message": "NVMe SSD media error count exceeds threshold (247 errors). Drive replacement required.",
+            "component": "PCI_E_ENDPOINT",
+            "severity": "FATAL",
+            "action": "REPLACE",
+            "confidence": 99,
+            "category": "OEM_MEDIA_ERRORS",
+            "urgency": true,
+            "locations": [
+                {
+                    "label": "PCIe Slot 3 / 0000:66:00.0",
+                    "hardwareInfoId": "nvme-1"
+                }
+            ]
+        },
+        {
+            "@type": "DiagnosticIssue",
+            "@version": "1.0",
+            "issueId": "issue-003",
+            "drc": "INTEL-ERR-00010",
+            "message": "PCIe link width degraded. GPU negotiated x8 instead of expected x16. Further investigation required.",
+            "component": "PCI_E_ENDPOINT",
+            "severity": "RECOVERABLE",
+            "action": "FURTHER_TRIAGE_NEEDED",
+            "confidence": 87,
+            "category": "OEM_LINK_WIDTH_DEGRADED",
+            "urgency": false,
+            "locations": [
+                {
+                    "label": "PCIe Slot 0 / 0000:17:00.0",
+                    "hardwareInfoId": "pcie-gpu-0"
+                }
+            ]
+        },
+        {
+            "@type": "DiagnosticIssue",
+            "@version": "1.0",
+            "issueId": "issue-004",
+            "drc": "INTEL-ERR-00030",
+            "message": "Correctable memory errors detected on DIMM. Error count within threshold but trending upward. Continue monitoring.",
+            "component": "MEMORY",
+            "severity": "CORRECTED",
+            "action": "RETEST",
+            "confidence": 82,
+            "category": "CE",
+            "urgency": false,
+            "locations": [
+                {
+                    "label": "SOCKET_1/mc2/CH1/SLOT0",
+                    "hardwareInfoId": "dimm-s1-mc2-ch1"
+                }
+            ]
+        }
+    ]
+}

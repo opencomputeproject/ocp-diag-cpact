@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "Connection": {
+      "type": "object",
+      "properties": {
+        "connections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "connection_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["ssh", "redfish"]
+          }
+        },
+        "redfish_port": { "type": "integer" },
+        "protocol": { "type": "string" },
+        "use_ssl": { "type": "boolean" }
+      },
+      "required": ["connections", "connection_types"]
+    },
+
+    "NodeManager": {
+      "type": "object"
+    },
+    "NodeManagerTunnel": {
+      "type": "object"
+    },
+    "Inband": {
+      "type": "object"
+    },
+    "RackManager": {
+      "type": "object"
+    }
+  },
+
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "Connection": {
+            "properties": {
+              "connections": {
+                "contains": { "const": "NodeManager" }
+              }
+            },
+            "required": ["connections"]
+          }
+        }
+      },
+      "then": {
+        "required": ["NodeManager"],
+        "properties": {
+          "NodeManager": {
+            "required": [
+              "nodemanager_host",
+              "nodemanager_username",
+              "nodemanager_password",
+              "nodemanager_ssh_port",
+              "nodemanager_redfish_port",
+              "nodemanager_redfish_auth"
+            ]
+          }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "NodeManager": {
+            "properties": {
+              "nodemanager_tunnel": { "const": true }
+            },
+            "required": ["nodemanager_tunnel"]
+          }
+        }
+      },
+      "then": {
+        "required": ["NodeManagerTunnel"]
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "Connection": {
+            "properties": {
+              "connections": {
+                "contains": { "const": "Inband" }
+              }
+            },
+            "required": ["connections"]
+          }
+        }
+      },
+      "then": {
+        "required": ["Inband"],
+        "properties": {
+          "Inband": {
+            "required": [
+              "inband_host",
+              "inband_username",
+              "inband_password",
+              "inband_ssh_port"
+            ]
+          }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "Connection": {
+            "properties": {
+              "connections": {
+                "contains": { "const": "RackManager" }
+              }
+            },
+            "required": ["connections"]
+          }
+        }
+      },
+      "then": {
+        "required": ["RackManager"],
+        "properties": {
+          "RackManager": {
+            "required": [
+              "rackmanager_host",
+              "rackmanager_username",
+              "rackmanager_password",
+              "rackmanager_ssh_port",
+              "rackmanager_redfish_port"
+            ]
+          }
+        }
+      }
+    },
+
+    {
+      "if": {
+        "properties": {
+          "Connection": {
+            "properties": {
+              "connection_types": {
+                "contains": { "const": "redfish" }
+              }
+            },
+            "required": ["connection_types"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "RackManager": {
+            "required": ["rackmanager_redfish_auth"]
+          },
+          "NodeManager": {
+            "required": [
+              "nodemanager_redfish_auth",
+              "nodemanager_redfish_port"
+            ]
+          },
+          "NodeManagerTunnel": {
+            "required": ["nodemanager_tunnel_redfish_local_port"]
+          }
+        }
+      }
+    }
+  ]
+}
