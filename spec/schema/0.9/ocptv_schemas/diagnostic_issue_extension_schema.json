@@ -116,23 +116,12 @@
             "type": "boolean",
             "description": "True if immediate action is required; false if the issue can be scheduled."
         },
-        "locations": {
+        "hardwareInfoIds": {
             "type": "array",
-            "description": "List of affected hardware locations. Each entry can reference hardware by human-readable description, by hardwareInfoId (matching dutInfo.hardwareInfos[*].hardwareInfoId), or both.",
+            "description": "List of hardwareInfoId references matching dutInfo.hardwareInfos[*].hardwareInfoId.",
             "items": {
-                "type": "object",
-                "properties": {
-                    "label": {
-                        "type": "string",
-                        "description": "Human-readable location description, e.g. 'Socket 0', 'PCIe Slot 2 / 0000:65:00.0', 'DIMM SOCKET_1/mc2/CH1/SLOT0'."
-                    },
-                    "hardwareInfoId": {
-                        "type": "string",
-                        "description": "Reference to a hardwareInfo entry in dutInfo, e.g. 'cpu-0', 'dimm-s0-mc0-ch0', 'nvme-0', 'nic-0'."
-                    }
-                },
-                "minProperties": 1,
-                "additionalProperties": false
+                "type": "string",
+                "description": "Reference to a hardwareInfo entry in dutInfo, e.g. 'cpu-0', 'dimm-s0-mc0-ch0', 'nvme-0', 'nic-0'."
             },
             "minItems": 1
         }
@@ -149,7 +138,7 @@
         "confidence",
         "category",
         "urgency",
-        "locations"
+        "hardwareInfoIds"
     ],
     "additionalProperties": false,
     "examples": [
@@ -165,15 +154,9 @@
             "confidence": 95,
             "category": "SDE",
             "urgency": true,
-            "locations": [
-                {
-                    "label": "Socket 0",
-                    "hardwareInfoId": "cpu-0"
-                },
-                {
-                    "label": "Socket 1",
-                    "hardwareInfoId": "cpu-1"
-                }
+            "hardwareInfoIds": [
+                "cpu-0",
+                "cpu-1"
             ]
         },
         {
@@ -188,11 +171,8 @@
             "confidence": 99,
             "category": "OEM_MEDIA_ERRORS",
             "urgency": true,
-            "locations": [
-                {
-                    "label": "PCIe Slot 3 / 0000:66:00.0",
-                    "hardwareInfoId": "nvme-1"
-                }
+            "hardwareInfoIds": [
+                "nvme-1"
             ]
         },
         {
@@ -207,11 +187,8 @@
             "confidence": 87,
             "category": "OEM_LINK_WIDTH_DEGRADED",
             "urgency": false,
-            "locations": [
-                {
-                    "label": "PCIe Slot 0 / 0000:17:00.0",
-                    "hardwareInfoId": "pcie-gpu-0"
-                }
+            "hardwareInfoIds": [
+                "pcie-gpu-0"
             ]
         },
         {
@@ -226,11 +203,8 @@
             "confidence": 82,
             "category": "CE",
             "urgency": false,
-            "locations": [
-                {
-                    "label": "SOCKET_1/mc2/CH1/SLOT0",
-                    "hardwareInfoId": "dimm-s1-mc2-ch1"
-                }
+            "hardwareInfoIds": [
+                "dimm-s1-mc2-ch1"
             ]
         }
     ]

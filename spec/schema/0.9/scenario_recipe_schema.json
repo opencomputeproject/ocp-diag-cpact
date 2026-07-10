@@ -6,6 +6,9 @@
     "test_scenario": {
       "type": "object",
       "properties": {
+        "test_id": {
+          "type": "string"
+        },
         "test_name": {
           "type": "string",
           "description": "Name of the test"
@@ -18,6 +21,12 @@
           "type": "string",
           "description": "Description of the test"
         },
+        "map_file": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
         "recipe_metadata": {
           "type": "object",
           "description": "Complete recipe metadata including versioning, classification, execution requirements, and outputs",
@@ -26,7 +35,7 @@
               "type": "string",
               "description": "Unique global identifier for the recipe"
             },
-            "recipe_version": {
+            "recipe_revision": {
               "type": "string",
               "description": "Supplier-defined version of the recipe"
             },
@@ -34,44 +43,86 @@
               "type": "string",
               "description": "Identifier of the supplier providing the recipe"
             },
-            "platform_id": {
+            "target_platform": {
               "type": "string",
               "description": "Identifier of the target CPU or platform family"
             },
-            "schema_version": {
-              "type": "string",
-              "description": "Version of the recipe schema used"
-            },
-            "integrity_hash": {
-              "type": "string",
-              "description": "Cryptographic hash to verify recipe integrity prior to execution"
+            "package_integrity_hash": {
+              "type": "object",
+              "description": "Cryptographic hash to verify recipe integrity prior to execution",
+              "properties": {
+                "algorithm": {
+                  "type": "string",
+                  "description": "Hash algorithm used (e.g., SHA-256)"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Hexadecimal hash value"
+                }
+              }
             },
             "class_code": {
               "type": "string",
-              "description": "Lifecycle stage (manufacturing, rack screening, fleet deployment)"
+              "anyOf": [
+                {
+                  "enum": [
+                    "L10",
+                    "L11",
+                    "L12"
+                  ]
+                },
+                {
+                  "pattern": "^OEM_.+"
+                }
+              ],
+              "description": "Recipe lifecycle classification. Use L10, L11, or L12 for standard flows, or an OEM-specific value matching OEM_<identifier>."
             },
             "subclass_code": {
               "type": "string",
-              "description": "Diagnostic intent (BAT, burn-in, aging, repro)"
+              "anyOf": [
+                {
+                  "enum": [
+                    "BAT",
+                    "SCREENING",
+                    "BURN_IN",
+                    "AGING",
+                    "TRICKLE",
+                    "DEBUG",
+                    "STRESS_COMPUTE",
+                    "STRESS_GPU",
+                    "STRESS_TPU",
+                    "STRESS_CACHE",
+                    "STRESS_HBM",
+                    "STRESS_MEMORY",
+                    "STRESS_IO",
+                    "STRESS_POWER_THERM"
+                  ]
+                },
+                {
+                  "pattern": "^STRESS_OEM_.+"
+                }
+              ],
+              "description": "Diagnostic workload classification. Use one of the standard subclasses or an OEM-specific value matching STRESS_OEM_<identifier>."
             },
             "data_sensitivity": {
               "type": "string",
               "description": "Sensitivity classification of collected data"
             },
-            "connection_type": {
+            "requested_connection_type": {
               "type": "string",
               "enum": [
-                "Local",
-                "Inband",
-                "RackManager",
-                "NodeManager",
-                "both"
+                "LOCAL",
+                "REMOTE"
               ],
-              "description": "Access path (in-band, out-of-band, or both)"
+              "description": "Access path"
             },
             "execution_target": {
               "type": "string",
-              "description": "Component executing the recipe (host OS, BMC)"
+              "enum": [
+                "HOST_OS",
+                "BMC"
+              ],
+              "description": "Execution environment responsible for running the recipe, either the host operating system or the BMC."
             },
             "os_environment_type": {
               "type": "string",
@@ -90,13 +141,9 @@
               "type": "integer",
               "description": "Size of diagnostic tools package in MB"
             },
-            "tools_package_ref": {
+            "tools_package_url": {
               "type": "string",
               "description": "Reference to diagnostic tools package"
-            },
-            "map_file": {
-              "type": "string",
-              "description": "Reference to DRC-to-action mapping file"
             },
             "firmware_version_min": {
               "type": "string",
@@ -105,79 +152,116 @@
             "output_format": {
               "type": "string",
               "enum": [
-                "OCPTV",
-                "JSON_LOG",
-                "DRC"
+                "OCPTV"
               ],
-              "description": "Supported output format (OCPTV, JSON_LOG, DRC)"
+              "description": "Supported output format (OCPTV)"
             },
-            "drc_definitions": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of DRCs emitted by this recipe"
-            },
-            "log_path": {
+            "log_url": {
               "type": "string",
               "description": "Log location (no hardcoded absolute paths)"
             },
-            "platform_configuration": {
-              "type": "string",
-              "description": "Platform settings (BIOS, SMT, sockets)"
-            },
-            "feature_flags": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Required CPU/platform features"
-            },
             "system_requirements": {
-              "type": "string",
-              "description": "Minimum resource requirements"
+              "type": "object",
+              "description": "Minimum platform prerequisites that must be satisfied before the recipe can run.",
+              "properties": {
+                "bios_requirements": {
+                  "type": "string",
+                  "description": "Required BIOS configuration, settings, or firmware-level prerequisites."
+                },
+                "socket_count": {
+                  "type": "integer",
+                  "description": "Minimum number of CPU sockets required by the recipe."
+                },
+                "SMT": {
+                  "type": "boolean",
+                  "description": "Required simultaneous multithreading configuration for the target system."
+                },
+                "feature_flags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "SGX",
+                      "TME",
+                      "CXL"
+                    ]
+                  },
+                  "description": "Platform features that must be enabled for the recipe to run correctly."
+                },
+                "memory_size_min": {
+                  "type": "integer",
+                  "description": "Minimum installed system memory required by the recipe."
+                },
+                "network_bandwidth_min": {
+                  "type": "integer",
+                  "description": "Minimum network bandwidth required for recipe execution or data transfer."
+                },
+                "storage_temp_mb": {
+                  "type": "integer",
+                  "description": "Minimum temporary local storage required for logs, staging, or artifacts, in MB."
+                },
+                "execution_access_level": {
+                  "type": "string",
+                  "enum": [
+                    "USER",
+                    "ADMIN"
+                  ],
+                  "description": "Minimum privilege level required to execute the recipe."
+                }
+              },
+              "additionalProperties": false
             },
             "security_constraints": {
               "type": "string",
               "description": "Security/privilege constraints"
             },
-            "execution_access_level": {
-              "type": "string",
-              "description": "Required execution privilege level"
-            },
-            "extended_outputs": {
+            "extended_artifacts": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "REGISTER_DUMP",
+                      "TRACE",
+                      "MEMORY_DUMP",
+                      "STDOUT",
+                      "STDERR",
+                      "JOURNAL",
+                      "OTHER"
+                    ]
+                  }
+                },
+                "required": [
+                  "url",
+                  "type"
+                ]
               },
-              "description": "Additional outputs (logs, debug artifacts)"
-            },
-            "vendor_extensions": {
-              "type": "object",
-              "description": "Supplier-specific extensions (must not override standard fields)"
+              "description": "Additional output captures (logs, debug artifacts)"
             }
           },
           "required": [
             "recipe_id",
-            "recipe_version",
+            "recipe_revision",
             "supplier_id",
-            "platform_id",
-            "schema_version",
-            "integrity_hash",
+            "target_platform",
+            "package_integrity_hash",
             "class_code",
             "subclass_code",
             "data_sensitivity",
-            "connection_type",
+            "requested_connection_type",
             "execution_target",
             "os_environment_type",
             "nominal_execution_time",
             "package_size_mb",
-            "tools_package_ref",
-            "map_file",
+            "tools_package_url",
             "firmware_version_min",
             "output_format",
-            "drc_definitions",
-            "log_path"
+            "log_url"
           ],
           "additionalProperties": false
         },
@@ -483,7 +567,9 @@
         "test_name",
         "test_group",
         "test_steps",
-        "recipe_metadata"
+        "recipe_metadata",
+        "map_file",
+        "schema_version"
       ],
       "additionalProperties": true
     }
