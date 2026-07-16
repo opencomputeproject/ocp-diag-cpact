@@ -29,12 +29,17 @@ Usage:
 
 import time
 from datetime import datetime
+from typing import List, Optional
 from cpact.result_builder.result_builder import ResultCollector
+from cpact.utils.logger_utils import TestLogger
 from cpact.utils.scenario_parser import load_yaml_file
 from cpact.core.context import Context
 from cpact.utils.path_resolver import resolve_paths_in_yaml
 import ocptv.output as tv
 from concurrent.futures import ThreadPoolExecutor
+from cpact.scoring.score_manager import ScoreManager
+from cpact.schema_checker import ValidationRequest
+from cpact.schema_checker.schema_service import SchemaService
 
 
 class ScenarioInvoker:
@@ -85,13 +90,37 @@ class ScenarioInvoker:
         parent_scenario = (
             f"{self.context.get('scenario_parent')}.{scenario_data.get('test_name')}"
         )
+        parent_id = self.context.get("test_id")
+        self.context.set("parent_recipe_id", parent_id)
+        execution_id = f"{parent_id}.{scenario_data.get('test_id')}"
         start_time = time.time()
         self.context.set("scenario_parent", parent_scenario)
+        score_manager = ScoreManager.instance()
+        score_manager.start_nested_run(
+            parent_execution_id=parent_id,
+            execution_id=execution_id,
+            recipe_name=scenario_data.get('test_name'),
+        )
+        # result = self.validate_schema(
+        #     schema_type="scenario",
+        #     schema_file=None,
+        #     data=scenario_path,
+        #     logger=TestLogger().get_logger(),
+        # )
+        # recipe = result.results[0]
+        # score_manager.record_schema_validation(
+        #     execution_id=execution_id,
+        #     validation_result=recipe,
+        # )
+        # if not recipe.recipe_schema_valid:
+        #     score_manager.end_run(execution_id=execution_id)
+        #     return  "Schema validation failed", False, "Scenario schema is invalid"
         runner = ScenarioRunner(
             scenario_data,
             self.context,
             thread_executor=self.thread_executor,
             validate_continue=self.validate_continue,
+            score_manager=score_manager
         )
         output, status, message = runner.run()
 
@@ -124,4 +153,38 @@ class ScenarioInvoker:
                 "scenario_path": scenario_path,
             },
         )
+        score_manager.end_run(execution_id=execution_id)
         return output, status, message
+    def validate_schema(
+            self,
+            schema_type: str,
+            schema_file: Optional[List[str]],
+            data: str,
+            logger: Optional[TestLogger],
+        ):
+        """
+        Validate the given data file(s) against the specified schema type.
+
+        Args:
+            schema_type: 'config' or 'scenario'.
+            schema_file: Optional list with 0 or 1 element for an explicit schema path.
+            data: Path to the data file to validate.
+            logger: Logger instance.
+
+        Returns:
+            True if all validations pass; False otherwise.
+        """
+        service = SchemaService(logger)
+
+        request = ValidationRequest(
+
+            schema_type=schema_type,
+
+            source=data,
+
+            schema_file=schema_file[0]
+            if schema_file
+            else None,
+        )
+
+        return service.validate(request)

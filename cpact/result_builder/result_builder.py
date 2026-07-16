@@ -480,29 +480,38 @@ class ResultCollector:
                 self.logger.info(f"{k} = {v}")
 
     def print_summary_table(self) -> None:
-        """
-        Prints a tabular summary of the step results.
-        Returns:
-            None
-        """
-        headers = ["Step Name", "Type", "Status", "Duration (s)", "Message"]
-        table = []
+        headers = [
+            "Scenario ID",
+            "Step Name",
+            "Type",
+            "Status",
+            "Duration (s)",
+            "Message",
+        ]
+
+        grouped = defaultdict(list)
+
         for r in self.step_results:
-            table.append(
-                [
+            grouped[r.get("scenario_id", "")].append(r)
+
+        table = []
+
+        for scenario_id, steps in grouped.items():
+            first = True
+            for r in steps:
+                table.append([
+                    scenario_id if first else "",
                     r.get("step_name", ""),
                     r.get("step_type", ""),
                     self.color_severity(r.get("status", "")),
                     f"{r.get('duration', 0):.2f}",
-                    (
-                        self.shorten_string(r.get("message", ""), max_length=50)
-                        if r.get("message")
-                        else ""
-                    ),
-                ]
-            )
-        self.logger.info("\n" + tabulate(table, headers=headers, tablefmt="grid"))
+                    self.shorten_string(r.get("message", ""), max_length=50)
+                    if r.get("message")
+                    else "",
+                ])
+                first = False
 
+        self.logger.info("\n" + tabulate(table, headers=headers, tablefmt="grid"))
     def shorten_string(self, text: str, max_length: int = 20) -> str:
         """
         Shortens a string to a specified maximum length, adding ellipsis if truncated.
@@ -1271,5 +1280,5 @@ class ResultCollector:
         elif sev_upper == "WARNING":
             return Fore.YELLOW + sev + Style.RESET_ALL
         elif sev_upper in ("INFO", "PASSED", "SUCCESS"):
-            return Fore.CYAN + sev + Style.RESET_ALL
+            return Fore.GREEN + sev + Style.RESET_ALL
         return sev

@@ -140,6 +140,7 @@ class StepExecutor:
                 self.scenario_step.add_log(
                     LogSeverity.WARNING, f"[Attempt {attempts + 1}] Step failed: {e}"
                 )
+                output, status, message = "", False, f"Step failed: {e}"
                 self.logger.warning(f"[Attempt {attempts + 1}] Step failed: {e}")
                 if duration and (time.time() - start_time > duration):
                     self.scenario_step.add_log(

@@ -34,6 +34,7 @@ from typing import List, Dict
 
 from cpact.schema_checker.base_schema import BaseSchema
 from cpact.result_builder.result_builder import ResultCollector
+from cpact.schema_checker import SchemaValidationResult, ValidationEntry
 
 
 class ConfigSchemaValidator(BaseSchema):
@@ -47,34 +48,55 @@ class ConfigSchemaValidator(BaseSchema):
         :param data: Data to validate.
         :return: None
         """
+        entries :  list[ValidationEntry] = []
         data = self.load_schema(data_file)
         validator = Draft7Validator(self.schema)
         errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
 
         if not errors:
             self.logger.info("✅ Config Schema is valid")
-            rc = ResultCollector().get_instance()
-            rc.add_schema_validation_result(
-                category="Config Schema",
-                colateral=os.path.basename(data_file),
-                status="SUCCESS",
-                message="Config Schema is valid",
-                path="",
+            # rc = ResultCollector().get_instance()
+            entries.append(
+                ValidationEntry(
+                    category="Config Schema",
+                    colateral=os.path.basename(data_file),
+                    status="SUCCESS",
+                    message="Config Schema is valid",
+                    path="",
+                )
             )
-            return True
+            return SchemaValidationResult(
+                recipe_name=data.get("test_scenario", {}).get("test_name", ""),
+                map_file=data.get("test_scenario", {}).get("map_file", ""),
+                config_name=data_file,
+                recipe_schema_valid=False,
+                map_schema_valid=False,
+                config_schema_valid=True,
+                metadata={},
+            )
 
         self.logger.info("❌ Validation error")
         for error in errors:
             path = " : ".join(str(p) for p in error.absolute_path)
-            rc = ResultCollector().get_instance()
-            rc.add_schema_validation_result(
-                category="Config Schema",
-                file=os.path.basename(data_file),
-                severity="ERROR",
-                message=error.message,
-                path=path,
+            entries.append(
+                ValidationEntry(
+                    category="Config Schema",
+                    file=os.path.basename(data_file),
+                    severity="ERROR",
+                    message=error.message,
+                    path=path,
+                )
             )
             if path:
                 self.logger.debug(f"   Path: {path}")
             self.logger.info("\n")
-        return False
+        return SchemaValidationResult(
+            recipe_name=data.get("test_scenario", {}).get("test_name", ""),
+            map_file=data.get("test_scenario", {}).get("map_file", ""),
+            config_name=data_file,
+            schema_version=data.get("schema_version", ""),
+            recipe_schema_valid=False,
+            map_schema_valid=False,
+            config_schema_valid=(len(errors) == 0),
+            entries=entries,
+        )

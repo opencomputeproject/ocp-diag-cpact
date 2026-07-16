@@ -38,6 +38,7 @@ from cpact.utils.path_resolver import resolve_paths_in_yaml
 from cpact.schema_checker.base_schema import BaseSchema
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
 from cpact.result_builder.result_builder import ResultCollector
+from cpact.schema_checker import ValidationEntry, SchemaValidationResult
 
 
 class ScenarioSchemaValidator(BaseSchema):
@@ -103,19 +104,25 @@ class ScenarioSchemaValidator(BaseSchema):
         :param data: Data to validate.
         :return: None
         """
+        entries : list[ValidationEntry] = []
         self.logger.info(f"Validating {data_file} against scenario schema...")
         # Check the duplicate keys in the YAML file
         duplicate_warnings = self.scan_duplicates(data_file)
         for dup in duplicate_warnings:
             rc = ResultCollector.get_instance()
-            rc.add_schema_validation_result(
-                category="Duplicate Key",
-                colateral=os.path.basename(data_file),
-                status="WARNING",
-                message=f"Duplicate key '{dup['key']}'",
-                path="",
-                line=str(dup["line"]),
+            entries.append(
+                ValidationEntry(
+                    category="Duplicate Key",
+                    collateral=os.path.basename(data_file),
+                    status="WARNING",
+                    message=f"Duplicate key '{dup['key']}'",
+                    path="",
+                    line=str(dup["line"]),
+                )
             )
+            # rc.add_schema_validation_result(
+            #     category="Duplicate Key",
+            # )
         if duplicate_warnings:
             self.logger.warning("Duplicate keys found in the YAML file:")
             for warning in duplicate_warnings:
@@ -127,7 +134,25 @@ class ScenarioSchemaValidator(BaseSchema):
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
             self.logger.error(f"Failed to load YAML file: {e}")
-            return False
+            entries.append(
+                ValidationEntry(
+                    category="Scenario Schema",
+                    collateral=os.path.basename(data_file),
+                    status="FAIL",
+                    message=str(e),
+                )
+            )
+            return SchemaValidationResult(
+                recipe_name=data_file,
+                config_name="",
+                map_file="",
+                schema_version="",
+                recipe_schema_valid=False,
+                map_schema_valid=False,
+                config_schema_valid=False,
+                entries=entries,
+            )
+        scenario_data = data.get("test_scenario", {}) 
         # Validate the data against the schema
         validator = Draft7Validator(self.schema)
         errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
@@ -135,29 +160,40 @@ class ScenarioSchemaValidator(BaseSchema):
             for error in errors:
                 path = " : ".join(str(p) for p in error.absolute_path)
                 rc = ResultCollector.get_instance()
-                rc.add_schema_validation_result(
-                    category="Scenario Schema",
-                    colateral=os.path.basename(data_file),
-                    status="ERROR",
-                    message=error.message,
-                    path=path,
+                entries.append(
+                    ValidationEntry(
+                        category="Scenario Schema",
+                        collateral=os.path.basename(data_file),
+                        status="FAIL",
+                        message=error.message,
+                        path=path,
+                    )
                 )
                 self.logger.error(f" * {error.message}")
                 if path:
                     self.logger.debug(f"   Path: {path}\n")
-            return False
+            return SchemaValidationResult(
+                recipe_name=scenario_data.get("test_name", ""),
+                config_name="",
+                map_file=scenario_data.get("map_file", ""),
+                recipe_schema_valid=False,
+                map_schema_valid=False,
+                config_schema_valid=False,
+                schema_version=scenario_data.get("schema_version", ""),
+                entries=entries,
+            )
         self.logger.info("✅ Scenario Schema is valid")
         rc = ResultCollector.get_instance()
-        rc.add_schema_validation_result(
-            category="Scenario Schema",
-            colateral=os.path.basename(data_file),
-            status="SUCCESS",
-            message="Scenario schema is valid",
-            path="",
+        entries.append(
+            ValidationEntry(
+                category="Scenario Schema",
+                collateral=os.path.basename(data_file),
+                status="SUCCESS",
+                message="Scenario schema is valid",
+            )
         )
         self.logger.info("🔍 Starting MAP Schema Validation...")
 
-        scenario_data = data.get("test_scenario", {})
         map_schema_validate = True
         scenario_data, _ = resolve_paths_in_yaml(scenario_data)
 
@@ -170,19 +206,40 @@ class ScenarioSchemaValidator(BaseSchema):
                 resolved_map_file = os.path.join(scenario_dir, scenario_map_file)
             self.logger.info(f"📍 Resolved map file absolute path: {resolved_map_file}")
 
-            map_res = self.validate_map_schema(resolved_map_file)
             self.logger.info(f"map_file detected in YAML: {resolved_map_file}")
-            if not map_res:
-                self.logger.error(f"❌ Map file validation FAILED: {resolved_map_file}")
-                return False
+            map_valid, map_entries = self.validate_map_schema(
+                resolved_map_file
+            )
+            entries.extend(map_entries)
+            # map_res = self.validate_map_schema(resolved_map_file)
+            # if not map_res:
+            #     self.logger.error(f"❌ Map file validation FAILED: {resolved_map_file}")
+            #     return SchemaValidationResult(
+            #         recipe_schema_valid=True,
+            #         map_schema_valid=False,
+            #         config_schema_valid=False,
+            #         metadata={"error": f"Map file validation failed: {resolved_map_file}"},
+            #     )
 
-        return True
+        return SchemaValidationResult(
+            recipe_name=scenario_data.get("test_name", ""),
+            config_name="",
+            map_file=scenario_data.get("map_file", ""),
+            schema_version=scenario_data.get("schema_version", ""),
+            recipe_schema_valid=(len(errors) == 0),
+            map_schema_valid=map_valid,
+            config_schema_valid=False,
+            entries=entries,
+        )
 
-    def validate_map_schema(self, map_file_path: str) -> bool:
+    def validate_map_schema(
+        self,
+        map_file_path: str,
+    ) -> tuple[bool, list[ValidationEntry]]:
         """
         Validate the map JSON file against the latest map_recipe_schema_*.json.
         """
-
+        entries: list[ValidationEntry] = []
         self.logger.info(
             f"📍 Attempting to load map file from: {os.path.abspath(map_file_path)}"
         )
@@ -191,54 +248,55 @@ class ScenarioSchemaValidator(BaseSchema):
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
             self.logger.error(f"❌ Failed to load map file '{map_file_path}': {e}")
-            return False
+            return False, entries
         try:
             spec_schema_dir = self.schema_dir
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
             self.logger.error(f"❌ Failed to resolve schema directory: {e}")
-            return False
+            return False, entries
 
         # Find files like map_file_schema_0.7.json, map_file_schema_1.2.json
         map_schema_file = os.path.join(spec_schema_dir, "map_recipe_schema.json")
         if not map_schema_file:
             self.logger.error(f"❌ No map recipe schemas found in: {self.schema_dir}")
-            return False
+            return False, entries
 
         try:
             map_schema = self.load_schema(map_schema_file)
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
             self.logger.error(f"❌ Failed to load map schema '{map_schema_file}': {e}")
-            return False
+            return False, entries
 
         validator = Draft7Validator(map_schema)
         errors = sorted(validator.iter_errors(map_data), key=lambda e: e.path)
 
         if not errors:
             self.logger.info("✅ Map Schema is valid")
-            rc = ResultCollector.get_instance()
-            rc.add_schema_validation_result(
-                category="Map Schema",
-                colateral=os.path.basename(map_file_path),
-                status="SUCCESS",
-                message="Map schema is valid",
-                path="",
+            entries.append(
+                ValidationEntry(
+                    category="Map Schema",
+                    collateral=os.path.basename(map_file_path),
+                    status="SUCCESS",
+                    message="Map schema is valid",
+                )
             )
-            return True
+            return True, entries
 
         self.logger.error(f"❌ Map Schema validation FAILED: {map_file_path}")
         for error in errors:
             path = " : ".join(str(p) for p in error.absolute_path)
-            rc = ResultCollector.get_instance()
-            rc.add_schema_validation_result(
-                category="Map Schema",
-                colateral=os.path.basename(map_file_path),
-                status="ERROR",
-                message=error.message,
-                path=path,
+            entries.append(
+                ValidationEntry(
+                    category="Map Schema",
+                    collateral=os.path.basename(map_file_path),
+                    status="ERROR",
+                    message=error.message,
+                    path=path,
+                )
             )
             if path:
                 self.logger.debug(f"   Path: {path}\n")
 
-        return False
+        return False, entries

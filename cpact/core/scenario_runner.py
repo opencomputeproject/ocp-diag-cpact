@@ -34,6 +34,7 @@ from cpact.core.context import Context
 from cpact.core.step_executor import StepExecutor
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.logger_utils import OCPTVFileWriter
+from cpact.scoring.score_manager import ScoreManager
 import ocptv.output as tv
 from ocptv.output import (
     DiagnosisType,
@@ -51,6 +52,7 @@ class ScenarioRunner:
         context: Context,
         thread_executor: ThreadPoolExecutor = None,
         validate_continue: bool = False,
+        score_manager: ScoreManager = None,
     ) -> None:
         """
         Initializes the ScenarioRunner with a scenario, context, and optional thread executor for continued steps.
@@ -67,7 +69,7 @@ class ScenarioRunner:
         self.context = context
         self.executor_continue = thread_executor or ThreadPoolExecutor(max_workers=5)
         self.validate_continue = validate_continue
-
+        self.score_manager = ScoreManager.instance() if not score_manager else score_manager
     def run(self) -> tuple[None, bool, str]:
         """
         Runs the test scenario by executing the defined test steps and managing the test run lifecycle.
@@ -95,6 +97,8 @@ class ScenarioRunner:
             severity=LogSeverity.INFO,
         )
         run_status = True
+
+        execution_id = f"{self.context.get('parent_recipe_id')}.{data.get('test_id')}"
         for step in steps:
             scenario_step = run.add_step(
                 name=f"Step: ID:{step.get('step_id', 'Unnamed Step')}_{step.get('step_name', 'Unnamed Step')}"
@@ -121,12 +125,28 @@ class ScenarioRunner:
                     )
                     # if not step.get("continue", False):
                     run_status = False
+                    self.score_manager.execution_step(
+                        execution_id=execution_id,
+                        passed=False,
+                        metadata={
+                            "step_id": step.get("step_id"),
+                            "step_name": step.get("step_name"),
+                        }
+                    )
                     break
                 else:
                     scenario_step.add_diagnosis(
                         diagnosis_type=DiagnosisType.PASS,
                         message=message,
                         verdict="passed",
+                    )
+                    self.score_manager.execution_step(
+                        execution_id=execution_id,
+                        passed=True,
+                        metadata={
+                            "step_id": step.get("step_id"),
+                            "step_name": step.get("step_name"),
+                        }
                     )
                     self.logger.info(
                         f"Step '{step.get('step_name')}' completed successfully."

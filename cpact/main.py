@@ -39,6 +39,7 @@ Usage:
 
 import sys
 import argparse
+from pathlib import Path
 from email.mime import text
 import json
 import os
@@ -49,13 +50,18 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from tabulate import tabulate
 
+from cpact.scoring.score_manager import ScoreManager
+from cpact.scoring.score_result import ScorePrinter
 from cpact.versions import get_version_info, __version__
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.scenario_parser import load_yaml_file
 from cpact.utils.path_resolver import resolve_paths_in_yaml
 from cpact.result_builder.result_builder import ResultCollector
-from cpact.schema_checker.schema_factory import ExecutorFactory
+# from cpact.schema_checker.factories.schema_factory import ExecutorFactory
+from cpact.schema_checker import ValidationRequest
+from cpact.schema_checker.schema_service import SchemaService
 from cpact.core.orchestrator import Orchestrator
+from cpact.core.context import ExecutionContext
 from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.system_connections.connection_discovery import ConnectionDiscovery
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
@@ -190,9 +196,32 @@ def run_test(
     scenario_data, _ = resolve_paths_in_yaml(
         scenario_data, scenario_data.get("paths", {})
     )
+    score_manager = ScoreManager()
+    context = ExecutionContext(logger, score_manager)
 
-    orchestrator = Orchestrator()
+    orchestrator = Orchestrator(context)
+    score_manager.start_run(execution_id=scenario_data.get("test_id"),
+                            recipe_name=scenario_data.get("test_name"))
+    
+    valid = validate_recipe(
+        schema_type="scenario",
+        scenario_path=file_path,
+        schema_file=None,
+        score_manager=score_manager,
+        execution_id=scenario_data.get("test_id"),
+        logger=logger,
+    )
+
+    if not valid:
+        score_manager.end_run(execution_id=scenario_data.get("test_id"))
+        return
+    # score_manager.schema_validation(execution_id=scenario_data.get("test_id"),
+    #                                 passed=True)
+
+
     orchestrator.run(scenario_data, file_path)
+
+    score_manager.end_run(execution_id=scenario_data.get("test_id"))
 
     elapsed_time = time.time() - start_time
     logger.info(f"✅ Test completed in {elapsed_time:.2f} seconds")
@@ -526,219 +555,137 @@ def calculate_connection_statistics(
 # Schema validation
 # --------------------------------------------------------------------------------------
 
-
-def get_versioned_schema_dir(schema_type: str, schema_version: str) -> str:
-    """
-    Get the default schema file path based on schema type and current version.
-
-    Args:
-        schema_type: 'config' or 'scenario'.
-    Returns:
-        Path to the schema file.
-    """
-
-    schema_dir = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "spec", "schema"
-    )
-    schema_dirs = os.listdir(schema_dir)
-    if schema_version and schema_version in schema_dirs:
-        return os.path.join(schema_dir, schema_version)
-    latest_schema_version = sorted(schema_dirs)[-1]
-
-    return os.path.join(
-        schema_dir,
-        latest_schema_version,
-    )
-
-
-def get_schema_file_path(
-    schema_dir: str,
-    schema_type: str,
-) -> str:
-    """
-    Resolve the schema file path based on input or default.
-
-    Args:
-        schema_type: 'config' or 'scenario'.
-        schema_file: Optional list with 0 or 1 element for an explicit schema path.
-        schema_version: Version string from the data file.
-    Returns:
-        Path to the schema file.
-    """
-    return os.path.join(schema_dir, f"{schema_type}_recipe_schema.json")
-
-
 def validate_schema(
     schema_type: str,
     schema_file: Optional[List[str]],
-    file_or_dir: str,
+    data: str,
     logger: Optional[TestLogger],
-) -> bool:
+):
     """
     Validate the given data file(s) against the specified schema type.
 
     Args:
         schema_type: 'config' or 'scenario'.
         schema_file: Optional list with 0 or 1 element for an explicit schema path.
-        file_or_dir: Path to a file or a directory to validate.
+        data: Path to the data file to validate.
         logger: Logger instance.
 
     Returns:
         True if all validations pass; False otherwise.
     """
-    logger = logger or TestLogger().get_logger()
+    service = SchemaService(logger)
 
-    if schema_type not in {"config", "scenario"}:
-        logger.error("SCHEMA_TYPE must be 'config' or 'scenario'.")
+    request = ValidationRequest(
+
+        schema_type=schema_type,
+
+        source=data,
+
+        schema_file=schema_file[0]
+        if schema_file
+        else None,
+    )
+
+    return service.validate(request)
+
+
+
+from pathlib import Path
+
+
+def validate_recipe(
+    schema_type: str,
+    schema_file: Optional[List[str]],
+    scenario_path: str,
+    logger: TestLogger,
+    score_manager,
+    execution_id: str,
+    visited: Optional[set] = None,
+):
+    if visited is None:
+        visited = set()
+
+    scenario_path = str(Path(scenario_path).resolve())
+    # Prevent circular invocation
+    scenario_doc = load_yaml_file(scenario_path)
+    if not scenario_doc or "test_scenario" not in scenario_doc:
+        logger.error(f"Invalid scenario file: {scenario_path}")
         return False
 
-    # Resolve schema file: use provided or default path based on __version__
+    scenario_data = scenario_doc["test_scenario"]
+    scenario_data, _ = resolve_paths_in_yaml(
+        scenario_data, scenario_data.get("paths", {})
+    )
 
-    if not os.path.exists(file_or_dir):
-        logger.error(f"❌ File or directory not found: {file_or_dir}")
+    if scenario_path in visited:
+        logger.warning(f"Circular invocation detected: {scenario_path}")
         return False
 
-    # Collect matching files to validate
-    if os.path.isdir(file_or_dir):
-        matched_files = discover_tests(file_or_dir, None, logger=logger)
-        if not matched_files:
-            logger.error(f"❌ No matching files found in directory: {file_or_dir}")
+    visited.add(scenario_path)
+
+    service = SchemaService(logger)
+
+    request = ValidationRequest(
+        schema_type=schema_type,
+        source=scenario_path,
+        schema_file=schema_file[0] if schema_file else None,
+    )
+
+    result = service.validate(request)
+    recipe = result.results[0]
+    if not recipe.recipe_schema_valid:
+        score_manager.record_schema_validation(
+            execution_id=execution_id,
+            validation_result=recipe,
+        )
+        return False
+    # Record this recipe's validation result
+    score_manager.record_schema_validation(
+        execution_id=execution_id,
+        validation_result=result.results[0],
+    )
+    # if not result.success:
+    #     return False
+
+    child_no = 1
+
+    for step in scenario_data.get("test_steps", []):
+        if step.get("step_type") != "invoke_scenario":
+            continue
+
+        child_path = step.get("scenario_path")
+        if not child_path:
+            continue
+        scenario_doc = load_yaml_file(child_path)
+        if not scenario_doc or "test_scenario" not in scenario_doc:
+            logger.error(f"Invalid scenario file: {child_path}")
             return False
-    else:
-        matched_files = [file_or_dir]
 
-    results: List[bool] = []
-    report: List[Dict[str, str]] = []
-    for fp in matched_files:
-        if not os.path.isfile(fp):
-            logger.error(f"❌ Not a file: {fp}")
-            results.append(False)
-            continue
-        if not fp.endswith((".yaml", ".yml", ".json")):
-            logger.error(f"❌ Unsupported file format: {fp}")
-            results.append(False)
-            continue
-        try:
-            fp_data = load_yaml_file(fp)
-            if not fp_data:
-                logger.error(f"❌ Failed to load data from {fp}.")
-                results.append(False)
-                continue
-            schema_version = fp_data.get("test_scenario", {}).get("schema_version")
-            logger.info(
-                f"Using schema version: {schema_version or '-latest-'} for {fp}"
-            )
-            schema_dir = get_versioned_schema_dir(schema_type, schema_version)
-            logger.info(f"Using schema directory: {schema_dir} for {fp}")
-            resolved_schema_file = (
-                schema_file[0]
-                if schema_file
-                else get_schema_file_path(schema_dir, schema_type)
-            )
-            logger.info(f"Using schema file: {resolved_schema_file} for {fp}")
-            if not os.path.exists(resolved_schema_file):
-                logger.error(f"❌ Schema file not found: {resolved_schema_file}")
-                return False
-            logger.info(f"Validating {fp} against {schema_type} schema...")
-            factory = ExecutorFactory().get_instance(resolved_schema_file)
-            executor = factory.get_executor(schema_type)
-            schema_executor = executor(resolved_schema_file, schema_dir)
-            res = schema_executor.validate_schema(fp)
-            report.append(
-                ResultCollector.get_instance().get_schema_validation_results()
-            )
-            ResultCollector.get_instance().reset_schema_validation_results()
-            results.append(bool(res))
-        except Exception as exc:
-            CustomExceptionHandler.print_exception(exc)
-            logger.error(f"❌ Validation error for {fp}: {exc}")
-            results.append(False)
+        scenario_data = scenario_doc["test_scenario"]
+        scenario_data, _ = resolve_paths_in_yaml(
+            scenario_data, scenario_data.get("paths", {})
+        )
+        child_execution_id = f"{execution_id}.{scenario_data.get('test_id', f'child_{child_no}')}"
+        score_manager.start_nested_run(
+            parent_execution_id=execution_id,
+            execution_id=child_execution_id,
+            recipe_name=scenario_data.get('test_name'),
+        )
+        valid = validate_recipe(
+            schema_type=schema_type,
+            schema_file=schema_file,
+            scenario_path=child_path,
+            logger=logger,
+            score_manager=score_manager,
+            execution_id=child_execution_id,
+            visited=visited,
+        )
+        if not valid:
+            return False
 
-    print_validation_report(report, logger)
-    ResultCollector.get_instance().generate_schema_report(
-        report,
-        os.path.join(
-            TestLogger().get_log_dir(), f"{schema_type}_schema_validation_report"
-        ),
-        output_type="json",
-    )
-    return all(results)
+        child_no += 1
 
-
-def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) -> None:
-    """
-    Print a formatted validation report to console and log file.
-    This function takes a list of validation report sections and displays them in a
-    formatted table with color-coded severity levels. The report is printed to both
-    the console logger and saved to a text file in the log directory.
-    Args:
-        report (List[Dict[str, str]]): A list of report sections, where each section
-            contains multiple rows. Each row is a dictionary with keys like "Category",
-            "Colateral", "Status", "Message", "Path", and "Line".
-        logger (TestLogger): The logger instance used to output the formatted report
-            and manage log file paths.
-    Returns:
-        None
-    Behavior:
-        - Attempts to import colorama for colored output. Falls back to plain text if unavailable.
-        - Wraps text in cells to 30 characters width for readability.
-        - Color-codes severity levels: ERROR (red), WARNING (yellow), INFO/PASSED (cyan).
-        - Groups report sections with visual breaks.
-        - Displays the table using tabulate in grid format.
-        - Saves the report (without colors) to "schema_validation_report.txt" in the log directory.
-        - Prints "No issues found." if the report is empty.
-    Raises:
-        None (gracefully handles missing colorama dependency)
-    """
-
-    def wrap_text(text, width=30):
-        if text is None:
-            return ""
-        return "\n".join(textwrap.wrap(str(text), width))
-
-    if not report:
-        print("No issues found.")
-        return
-
-    all_rows = []
-    group_breaks = []
-
-    for section in report:
-        first = True
-        for row in section:
-            r = row.copy()
-            for k in r:
-                r[k] = wrap_text(r[k], 30)
-            if "Status" in r:
-                r["Status"] = ResultCollector.get_instance().color_severity(r["Status"])
-            if not first:
-                if "Category" in r:
-                    r["Category"] = ""
-                if "Colateral" in r:
-                    r["Colateral"] = ""
-            first = False
-            all_rows.append(r)
-        group_breaks.append(len(all_rows))
-    table_lines = tabulate(all_rows, headers="keys", tablefmt="grid")
-
-
-    logger.info(
-        f"""
-================================================================
-                    VALIDATION REPORT
-================================================================
-{table_lines}
-================================================================
-                """
-    )
-    
-    log_path = os.path.join(TestLogger().get_log_dir(), "schema_validation_report.txt")
-    with open(log_path, "w", encoding="utf-8") as f:
-        f.write("VALIDATION REPORT\n")
-        f.write("=" * 80 + "\n")
-        f.write(ResultCollector().clean_ansi(table_lines))
-        f.write("\n" + "=" * 80 + "\n")
-
+    return True
 
 def get_final_results() -> bool:
     rc = ResultCollector().get_instance()
@@ -935,19 +882,19 @@ def main() -> None:
     else:
         matched_files = discover_tests(test_dir, args, logger=logger)
 
-    if args.run_with_schema_check:
-        for matched_file in matched_files:
-            ok = validate_schema(
-                schema_type="scenario",
-                schema_file=None,
-                file_or_dir=matched_file,
-                logger=logger,
-            )
-            if not ok:
-                logger.error(f"❌ Recipe Schema Check Failed!!! for {matched_file}")
-                factory.close_all_connections()
-                logger.error("❌ Final Test Result: FAIL")
-                sys.exit(1)
+    # if args.run_with_schema_check:
+    #     for matched_file in matched_files:
+    #         ok = validate_schema(
+    #             schema_type="scenario",
+    #             schema_file=None,
+    #             file_or_dir=matched_file,
+    #             logger=logger,
+    #         )
+    #         if not ok:
+    #             logger.error(f"❌ Recipe Schema Check Failed!!! for {matched_file}")
+    #             factory.close_all_connections()
+    #             logger.error("❌ Final Test Result: FAIL")
+    #             sys.exit(1)
 
     print("Matched Files are: ", matched_files)
     for file_path in matched_files:
@@ -958,7 +905,9 @@ def main() -> None:
             logger=logger,
             historical_data=args.historical_data,
         )
-
+    score_result = ScorePrinter(logger=logger)
+    score_result.print_framework_report()
+    # score_result.print_all_detailed_reports()
     factory.close_all_connections()
     logger.info("All tests executed successfully.")
     result = get_final_results()

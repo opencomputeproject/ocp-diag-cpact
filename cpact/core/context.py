@@ -226,3 +226,14 @@ class Context:
             dict: A dictionary containing the diagnostic codes.
         """
         return self.diagnostic_codes
+
+
+class ExecutionContext:
+
+    def __init__(
+        self,
+        logger,
+        score_manager,
+    ):
+        self.logger = logger
+        self.score_manager = score_manager

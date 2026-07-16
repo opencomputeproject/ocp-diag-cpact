@@ -34,7 +34,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, Type, List
 
-from cpact.core.context import Context
+from cpact.core.context import Context, ExecutionContext
 from cpact.core.scenario_runner import ScenarioRunner
 from cpact.core.step_executor import StepExecutor
 
@@ -44,6 +44,8 @@ from cpact.result_builder.result_builder import ResultCollector
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.docker_executor import DockerExecutor
 from cpact.utils.logger_utils import OCPTVFileWriter
+from cpact.scoring.score_manager import ScoreManager
+
 import ocptv.output as tv
 from ocptv.output import (
     DiagnosisType,
@@ -55,7 +57,7 @@ from ocptv.output import (
 
 
 class Orchestrator:
-    def __init__(self) -> None:
+    def __init__(self, execution_context: ExecutionContext) -> None:
         """
         Initializes the Orchestrator with a logger, context, and a thread pool executor for continued
         steps.
@@ -66,6 +68,7 @@ class Orchestrator:
         """
         self.logger = TestLogger().get_logger()
         self.context = Context.get_instance()
+        self.execution_context = execution_context
         self.executor_continue = ThreadPoolExecutor(max_workers=5)
 
     def run(self, test_scenario: dict = None, scenario_path: str = None) -> None:
@@ -152,6 +155,7 @@ class Orchestrator:
             self.logger.info(f"Running inline steps...")
             run = tv.TestRun(name=scenario.get("test_name"), version="1.0")
             dut = tv.Dut(id=scenario["test_id"], name=scenario["test_name"])
+            
             run.start(dut=dut)
             run.add_log(
                 message=f"Running Test Scenario: {scenario.get('test_name')}",
@@ -178,6 +182,8 @@ class Orchestrator:
                         self.context,
                         executor=self.executor_continue,
                     ).run()
+                    end_time = time.time()
+                    duration = end_time - start_time
                     if not status:
                         self.logger.error(f"Step failed: {message}")
                         scenario_step.add_diagnosis(
@@ -190,12 +196,30 @@ class Orchestrator:
                             f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} ================="
                         )
                         run_status = False
+                        self.execution_context.score_manager.execution_step(
+                            execution_id=scenario.get("test_id"),
+                            passed=False,
+                            metadata={
+                                "step": step.get("step_name"),
+                                "message": message,
+                                "duration": duration,
+                            },
+                        )
                         break
                         # raise Exception(f"Step execution failed: {message}")
                     scenario_step.add_diagnosis(
                         diagnosis_type=DiagnosisType.PASS,
                         message=message,
                         verdict="passed",
+                    )
+                    self.execution_context.score_manager.execution_step(
+                        execution_id=scenario.get("test_id"),
+                        passed=True,
+                        metadata={
+                            "step": step.get("step_name"),
+                            "message": message,
+                            "duration": duration,
+                        },
                     )
                 self.logger.info(
                     f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} ================="
@@ -204,18 +228,37 @@ class Orchestrator:
             run.end(status=TestStatus.ERROR, result=TestResult.FAIL)
         else:
             run.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
-
         self.logger.info("Finalizing continued steps...")
         final_results = self.finalize_all_continued_steps(self.context)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
         if not final_results:
             self.logger.info("No continued steps to finalize.")
         else:
             for step_id, result in final_results.items():
                 if result["status"] == "error":
                     self.logger.error(f"[{step_id}] failed: {result['error']}")
+                    self.execution_context.score_manager.execution_step(
+                        execution_id=scenario.get("test_id"),
+                        passed=False,
+                        metadata={
+                            "step": step.get("step_name"),
+                            "message": message,
+                            "duration": elapsed_time,
+                        },
+                    )
                 else:
                     self.logger.info(
                         f"[{step_id}] completed. Output snippet: {result['output'][:100]}"
+                    )
+                    self.execution_context.score_manager.execution_step(
+                        execution_id=scenario.get("test_id"),
+                        passed=True,
+                        metadata={
+                            "step": step.get("step_name"),
+                            "message": message,
+                            "duration": elapsed_time,
+                        },
                     )
             self.logger.info("All continued steps finalized.")
         self.executor_continue.shutdown(wait=True)
