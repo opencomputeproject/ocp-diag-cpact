@@ -88,6 +88,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+
 class EventType(Enum):
     """Semantic categories of events emitted during a recipe execution.
 
@@ -113,7 +114,7 @@ class EventType(Enum):
 
     def __str__(self) -> str:  # pragma: no cover - cosmetic only
         return self.value
-    
+
 
 @dataclass(frozen=True)
 class Event:

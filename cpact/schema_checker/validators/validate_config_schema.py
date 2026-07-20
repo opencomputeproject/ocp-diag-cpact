@@ -48,7 +48,7 @@ class ConfigSchemaValidator(BaseSchema):
         :param data: Data to validate.
         :return: None
         """
-        entries :  list[ValidationEntry] = []
+        entries: list[ValidationEntry] = []
         data = self.load_schema(data_file)
         validator = Draft7Validator(self.schema)
         errors = sorted(validator.iter_errors(data), key=lambda e: e.path)

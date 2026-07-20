@@ -71,9 +71,7 @@ class SchemaReporter:
         - Integrate validation reporting with logging frameworks.
     """
 
-    ANSI_ESCAPE = re.compile(
-        r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
-    )
+    ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
     def __init__(self, logger=None):
         self.logger = logger or TestLogger().get_logger()

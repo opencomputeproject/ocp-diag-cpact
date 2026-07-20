@@ -40,7 +40,6 @@ The implementation follows PEP 257 documentation conventions and aligns
 with CPACT framework coding standards.
 """
 
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -64,14 +63,8 @@ class ValidationRequest:
         schema_file:
             Optional schema definition file used during validation.
     """
-    source: (
-        str
-        | Path
-        | dict[str, Any]
-        | list[str]
-        | list[Path]
-        | list[dict[str, Any]]
-    )
+
+    source: str | Path | dict[str, Any] | list[str] | list[Path] | list[dict[str, Any]]
 
     schema_type: str
     schema_file: str | None = None

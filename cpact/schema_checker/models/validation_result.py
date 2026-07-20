@@ -57,10 +57,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-
 # ---------------------------------------------------------------------
 # Validation Request
 # ---------------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class ValidationRequest:
@@ -72,6 +72,7 @@ class ValidationRequest:
 # ---------------------------------------------------------------------
 # Validation Entry
 # ---------------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class ValidationEntry:
@@ -86,6 +87,7 @@ class ValidationEntry:
 # ---------------------------------------------------------------------
 # Schema Validation Result (one recipe)
 # ---------------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class SchemaValidationResult:
@@ -118,6 +120,7 @@ class SchemaValidationResult:
 # ---------------------------------------------------------------------
 # Overall Validation Result
 # ---------------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class ValidationResult:

@@ -87,9 +87,7 @@ class SchemaService:
 
         self.validator = SchemaValidator()
 
-        self.reporter = SchemaReporter(
-            logger=self.logger
-        )
+        self.reporter = SchemaReporter(logger=self.logger)
 
     def validate(
         self,

@@ -98,16 +98,11 @@ class ScorePrinter:
     - Improve score readability through structured output.
     """
 
-    def __init__(
-        self,
-        console: Optional[Console] = None,
-        logger: Optional[Any] = None
-    ):
+    def __init__(self, console: Optional[Console] = None, logger: Optional[Any] = None):
 
         self.manager = ScoreManager()
         self.console = console or Console()
         self.logger = logger
-
 
     def _colored_status(self, status):
 
@@ -122,10 +117,9 @@ class ScorePrinter:
 
         return status
 
-
     def print_summary(
         self,
-        include_nested: bool =True,
+        include_nested: bool = True,
     ):
         """
         Print summary of all recipe executions.
@@ -148,7 +142,6 @@ class ScorePrinter:
         failed = 0
         partial = 0
         not_executed = 0
-
 
         for index, result in enumerate(results, start=1):
 
@@ -186,7 +179,6 @@ class ScorePrinter:
             else:
                 status = "PARTIAL"
 
-
             if status == "PASS":
                 passed += 1
             elif status == "FAIL":
@@ -207,17 +199,19 @@ class ScorePrinter:
             highest = max(highest, score)
             lowest = min(lowest, score)
 
-            rows.append([
-                index,
-                result.recipe_name,
-                result.execution_id,
-                ReportColor.status(schema),
-                ReportColor.status(map_status),
-                f"{ctx.passed_steps}/{ctx.total_steps}",
-                ReportColor.score(score),
-                ReportColor.status(status),
-                f"{duration:.2f}s",
-            ])
+            rows.append(
+                [
+                    index,
+                    result.recipe_name,
+                    result.execution_id,
+                    ReportColor.status(schema),
+                    ReportColor.status(map_status),
+                    f"{ctx.passed_steps}/{ctx.total_steps}",
+                    ReportColor.score(score),
+                    ReportColor.status(status),
+                    f"{duration:.2f}s",
+                ]
+            )
 
         table = tabulate(
             rows,
@@ -248,8 +242,8 @@ class ScorePrinter:
             ["Partial", ReportColor.status(f"PARTIAL ({partial})")],
             ["Not Executed", ReportColor.status(f"NOT EXECUTED ({not_executed})")],
             ["Average Score", ReportColor.score(avg)],
-            #["Highest Score", ReportColor.score(highest)],
-            #["Lowest Score", ReportColor.score(lowest)],
+            # ["Highest Score", ReportColor.score(highest)],
+            # ["Lowest Score", ReportColor.score(lowest)],
             ["Total Duration", f"{total_duration:.2f}s"],
         ]
 
@@ -317,7 +311,7 @@ class ScorePrinter:
 
         for result in results:
             self.print_detailed_report(result.execution_id)
-    
+
     def _build_event_table(
         self,
         events,
@@ -351,24 +345,28 @@ class ScorePrinter:
             )
 
             message = md.get("message", "")
-            rows.append([
-                index,
-                item,
-                "PASS" if event.passed else "FAIL",
-                md.get("score", "-"),
-                md.get("max_score", "-"),
-                message,
-            ])
+            rows.append(
+                [
+                    index,
+                    item,
+                    "PASS" if event.passed else "FAIL",
+                    md.get("score", "-"),
+                    md.get("max_score", "-"),
+                    message,
+                ]
+            )
 
         if not rows:
-            rows.append([
-                "-",
-                "-",
-                "-",
-                "-",
-                "-",
-                empty_message,
-            ])
+            rows.append(
+                [
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    "-",
+                    empty_message,
+                ]
+            )
 
         return tabulate(
             rows,
@@ -398,12 +396,12 @@ class ScorePrinter:
             EventType.MAP_VALIDATION: [],
             EventType.EXECUTION_STEP: [],
             EventType.PROFILE_SCORE: [],
-            EventType.NESTED_RECIPE: []
+            EventType.NESTED_RECIPE: [],
         }
         for event in ctx.events:
             grouped.setdefault(event.event_type, []).append(event)
         return grouped
-    
+
     def _build_map_table(self, events):
 
         return self._build_event_table(
@@ -435,7 +433,7 @@ class ScorePrinter:
             item_key="step",
             empty_message="No execution steps",
         )
-    
+
     def _print_section(self, title, table):
 
         self.logger.info("")
@@ -510,16 +508,12 @@ class ScorePrinter:
 
         self._print_section(
             "1. SCHEMA VALIDATION",
-            self._build_schema_table(
-                grouped[EventType.SCHEMA_VALIDATION]
-            ),
+            self._build_schema_table(grouped[EventType.SCHEMA_VALIDATION]),
         )
 
         self._print_section(
             "2. MAP VALIDATION",
-            self._build_map_table(
-                grouped[EventType.MAP_VALIDATION]
-            ),
+            self._build_map_table(grouped[EventType.MAP_VALIDATION]),
         )
 
         # self._print_section(
@@ -546,7 +540,7 @@ class ScorePrinter:
         # for result in results:
 
         #     self.print_detailed_report(result.execution_id)
-        
+
         self.logger.info("\n")
         self.logger.info("=" * 120)
         self.logger.info("OVERALL SUMMARY")
@@ -563,10 +557,9 @@ class ScorePrinter:
 
         for result in results:
 
-            self.logger.info(
-                "\n%s",
-                renderer.render_tree(result.execution_id)
-            )
+            self.logger.info("\n%s", renderer.render_tree(result.execution_id))
+
+
 # ===========================================================================
 # TreeRenderer
 # ===========================================================================

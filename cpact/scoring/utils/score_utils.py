@@ -1,41 +1,26 @@
 """
+Console color formatting utilities for CPACT scoring reports.
+
 Copyright (c) 2025 Open Compute Project
 Licensed under the MIT License.
 
-This source code is licensed under the MIT license found in the
-LICENSE file in the root directory of this source tree.
-================================================================================
+This module provides reusable ANSI color helpers used by the CPACT scoring
+presentation layer to improve the readability of console reports. It centralizes
+terminal color formatting logic so report-rendering components can present
+consistent visual output without duplicating ANSI escape sequence handling.
 
-Provides console color formatting utilities for CPACT scoring reports.
-
-This module defines reusable ANSI color helpers used by the CPACT scoring
-presentation layer to improve readability of validation statuses, score values,
-headings, and report titles. The utilities centralize terminal color formatting
-logic so report-rendering components can present consistent visual output
-without duplicating ANSI escape sequence handling.
-
-The module supports:
-- Status-based color formatting for PASS, FAIL, and PARTIAL outcomes.
-- Score-based color formatting using configurable score thresholds.
-- Highlighted headings and titles for console reports.
-- Consistent terminal output styling across scoring reports.
-
-Classes:
-    ReportColor:
-        Utility class containing ANSI color constants and helper methods for
-        formatting report text, statuses, and scores.
-
-Design Goals:
-    - Centralize console color formatting logic.
-    - Improve readability of scoring and validation output.
-    - Keep presentation helpers lightweight and reusable.
-    - Maintain consistent report styling across CPACT scoring components.
-
-Implementation follows PEP 257 documentation conventions and aligns with
-CPACT framework coding standards.
+Supported features:
+    - Status-based color formatting (PASS, FAIL, PARTIAL)
+    - Score-based color formatting using configurable thresholds
+    - Highlighted report headings and titles
+    - Consistent ANSI styling across CPACT scoring reports
 """
 
+from __future__ import annotations
+
+
 class ReportColor:
+    """ANSI color formatting helpers for CPACT console reports."""
 
     RESET = "\033[0m"
 
@@ -45,37 +30,61 @@ class ReportColor:
     BLUE = "\033[94m"
     CYAN = "\033[96m"
 
-    @classmethod
-    def status(cls, status):
-
-        status = status.upper()
-
-        if status == "PASS":
-            return f"{cls.GREEN}{status}{cls.RESET}"
-
-        if status == "FAIL":
-            return f"{cls.RED}{status}{cls.RESET}"
-
-        if status == "PARTIAL":
-            return f"{cls.YELLOW}{status}{cls.RESET}"
-
-        return status
+    _STATUS_COLORS = {
+        "PASS": GREEN,
+        "FAIL": RED,
+        "PARTIAL": YELLOW,
+    }
 
     @classmethod
-    def score(cls, score):
+    def status(cls, status: str) -> str:
+        """Return a colorized validation status.
 
+        Args:
+            status: Validation status string.
+
+        Returns:
+            The ANSI-colored status if recognized; otherwise, the original
+            status text.
+        """
+        normalized = status.upper()
+        color = cls._STATUS_COLORS.get(normalized)
+
+        if color is None:
+            return normalized
+
+        return f"{color}{normalized}{cls.RESET}"
+
+    @classmethod
+    def score(cls, score: float) -> str:
+        """Return a colorized score.
+
+        Scores are colored using the following thresholds:
+            - Green: 90 and above
+            - Yellow: 70 to <90
+            - Red: Below 70
+
+        Args:
+            score: Numeric score.
+
+        Returns:
+            ANSI-colored score formatted to two decimal places.
+        """
         if score >= 90:
-            return f"{cls.GREEN}{score:.2f}{cls.RESET}"
-
+            color = cls.GREEN
         elif score >= 70:
-            return f"{cls.YELLOW}{score:.2f}{cls.RESET}"
+            color = cls.YELLOW
+        else:
+            color = cls.RED
 
-        return f"{cls.RED}{score:.2f}{cls.RESET}"
+        return f"{color}{score:.2f}{cls.RESET}"
 
     @classmethod
-    def heading(cls, text):
+    def heading(cls, text: str) -> str:
+        """Return a cyan-colored report heading."""
         return f"{cls.CYAN}{text}{cls.RESET}"
 
     @classmethod
-    def title(cls, text):
+    def title(cls, text: str) -> str:
+        """Return a blue-colored report title."""
         return f"{cls.BLUE}{text}{cls.RESET}"

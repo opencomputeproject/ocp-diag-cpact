@@ -104,7 +104,7 @@ class ScenarioSchemaValidator(BaseSchema):
         :param data: Data to validate.
         :return: None
         """
-        entries : list[ValidationEntry] = []
+        entries: list[ValidationEntry] = []
         self.logger.info(f"Validating {data_file} against scenario schema...")
         # Check the duplicate keys in the YAML file
         duplicate_warnings = self.scan_duplicates(data_file)
@@ -152,7 +152,7 @@ class ScenarioSchemaValidator(BaseSchema):
                 config_schema_valid=False,
                 entries=entries,
             )
-        scenario_data = data.get("test_scenario", {}) 
+        scenario_data = data.get("test_scenario", {})
         # Validate the data against the schema
         validator = Draft7Validator(self.schema)
         errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
@@ -207,9 +207,7 @@ class ScenarioSchemaValidator(BaseSchema):
             self.logger.info(f"📍 Resolved map file absolute path: {resolved_map_file}")
 
             self.logger.info(f"map_file detected in YAML: {resolved_map_file}")
-            map_valid, map_entries = self.validate_map_schema(
-                resolved_map_file
-            )
+            map_valid, map_entries = self.validate_map_schema(resolved_map_file)
             entries.extend(map_entries)
             # map_res = self.validate_map_schema(resolved_map_file)
             # if not map_res:

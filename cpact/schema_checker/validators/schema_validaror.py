@@ -88,7 +88,6 @@ class SchemaValidator:
         - scenario
     """
 
-
     VALID_TYPES = {"config", "scenario"}
 
     def validate(
@@ -162,9 +161,7 @@ class SchemaValidator:
         """
 
         if request.schema_type not in self.VALID_TYPES:
-            raise ValueError(
-                f"schema_type must be one of {self.VALID_TYPES}"
-            )
+            raise ValueError(f"schema_type must be one of {self.VALID_TYPES}")
 
     def _validate_source(
         self,
@@ -207,30 +204,20 @@ class SchemaValidator:
         """
 
         if not isinstance(source, (str, Path)):
-            raise TypeError(
-                f"Unsupported source type: {type(source)}"
-            )
+            raise TypeError(f"Unsupported source type: {type(source)}")
 
         data = load_yaml_file(str(source))
 
-        schema_version = (
-            data.get("test_scenario", {})
-            .get("schema_version")
-        )
+        schema_version = data.get("test_scenario", {}).get("schema_version")
 
         schema_dir = SchemaUtils.get_schema_dir(schema_version)
 
-        schema_path = (
-            schema_file
-            or SchemaUtils.get_schema_file(
-                schema_dir,
-                schema_type,
-            )
+        schema_path = schema_file or SchemaUtils.get_schema_file(
+            schema_dir,
+            schema_type,
         )
 
-        executor_cls = ExecutorFactory.get_executor(
-            schema_type
-        )
+        executor_cls = ExecutorFactory.get_executor(schema_type)
 
         executor = executor_cls(
             schema_path,

@@ -349,7 +349,7 @@ class ScoreManager:
         """Return a snapshot list of every registered execution id."""
         with self._contexts_lock:
             return list(self._contexts.keys())
-        
+
     def get_all_results(self) -> List[ScoreResult]:
         """
         Return the calculated score for every execution context.
@@ -358,7 +358,7 @@ class ScoreManager:
             execution_ids = list(self._contexts.keys())
 
         return [self.calculate(execution_id) for execution_id in execution_ids]
-    
+
     def get_root_results(self) -> List[ScoreResult]:
         """
         Return only root recipe results.
@@ -454,9 +454,7 @@ class ScoreManager:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Event:
         """Record the (optional) map validation outcome for an execution."""
-        return self.emit_event(
-            execution_id, EventType.MAP_VALIDATION, passed, metadata
-        )
+        return self.emit_event(execution_id, EventType.MAP_VALIDATION, passed, metadata)
 
     def execution_step(
         self,
@@ -465,24 +463,18 @@ class ScoreManager:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Event:
         """Record a single execution step result."""
-        metadata.update({
-            "score": 0 if not passed else self.config.execution_weight,
-            "max_score": self.config.execution_weight
-        })
-        return self.emit_event(
-            execution_id, EventType.EXECUTION_STEP, passed, metadata
+        metadata.update(
+            {
+                "score": 0 if not passed else self.config.execution_weight,
+                "max_score": self.config.execution_weight,
+            }
         )
+        return self.emit_event(execution_id, EventType.EXECUTION_STEP, passed, metadata)
 
-    def record_execution_step(self,
-                              execution_id,
-                              execution_result):
+    def record_execution_step(self, execution_id, execution_result):
         self.execution_step(
-            execution_id=execution_id,
-            passed=execution_result.passed,
-            meta_data={}
-
+            execution_id=execution_id, passed=execution_result.passed, meta_data={}
         )
-
 
     def add_profile_score(
         self,
@@ -499,7 +491,7 @@ class ScoreManager:
         meta = dict(metadata or {})
         meta["score"] = float(score)
         return self.emit_event(execution_id, EventType.PROFILE_SCORE, True, meta)
-    
+
     def record_schema_validation(
         self,
         execution_id,
@@ -536,9 +528,7 @@ class ScoreManager:
                 "file": getattr(validation_result, "map_schema", "Recipe Map"),
                 "validator": "MapSchemaValidator",
                 "score": (
-                    self.config.map_weight
-                    if validation_result.map_schema_valid
-                    else 0
+                    self.config.map_weight if validation_result.map_schema_valid else 0
                 ),
                 "max_score": self.config.map_weight,
                 "message": (
@@ -617,9 +607,7 @@ class ScoreManager:
                         f"(Failed: {context.failed_steps})"
                     )
                 else:
-                    exec_status = (
-                        f"{context.passed_steps}/{context.total_steps}"
-                    )
+                    exec_status = f"{context.passed_steps}/{context.total_steps}"
 
             categories.append(
                 CategoryScore(
@@ -627,15 +615,11 @@ class ScoreManager:
                     earned=exec_earned,
                     maximum=cfg.execution_weight,
                     status=exec_status,
-                    present=True,      # Always present
+                    present=True,  # Always present
                 )
             )
 
-            earned = sum(
-                c.earned
-                for c in categories
-                if c.present
-            )
+            earned = sum(c.earned for c in categories if c.present)
 
             available = cfg.schema_weight + cfg.execution_weight
             if context.map_exists:
@@ -647,11 +631,7 @@ class ScoreManager:
             # print("Available score is ", available)
             # final = (earned / available * 100.0) if available > 0 else 0.0
             # print("Final Score is ", final)
-            final = (
-                (earned / available) * 100.0
-                if available > 0
-                else 0.0
-            )
+            final = (earned / available) * 100.0 if available > 0 else 0.0
             return ScoreResult(
                 execution_id=context.execution_id,
                 recipe_name=context.recipe_name,
