@@ -26,7 +26,7 @@ https://github.com/MeritedHobbit/Cloud-Processor-Accessibility-Compliance-Tool.g
     d. Inbuilt tunnel creation option (to bypass ,say, a Rack manager)
 3. YAML based compliance scenario definitions 
     a. Internally leverages python
-    b. Grouping of compliance scenarios per domain - like RAS, Debug, FWUpdate, Telemetry  etc
+    b. Grouping of compliance scenarios per domain - like RAS, Debug, FWUpdate, Telemetry etc
     c. Yaml based scenario sequencing (along with expectations) 
     d. Dynamic compliance scenario discovery
         i. Connectivity based scenario listing
@@ -37,6 +37,13 @@ https://github.com/MeritedHobbit/Cloud-Processor-Accessibility-Compliance-Tool.g
     a. CPACT Logs
     b. Workload logs 
     c. CPACT Reports
+8. Schema validation and scoring
+    a. Validates configuration and scenario files against JSON schema.
+    b. Computes recipe-level scores across schema, map, and execution categories.
+    c. Produces summary reporting and recipe score outputs.
+    d. Supports nested scenario validation and child recipe aggregation.
+    e. Records schema and map validation events in a unified scoring context.
+    f. Uses a pluggable validation architecture for config vs scenario schema workflows.
 ```
 
 ## 🛠️ Installation
@@ -105,7 +112,7 @@ You can run test cases using various filters like test ID, test name, group, tag
 | `--list_scenarios_with_connections`, `-lsc` | List all scenarios with connections without                         |    execution.                                                                                                          |
 | `--list_scenarios`, `ls` | List all scenarios without executing them.                                             |
 | `run_with_discover_connections`, `-rdc` | Discover and check all connections without executing the tests.         |
-| `run_with_schema_check`, `-rsc` | Execute tests with schema check.                                                |
+| `run_with_schema_check`, `-rsc` | Execute tests with schema check and scoring enabled.                             |
 | `--log-path`              | Set the log file or folder path to save execution logs.                               |
 
 ---
@@ -184,6 +191,60 @@ It simplifies connection handling, command execution, and session management acr
 - **Extensible Architecture**: Abstract base class (`BaseConnection`) to easily add new connection types if needed.
 - **Caching**: Established connections are cached to avoid redundant reconnections.
 
+
+## 🔍 Schema Validation Architecture
+- Schema validation is implemented through the `cpact.schema_checker` subsystem.
+- The public API is `SchemaService.validate(request)`.
+- `SchemaValidator` orchestrates schema processing by:
+  - loading YAML scenario or config sources,
+  - resolving the `schema_version` from the scenario metadata,
+  - selecting the right validator using `ExecutorFactory`, and
+  - validating scenario schema and optional map schema files.
+- `ValidationRequest` includes:
+  - `schema_type`: `config` or `scenario`
+  - `source`: a path or list of paths to validate
+  - `schema_file`: optional explicit schema definition file
+- Scenario validation uses `ScenarioSchemaValidator`, which:
+  - detects duplicate YAML keys,
+  - loads YAML with `ruamel.yaml`,
+  - validates the document against Draft7 JSON Schema, and
+  - validates the referenced `map_file` when present.
+- The schema output model includes:
+  - `SchemaValidationResult` for each recipe,
+  - `ValidationResult` for aggregated success/failure counts.
+- Use the `schema_version` field in a scenario YAML to select the schema directory under `spec/schema/`.
+
+## 🧮 Scoring Architecture
+- Scoring is implemented in the `cpact.scoring` subsystem.
+- `ScoreManager` is a thread-safe singleton that coordinates all score tracking.
+- Each recipe execution is represented by a `ScoreContext`, which tracks:
+  - schema and map validation state,
+  - execution step counts,
+  - profile bonus scores,
+  - nested recipe parent/child relationships.
+- Scoring events include:
+  - `SCHEMA_VALIDATION`,
+  - `MAP_VALIDATION`,
+  - `EXECUTION_STEP`,
+  - `PROFILE_SCORE`, and
+  - `NESTED_RECIPE`.
+- `record_schema_validation()` converts a validation result into schema/map scoring events.
+- `calculate(execution_id)` produces normalized category scores using:
+  - Schema weight,
+  - Map weight, and
+  - Execution weight.
+- Category scores are represented with `CategoryScore` objects and the final result with `ScoreResult`.
+- `ScorePrinter` renders score summaries, recipe status, and execution statistics.
+- Nested scenario support is built with `start_nested_run()`, which links child recipes to their parent execution.
+
+## ✅ What to Use
+- Use `--schema_check scenario <file_or_dir> [schema_file]` for explicit scenario validation.
+- Use `--schema_check config <file_or_dir> [schema_file]` to validate config payloads.
+- Use `--run_with_schema_check` to enable schema validation when executing recipes.
+- Use `--no-schema-check` to skip schema validation entirely.
+- Use `schema_version` inside recipes to choose the correct schema version.
+- Use `map_file` in recipes to validate associated map definitions as part of the scoring pipeline.
+- Place schema definitions under `spec/schema/` and omit `schema_file` to resolve defaults automatically.
 
 ### 📂 Project Structure
 
@@ -316,7 +377,9 @@ ___
 
 - Caching Support: Caches loaded test cases for faster reloads using .cache folder.
 
-- Validation via Schema: YAML files are validated against a strict JSON Schema before execution.
+- Validation via Schema: YAML and configuration files are validated against JSON Schema before execution.
+
+- Scoring and Reporting: Recipe-level scores are calculated for schema, map, and execution outcomes, with summary reports and nested recipe aggregation.
 
 ### 🗂️ Project Structure
 ___
@@ -543,7 +606,7 @@ test_scenario:              # ✅ (Mandatory) Defines a complete test case, incl
 - The map file path can reference placeholders defined in the `paths` block for better portability and reuse.
  
   test_scenario:
-    map_file: '{workspace_path}/map_file1.json'
+    map_file: '{workspace_path}/map_file.json'
     paths:
       workspace_path: ./sample_workspace
 
