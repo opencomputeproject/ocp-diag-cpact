@@ -169,6 +169,7 @@ def run_test(
     workspace: str,
     logger: Optional[TestLogger] = None,
     historical_data: Optional[List[str]] = None,
+    score_weights_path: Optional[str] = None,
 ) -> None:
     """
     Run a single test scenario from the given file path.
@@ -196,7 +197,7 @@ def run_test(
     scenario_data, _ = resolve_paths_in_yaml(
         scenario_data, scenario_data.get("paths", {})
     )
-    score_manager = ScoreManager()
+    score_manager = ScoreManager(config_path=score_weights_path)
     context = ExecutionContext(logger, score_manager)
 
     orchestrator = Orchestrator(context)
@@ -710,6 +711,9 @@ def main() -> None:
         "--test_dir", type=str, required=False, help="Path to the root tests directory"
     )
     parser.add_argument(
+        "--score_weights", type=str, required=False, help="Path to the score weights file"
+    )
+    parser.add_argument(
         "--workspace",
         type=str,
         required=False,
@@ -808,6 +812,9 @@ def main() -> None:
     workspace = args.workspace or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "workspace"
     )
+    score_weights_path = args.score_weights or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "spec", "input", "score_weights.json"
+    )
     print("test dir", test_dir)
     if not os.path.exists(workspace):
         os.makedirs(workspace, exist_ok=True)
@@ -904,6 +911,7 @@ def main() -> None:
             workspace=workspace,
             logger=logger,
             historical_data=args.historical_data,
+            score_weights_path=score_weights_path
         )
     score_result = ScorePrinter(logger=logger)
     score_result.print_framework_report()

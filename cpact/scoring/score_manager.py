@@ -80,8 +80,8 @@ from cpact.scoring.score_models import (
 )
 
 #: Location of the bundled default configuration file.
-_DEFAULT_CONFIG_PATH = Path(__file__).with_name("scoring.json")
-
+current_path = Path(__file__).resolve()
+_DEFAULT_CONFIG_PATH = current_path.parent.parent.parent/ "spec/input/score_weights.json"
 
 # ===========================================================================
 # ScoreManager

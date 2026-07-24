@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Score Configuration Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "weights"
+  ],
+  "properties": {
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recipe_schema",
+        "map_schema",
+        "execution",
+        "profile"
+      ],
+      "properties": {
+        "recipe_schema": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Weight assigned to recipe schema validation."
+        },
+        "map_schema": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Weight assigned to map/schema validation."
+        },
+        "execution": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Weight assigned to execution results."
+        },
+        "profile": {
+          "type": "array",
+          "description": "Additional profile-based scoring weights.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "weight"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Unique profile name."
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Weight assigned to the profile."
+              }
+            }
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

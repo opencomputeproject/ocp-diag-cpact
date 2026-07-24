@@ -1,0 +1,17 @@
+{
+  "weights": {
+    "recipe_schema": 40,
+    "map_schema": 30,
+    "execution": 30,
+    "profile": [
+      {
+        "name": "profile_1",
+        "weight": 10
+      },
+      {
+        "name": "profile_2",
+        "weight": 20
+      }
+    ]
+  }
+}
