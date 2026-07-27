@@ -1,0 +1,383 @@
+2026-05-21 22:37:49,044 [INFO] 📁 Log directory created: .\sample_workspace\logs\test_run_20260521_223749
+2026-05-21 22:37:49,056 [INFO] 📝 Logging to file: .\sample_workspace\logs\test_run_20260521_223749\test_run.log
+2026-05-21 22:37:49,058 [INFO] Log directory: .\sample_workspace\logs\test_run_20260521_223749
+2026-05-21 22:37:49,062 [INFO] Starting test discovery in: .\sample_workspace\sample_diagnostic_recipes
+2026-05-21 22:37:49,343 [INFO] Using schema version: 0.8 for .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_10.yaml
+2026-05-21 22:37:49,357 [INFO] Using schema directory: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8 for .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_10.yaml
+2026-05-21 22:37:49,382 [INFO] Using schema file: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8\scenario_recipe_schema.json for .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_10.yaml
+2026-05-21 22:37:49,382 [INFO] Validating .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_10.yaml against scenario schema...
+2026-05-21 22:37:49,408 [INFO] Validating .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_10.yaml against scenario schema...
+2026-05-21 22:37:49,472 [INFO] ✅ Scenario Schema is valid
+2026-05-21 22:37:49,488 [INFO] 🔍 Starting MAP Schema Validation...
+2026-05-21 22:37:49,492 [INFO] 📍 Resolved map file absolute path: ./sample_workspace/TestSummaryMap.json
+2026-05-21 22:37:49,496 [INFO] 📍 Attempting to load map file from: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\TestSummaryMap.json
+2026-05-21 22:37:49,524 [INFO] ✅ Map Schema is valid
+2026-05-21 22:37:49,532 [INFO] map_file detected in YAML: ./sample_workspace/TestSummaryMap.json
+2026-05-21 22:37:49,546 [INFO] 
+================================================================
+                    VALIDATION REPORT
+================================================================
++-----------------+-------------------------------+----------+--------------------------+--------+
+| Category        | Colateral                     | Status   | Message                  | Path   |
++=================+===============================+==========+==========================+========+
+| Scenario Schema | diag_sample_log_regex_10.yaml | [36mSUCCESS[0m  | Scenario schema is valid |        |
++-----------------+-------------------------------+----------+--------------------------+--------+
+|                 |                               | [36mSUCCESS[0m  | Map schema is valid      |        |
++-----------------+-------------------------------+----------+--------------------------+--------+
+================================================================
+                
+2026-05-21 22:37:49,601 [INFO] 
+🚀 Running Test: .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_10.yaml
+2026-05-21 22:37:49,631 [INFO] 🔧 OCP TV output file: .\sample_workspace\logs\test_run_20260521_223749\ocptv_DiagSampleLogRegex10_20260521_223749.json
+2026-05-21 22:37:49,641 [INFO] Test Metadata set: ID=DG_10S
+2026-05-21 22:37:49,643 [INFO] Running 1 steps in scenario: DiagSampleLogRegex10
+2026-05-21 22:37:49,647 [INFO] Running inline steps...
+2026-05-21 22:37:49,688 [INFO] 🚀 Test Run Started: DiagSampleLogRegex10
+2026-05-21 22:37:49,751 [INFO] ================= Started Executing Step SearchForRegexAssignDRCWithFields=================
+2026-05-21 22:37:49,763 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForRegexAssignDRCWithFields
+2026-05-21 22:37:49,767 [INFO] Executing step: SearchForRegexAssignDRCWithFields
+2026-05-21 22:37:49,767 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x0000018DBF81BB10>
+2026-05-21 22:37:49,815 [INFO] Resolved relative path to absolute: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\DiagTestSummaryReport.json
+2026-05-21 22:37:52,876 [INFO] Log path: .\sample_workspace\logs\test_run_20260521_223749\AnalyzedLogFiles\analyzed_step_001.log
+2026-05-21 22:37:52,892 [INFO] Analyzing log: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\DiagTestSummaryReport.json
+2026-05-21 22:37:52,898 [INFO] Log content: {
+    "Device Index": {
+        "0": {
+            "Device Name": {
+                "PCIe": {
+      ...
+2026-05-21 22:37:52,931 [INFO] ---------------- Applying Rule ----------------
+2026-05-21 22:37:52,935 [INFO] 🔍 Validating output as JSON with pattern: {
+  "Device Index": {
+    "(?<device_index>\\d+)": {
+      "Device Name": {
+        "(?<device_name>.+)": {
+          "Test": {
+            "(?<test>.+)": [
+                { 
+                "Error": "(?<error>\\d+)", 
+                "Status": "(?i)(?<status>FAIL)" 
+                }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+2026-05-21 22:37:53,008 [INFO] 🔍 Extracted diagnostic codes from JSON: {'110110': [{'device_index': '0', 'device_name': 'PCIe', 'test': 'pcie stress test', 'error': '110110', 'status': 'fail'}], '110100': [{'device_index': '1', 'device_name': '(empty)', 'test': 'Debug Commands', 'error': '110100', 'status': 'FAIL'}, {'device_index': '1', 'device_name': '(empty)', 'test': 'Device Enumeration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '1', 'device_name': '(empty)', 'test': 'Firmware Status Check', 'error': '110100', 'status': 'FAIL'}, {'device_index': '1', 'device_name': '(empty)', 'test': 'Notification Registration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '1', 'device_name': '(empty)', 'test': 'Open and Initialize Devices', 'error': '110100', 'status': 'FAIL'}, {'device_index': '1', 'device_name': '(empty)', 'test': 'Telemetry Queries', 'error': '110100', 'status': 'FAIL'}, {'device_index': '2', 'device_name': '(empty)', 'test': 'Debug Commands', 'error': '110100', 'status': 'FAIL'}, {'device_index': '2', 'device_name': '(empty)', 'test': 'Device Enumeration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '2', 'device_name': '(empty)', 'test': 'Firmware Status Check', 'error': '110100', 'status': 'FAIL'}, {'device_index': '2', 'device_name': '(empty)', 'test': 'Notification Registration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '2', 'device_name': '(empty)', 'test': 'Open and Initialize Devices', 'error': '110100', 'status': 'FAIL'}, {'device_index': '2', 'device_name': '(empty)', 'test': 'Telemetry Queries', 'error': '110100', 'status': 'FAIL'}, {'device_index': '3', 'device_name': '(empty)', 'test': 'Debug Commands', 'error': '110100', 'status': 'FAIL'}, {'device_index': '3', 'device_name': '(empty)', 'test': 'Device Enumeration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '3', 'device_name': '(empty)', 'test': 'Firmware Status Check', 'error': '110100', 'status': 'FAIL'}, {'device_index': '3', 'device_name': '(empty)', 'test': 'Notification Registration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '3', 'device_name': '(empty)', 'test': 'Open and Initialize Devices', 'error': '110100', 'status': 'FAIL'}, {'device_index': '3', 'device_name': '(empty)', 'test': 'Telemetry Queries', 'error': '110100', 'status': 'FAIL'}, {'device_index': '4', 'device_name': '(empty)', 'test': 'Debug Commands', 'error': '110100', 'status': 'FAIL'}, {'device_index': '4', 'device_name': '(empty)', 'test': 'Device Enumeration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '4', 'device_name': '(empty)', 'test': 'Firmware Status Check', 'error': '110100', 'status': 'FAIL'}, {'device_index': '4', 'device_name': '(empty)', 'test': 'Notification Registration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '4', 'device_name': '(empty)', 'test': 'Open and Initialize Devices', 'error': '110100', 'status': 'FAIL'}, {'device_index': '4', 'device_name': '(empty)', 'test': 'Telemetry Queries', 'error': '110100', 'status': 'FAIL'}, {'device_index': '5', 'device_name': '(empty)', 'test': 'Debug Commands', 'error': '110100', 'status': 'FAIL'}, {'device_index': '5', 'device_name': '(empty)', 'test': 'Device Enumeration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '5', 'device_name': '(empty)', 'test': 'Firmware Status Check', 'error': '110100', 'status': 'FAIL'}, {'device_index': '5', 'device_name': '(empty)', 'test': 'Notification Registration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '5', 'device_name': '(empty)', 'test': 'Open and Initialize Devices', 'error': '110100', 'status': 'FAIL'}, {'device_index': '5', 'device_name': '(empty)', 'test': 'Telemetry Queries', 'error': '110100', 'status': 'FAIL'}, {'device_index': '6', 'device_name': '(empty)', 'test': 'Debug Commands', 'error': '110100', 'status': 'FAIL'}, {'device_index': '6', 'device_name': '(empty)', 'test': 'Device Enumeration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '6', 'device_name': '(empty)', 'test': 'Firmware Status Check', 'error': '110100', 'status': 'FAIL'}, {'device_index': '6', 'device_name': '(empty)', 'test': 'Notification Registration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '6', 'device_name': '(empty)', 'test': 'Open and Initialize Devices', 'error': '110100', 'status': 'FAIL'}, {'device_index': '6', 'device_name': '(empty)', 'test': 'Telemetry Queries', 'error': '110100', 'status': 'FAIL'}, {'device_index': '7', 'device_name': '(empty)', 'test': 'Debug Commands', 'error': '110100', 'status': 'FAIL'}, {'device_index': '7', 'device_name': '(empty)', 'test': 'Device Enumeration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '7', 'device_name': '(empty)', 'test': 'Firmware Status Check', 'error': '110100', 'status': 'FAIL'}, {'device_index': '7', 'device_name': '(empty)', 'test': 'Notification Registration', 'error': '110100', 'status': 'FAIL'}, {'device_index': '7', 'device_name': '(empty)', 'test': 'Open and Initialize Devices', 'error': '110100', 'status': 'FAIL'}, {'device_index': '7', 'device_name': '(empty)', 'test': 'Telemetry Queries', 'error': '110100', 'status': 'FAIL'}]}
+2026-05-21 22:37:53,014 [INFO] 🔍 Matched '{
+  "Device Index": {
+    "(?<device_index>\\d+)": {
+      "Device Name": {
+        "(?<device_name>.+)": {
+          "Test": {
+            "(?<test>.+)": [
+                { 
+                "Error": "(?<error>\\d+)", 
+                "Status": "(?i)(?<status>FAIL)" 
+                }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+' → True → set error
+2026-05-21 22:37:53,017 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_10S': {'step_001': {'error': True}}}}
+2026-05-21 22:37:53,027 [INFO] ---------------- Diagnostic Keys ----------------
+2026-05-21 22:37:53,033 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {})
+2026-05-21 22:37:53,053 [DEBUG] ==================== Step Result SearchForRegexAssignDRCWithFields ====================
+2026-05-21 22:37:53,053 [DEBUG] 
+Scenario ID:        DG_10S
+Step ID:            step_001
+Step Name:          SearchForRegexAssignDRCWithFields
+Step Type:          log_analysis
+Status:             Success
+Duration:           3.285 seconds
+Message:            Log analyzed successfully.
+2026-05-21 22:37:53,053 [DEBUG] =====================================================
+2026-05-21 22:37:53,067 [INFO] ✅ Diagnosis PASS: Passed
+2026-05-21 22:37:53,083 [INFO] ✅ Diagnosis PASS: passed
+2026-05-21 22:37:53,094 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2026-05-21 22:37:53,097 [INFO] ================= Completed Executing Step SearchForRegexAssignDRCWithFields =================
+2026-05-21 22:37:53,108 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2026-05-21 22:37:53,111 [INFO] Finalizing continued steps...
+2026-05-21 22:37:53,111 [DEBUG] Finalizing continued steps in context: {}
+2026-05-21 22:37:53,116 [INFO] No continued steps to finalize.
+2026-05-21 22:37:53,116 [INFO] ✅ Test completed in 3.49 seconds
+2026-05-21 22:37:53,123 [INFO] ---------------------- Test Summary -------------------------
+2026-05-21 22:37:53,126 [INFO] [PASS] Step: SearchForRegexAssignDRCWithFields | Type: log_analysis | Time: 3.29s | Msg: Log analyzed successfully.
+2026-05-21 22:37:53,127 [INFO] 
+❌ Detected Diagnostic Issues:
+2026-05-21 22:37:53,207 [INFO] 
++-------------------+----------------+---------------+---------------------+----------+
+|   Diagnostic Code |   device_index | device_name   | test                | status   |
++===================+================+===============+=====================+==========+
+|            110110 |              0 | PCIe          | pcie stress test    | fail     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              1 | (empty)       | Debug Commands      | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              1 | (empty)       | Device Enumeration  | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              1 | (empty)       | Firmware Status     | FAIL     |
+|                   |                |               | Check               |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              1 | (empty)       | Notification        | FAIL     |
+|                   |                |               | Registration        |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              1 | (empty)       | Open and Initialize | FAIL     |
+|                   |                |               | Devices             |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              1 | (empty)       | Telemetry Queries   | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              2 | (empty)       | Debug Commands      | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              2 | (empty)       | Device Enumeration  | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              2 | (empty)       | Firmware Status     | FAIL     |
+|                   |                |               | Check               |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              2 | (empty)       | Notification        | FAIL     |
+|                   |                |               | Registration        |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              2 | (empty)       | Open and Initialize | FAIL     |
+|                   |                |               | Devices             |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              2 | (empty)       | Telemetry Queries   | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              3 | (empty)       | Debug Commands      | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              3 | (empty)       | Device Enumeration  | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              3 | (empty)       | Firmware Status     | FAIL     |
+|                   |                |               | Check               |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              3 | (empty)       | Notification        | FAIL     |
+|                   |                |               | Registration        |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              3 | (empty)       | Open and Initialize | FAIL     |
+|                   |                |               | Devices             |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              3 | (empty)       | Telemetry Queries   | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              4 | (empty)       | Debug Commands      | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              4 | (empty)       | Device Enumeration  | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              4 | (empty)       | Firmware Status     | FAIL     |
+|                   |                |               | Check               |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              4 | (empty)       | Notification        | FAIL     |
+|                   |                |               | Registration        |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              4 | (empty)       | Open and Initialize | FAIL     |
+|                   |                |               | Devices             |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              4 | (empty)       | Telemetry Queries   | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              5 | (empty)       | Debug Commands      | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              5 | (empty)       | Device Enumeration  | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              5 | (empty)       | Firmware Status     | FAIL     |
+|                   |                |               | Check               |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              5 | (empty)       | Notification        | FAIL     |
+|                   |                |               | Registration        |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              5 | (empty)       | Open and Initialize | FAIL     |
+|                   |                |               | Devices             |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              5 | (empty)       | Telemetry Queries   | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              6 | (empty)       | Debug Commands      | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              6 | (empty)       | Device Enumeration  | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              6 | (empty)       | Firmware Status     | FAIL     |
+|                   |                |               | Check               |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              6 | (empty)       | Notification        | FAIL     |
+|                   |                |               | Registration        |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              6 | (empty)       | Open and Initialize | FAIL     |
+|                   |                |               | Devices             |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              6 | (empty)       | Telemetry Queries   | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              7 | (empty)       | Debug Commands      | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              7 | (empty)       | Device Enumeration  | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              7 | (empty)       | Firmware Status     | FAIL     |
+|                   |                |               | Check               |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              7 | (empty)       | Notification        | FAIL     |
+|                   |                |               | Registration        |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              7 | (empty)       | Open and Initialize | FAIL     |
+|                   |                |               | Devices             |          |
++-------------------+----------------+---------------+---------------------+----------+
+|            110100 |              7 | (empty)       | Telemetry Queries   | FAIL     |
++-------------------+----------------+---------------+---------------------+----------+
+2026-05-21 22:37:53,207 [INFO] 
+📊 Diagnostic Codes Summary:
+2026-05-21 22:37:53,218 [INFO] 
++-------------------+---------------+
+|   Diagnostic Code |   Occurrences |
++===================+===============+
+|            110110 |             1 |
++-------------------+---------------+
+|            110100 |             1 |
++-------------------+---------------+
+2026-05-21 22:37:53,218 [INFO] 
+🔑 Final Context Keys:
+2026-05-21 22:37:53,222 [INFO] DG_10S = {'step_001': {'error': True, 'step_001': True}}
+2026-05-21 22:37:53,238 [INFO] Results saved to .\sample_workspace\logs\test_run_20260521_223749\test_results.json
+2026-05-21 22:37:53,238 [INFO] Building historical data index...
+2026-05-21 22:37:53,276 [INFO] Merging map data from './sample_workspace/TestSummaryMap.json' into diagnostics for 'DiagSampleLogRegex10'
+2026-05-21 22:37:53,276 [DEBUG] Exact match found for code_key '110110'
+2026-05-21 22:37:53,281 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,281 [DEBUG] Matched map entry for code '110110' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,281 [DEBUG] Updated entry for code '110110' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,281 [DEBUG] Exact match found for code_key '110100'
+2026-05-21 22:37:53,283 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,283 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,283 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,283 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,283 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,283 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,283 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,286 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,286 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,286 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,298 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,298 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,298 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,298 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,298 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,298 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,300 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,300 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,300 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,300 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,300 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,300 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,302 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,302 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,302 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,302 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,302 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,302 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,302 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,302 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,302 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,302 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,302 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,302 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,302 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,302 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,302 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,302 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,307 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,307 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,307 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,307 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,307 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,307 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,307 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,307 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,307 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,307 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,307 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,307 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,307 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,307 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,307 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,307 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,307 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,307 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,307 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,307 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,307 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,314 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,314 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,314 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,314 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,314 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,314 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,314 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,316 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,316 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,316 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,316 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,318 [DEBUG] Exact match found for DRC value 1
+2026-05-21 22:37:53,318 [DEBUG] Matched map entry for code '110100' with DRC_count=1 using action key=1
+2026-05-21 22:37:53,318 [DEBUG] Updated entry for code '110100' in 'DiagSampleLogRegex10' with merged fields
+2026-05-21 22:37:53,363 [INFO] Diagnostics saved to .\sample_workspace\logs\test_run_20260521_223749\diagnostics_result_codes.json
+2026-05-21 22:37:53,369 [INFO] 
++-----------------------------------+--------------+----------+----------------+----------------------------+
+| Step Name                         | Type         | Status   |   Duration (s) | Message                    |
++===================================+==============+==========+================+============================+
+| SearchForRegexAssignDRCWithFields | log_analysis | [36mSuccess[0m  |           3.29 | Log analyzed successfully. |
++-----------------------------------+--------------+----------+----------------+----------------------------+
+2026-05-21 22:37:53,371 [INFO] ⏱️ Total execution time: 3.49s
+
+2026-05-21 22:37:53,375 [INFO] All tests executed successfully.
+2026-05-21 22:37:53,377 [INFO] Final Test Result: PASS

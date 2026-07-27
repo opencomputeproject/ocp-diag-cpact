@@ -1,0 +1,99 @@
+{
+    "diagnostic_codes": [
+        "FAIL-000000000086",
+        "FAIL-000000600000",
+        "FAIL-000000600035",
+        "FAIL-000000600014",
+        "FAIL-000000600033",
+        "FAIL-000000600043",
+        "FAIL-000000600012",
+        "FAIL-000000600034",
+        "FAIL-000000600001",
+        "FAIL-000000600023",
+        "FAIL-000000000110"
+    ],
+    "diagnostics": [
+        {
+            "parent_scenario": "DiagSampleLogRegex3",
+            "scenario_id": "DG_3S",
+            "step_id": "step_001",
+            "codes": {
+                "FAIL-000000000086": [
+                    {
+                        "Error_Code": "FAIL-000000000086"
+                    }
+                ],
+                "FAIL-000000600000": [
+                    {
+                        "Error_Code": "FAIL-000000600000"
+                    }
+                ],
+                "FAIL-000000600035": [
+                    {
+                        "Error_Code": "FAIL-000000600035"
+                    }
+                ],
+                "FAIL-000000600014": [
+                    {
+                        "Error_Code": "FAIL-000000600014"
+                    }
+                ],
+                "FAIL-000000600033": [
+                    {
+                        "Error_Code": "FAIL-000000600033"
+                    }
+                ],
+                "FAIL-000000600043": [
+                    {
+                        "Error_Code": "FAIL-000000600043"
+                    }
+                ],
+                "FAIL-000000600012": [
+                    {
+                        "Error_Code": "FAIL-000000600012"
+                    }
+                ],
+                "FAIL-000000600034": [
+                    {
+                        "Error_Code": "FAIL-000000600034"
+                    }
+                ],
+                "FAIL-000000600001": [
+                    {
+                        "Error_Code": "FAIL-000000600001"
+                    }
+                ],
+                "FAIL-000000600023": [
+                    {
+                        "Error_Code": "FAIL-000000600023"
+                    }
+                ],
+                "FAIL-000000000110": [
+                    {
+                        "Error_Code": "FAIL-000000000110"
+                    }
+                ]
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_3S": {
+            "step_001": {
+                "error_code": true,
+                "step_001": true
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_3S",
+            "step_id": "step_001",
+            "step_name": "SearchForRegexAssignDRC",
+            "step_type": "log_analysis",
+            "status": "Success",
+            "duration": 3.053,
+            "message": "Log analyzed successfully."
+        }
+    ]
+}

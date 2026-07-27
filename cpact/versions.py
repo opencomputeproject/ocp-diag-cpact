@@ -8,7 +8,7 @@ Stores and exposes framework version details.
 ================================================================================
 """
 
-__version__ = "0.7"
+__version__ = "0.8"
 __build__ = "2025.10.15"
 __author__ = "Open Compute Project"
 __tool_name__ = "Cloud Processor Accessibility Compliance Tool"

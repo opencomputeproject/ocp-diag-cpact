@@ -28,17 +28,20 @@ Usage:
     Automatically logs outcomes and updates diagnostic and result tracking.
 ===========================================================================
 """
+
 import time
 
-from executor.command_executor import CommandExecutor
+from cpact.executor.command_executor import CommandExecutor
 from concurrent.futures import ThreadPoolExecutor
-from core.context import Context
-from executor.log_analyzer import LogAnalyzer
-from executor.scenario_invoker import ScenarioInvoker
-from executor.executor_factory import ExecutorFactory
-from utils.logger_utils import TestLogger
-from result_builder.result_builder import ResultCollector
-from expression.evaluator import ExpressionEvaluator
+from cpact.core.context import Context
+from cpact.executor.log_analyzer import LogAnalyzer
+from cpact.executor.scenario_invoker import ScenarioInvoker
+from cpact.executor.executor_factory import ExecutorFactory
+from cpact.utils.logger_utils import TestLogger
+from cpact.result_builder.result_builder import ResultCollector
+from cpact.expression.evaluator import ExpressionEvaluator
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
@@ -85,9 +88,7 @@ class StepExecutor:
         """
         entry_criteria = self.step_details.get("entry_criteria")
         test_id = self.context.get("test_id")
-        diagnostic_keys = (
-            self.context.get_parameters_to_set()
-        )
+        diagnostic_keys = self.context.get_parameters_to_set()
         if entry_criteria and not self.evaluator.evaluate(
             entry_criteria, diagnostic_keys
         ):
@@ -95,11 +96,14 @@ class StepExecutor:
                 f"[SKIP] Entry criteria '{entry_criteria}' not met. Skipping step. {diagnostic_keys}"
             )
             ResultCollector().get_instance().add_step_result(
-                self.scenario_id,
+                scenario_name=self.context.get(
+                    "scenario_parent", self.context.get("test_name")
+                ),
+                scenario_id=self.scenario_id,
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
                 step_type=self.step_details["step_type"],
-                status="skip",
+                status="Skip",
                 duration=0,
                 message="Entry criteria not met",
                 details={"entry_criteria": entry_criteria, "keys": diagnostic_keys},
@@ -132,6 +136,7 @@ class StepExecutor:
                     break  # Exit loop if step fails and continue is not set
                 break
             except Exception as e:
+                CustomExceptionHandler.print_exception(e)
                 self.scenario_step.add_log(
                     LogSeverity.WARNING, f"[Attempt {attempts + 1}] Step failed: {e}"
                 )
@@ -167,19 +172,39 @@ class StepExecutor:
             validate_continue=validate_continue,
         )
         output, status, message = executor.execute()
+        if self.step_details["step_type"] == "invoke_scenario":
+            parent_scenario = ".".join(
+                self.context.get("scenario_parent").split(".")[:-1]
+            )
+            self.context.set("scenario_parent", parent_scenario)
         if not validate_continue:
             ResultCollector().get_instance().add_step_result(
-                self.scenario_id,
+                scenario_name=self.context.get(
+                    "scenario_parent", self.context.get("test_name")
+                ),
+                scenario_id=self.scenario_id,
                 step_id=self.step_details["step_id"],
                 step_name=self.step_details["step_name"],
                 step_type=self.step_details["step_type"],
-                status="success" if status else "fail",
+                status="Success" if status else "Failed",
                 duration=time.time() - self.context.get("start_time"),
                 message=message,
             )
             self.scenario_step.add_diagnosis(
                 diagnosis_type=DiagnosisType.FAIL if not status else DiagnosisType.PASS,
                 message=message,
-                verdict="passed" if status else "failed",
+                verdict="Passed" if status else "Failed",
             )
+        self.context.update_diagnostic_context(
+            tc_id=self.scenario_id,
+            step_id=self.step_details["step_id"],
+            key=self.step_details["step_id"],
+            value=True if status else False,
+        )
+        ResultCollector.get_instance().add_diagnostic_keys(
+            tc_id=self.scenario_id,
+            step_id=self.step_details["step_id"],
+            key=self.step_details["step_id"],
+            value=True if status else False,
+        )
         return output, status, message

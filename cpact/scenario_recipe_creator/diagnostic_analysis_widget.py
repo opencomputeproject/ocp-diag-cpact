@@ -30,6 +30,7 @@ Usage:
     Call `result()` to retrieve the structured output.
 ===========================================================================
 """
+
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
@@ -141,7 +142,7 @@ class DiagnosticAnalysisDialog(QDialog):
         Returns:
         None
         """
-         # Normalize the input into a dict with keys 0 and 1
+        # Normalize the input into a dict with keys 0 and 1
         normalized_data = {}
 
         # --- Case 1: List of dicts ---

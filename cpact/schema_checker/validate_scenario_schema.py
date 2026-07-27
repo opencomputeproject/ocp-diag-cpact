@@ -27,16 +27,21 @@ Usage:
     Use `scan_duplicates()` to detect duplicate keys before parsing.
 ===============================================================================
 """
+
+from typing import List
 from jsonschema import Draft7Validator
 from collections import defaultdict
 from ruamel.yaml import YAML
-
-
-from schema_checker.base_schema import BaseSchema
+import os
+from pathlib import Path
+from cpact.utils.path_resolver import resolve_paths_in_yaml
+from cpact.schema_checker.base_schema import BaseSchema
+from cpact.utils.custom_exception_handler import CustomExceptionHandler
+from cpact.result_builder.result_builder import ResultCollector
 
 
 class ScenarioSchemaValidator(BaseSchema):
-    def __init__(self, schema: dict) -> None:
+    def __init__(self, schema: dict, schema_dir: str) -> None:
         """
         Initializes the ScenarioSchemaValidator with a schema file or dictionary.
         Args:
@@ -44,16 +49,10 @@ class ScenarioSchemaValidator(BaseSchema):
         Returns:
             None
         """
-        super().__init__(schema)
+        super().__init__(schema, schema_dir)
+        self.report: List[BaseSchema.ReportRow] = []
 
     def scan_duplicates(self, yaml_file: str) -> list:
-        """
-        Scan a YAML file for duplicate keys.
-        Args:
-            yaml_file (str): Path to the YAML file.
-        Returns:
-            list: A list of warnings about duplicate keys.
-        """
         duplicates = []
         stack = [defaultdict(int)]
         indent_level = [0]
@@ -73,14 +72,17 @@ class ScenarioSchemaValidator(BaseSchema):
                     stack.append(defaultdict(int))
                     indent_level.append(current_indent + 1)
                     stripped_line = stripped_line[2:].strip()
+
                 if ":" in stripped_line:
                     key = stripped_line.split(":", 1)[0].strip()
                     if key in stack[-1]:
-                        duplicates.append(f"Duplicate key '{key}' found at line {line}")
+                        duplicates.append({"key": key, "line": line_num})
                     stack[-1][key] += 1
+
                     if stripped_line.endswith(":"):
                         stack.append(defaultdict(int))
                         indent_level.append(current_indent + 1)
+
         return duplicates
 
     def load_yaml_with_duplicates(self, yaml_file: str) -> dict:
@@ -101,8 +103,19 @@ class ScenarioSchemaValidator(BaseSchema):
         :param data: Data to validate.
         :return: None
         """
+        self.logger.info(f"Validating {data_file} against scenario schema...")
         # Check the duplicate keys in the YAML file
         duplicate_warnings = self.scan_duplicates(data_file)
+        for dup in duplicate_warnings:
+            rc = ResultCollector.get_instance()
+            rc.add_schema_validation_result(
+                category="Duplicate Key",
+                colateral=os.path.basename(data_file),
+                status="WARNING",
+                message=f"Duplicate key '{dup['key']}'",
+                path="",
+                line=str(dup["line"]),
+            )
         if duplicate_warnings:
             self.logger.warning("Duplicate keys found in the YAML file:")
             for warning in duplicate_warnings:
@@ -112,20 +125,120 @@ class ScenarioSchemaValidator(BaseSchema):
         try:
             data = self.load_yaml_with_duplicates(data_file)
         except Exception as e:
+            CustomExceptionHandler.print_exception(e)
             self.logger.error(f"Failed to load YAML file: {e}")
-            return
-
+            return False
         # Validate the data against the schema
         validator = Draft7Validator(self.schema)
         errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
+        if errors:
+            for error in errors:
+                path = " : ".join(str(p) for p in error.absolute_path)
+                rc = ResultCollector.get_instance()
+                rc.add_schema_validation_result(
+                    category="Scenario Schema",
+                    colateral=os.path.basename(data_file),
+                    status="ERROR",
+                    message=error.message,
+                    path=path,
+                )
+                self.logger.error(f" * {error.message}")
+                if path:
+                    self.logger.debug(f"   Path: {path}\n")
+            return False
+        self.logger.info("✅ Scenario Schema is valid")
+        rc = ResultCollector.get_instance()
+        rc.add_schema_validation_result(
+            category="Scenario Schema",
+            colateral=os.path.basename(data_file),
+            status="SUCCESS",
+            message="Scenario schema is valid",
+            path="",
+        )
+        self.logger.info("🔍 Starting MAP Schema Validation...")
+
+        scenario_data = data.get("test_scenario", {})
+        map_schema_validate = True
+        scenario_data, _ = resolve_paths_in_yaml(scenario_data)
+
+        if scenario_data and scenario_data.get("map_file"):
+            scenario_map_file = scenario_data.get("map_file")
+            scenario_dir = os.path.dirname(os.path.abspath(data_file))
+            if os.path.dirname(scenario_map_file):
+                resolved_map_file = scenario_map_file
+            else:
+                resolved_map_file = os.path.join(scenario_dir, scenario_map_file)
+            self.logger.info(f"📍 Resolved map file absolute path: {resolved_map_file}")
+
+            map_res = self.validate_map_schema(resolved_map_file)
+            self.logger.info(f"map_file detected in YAML: {resolved_map_file}")
+            if not map_res:
+                self.logger.error(f"❌ Map file validation FAILED: {resolved_map_file}")
+                return False
+
+        return True
+
+    def validate_map_schema(self, map_file_path: str) -> bool:
+        """
+        Validate the map JSON file against the latest map_recipe_schema_*.json.
+        """
+
+        self.logger.info(
+            f"📍 Attempting to load map file from: {os.path.abspath(map_file_path)}"
+        )
+        try:
+            map_data = self.load_schema(map_file_path)
+        except Exception as e:
+            CustomExceptionHandler.print_exception(e)
+            self.logger.error(f"❌ Failed to load map file '{map_file_path}': {e}")
+            return False
+        try:
+            spec_schema_dir = self.schema_dir
+        except Exception as e:
+            CustomExceptionHandler.print_exception(e)
+            self.logger.error(f"❌ Failed to resolve schema directory: {e}")
+            return False
+
+        # Find files like map_file_schema_0.7.json, map_file_schema_1.2.json
+        map_schema_file = os.path.join(spec_schema_dir, "map_recipe_schema.json")
+        if not map_schema_file:
+            self.logger.error(f"❌ No map recipe schemas found in: {self.schema_dir}")
+            return False
+
+        try:
+            map_schema = self.load_schema(map_schema_file)
+        except Exception as e:
+            CustomExceptionHandler.print_exception(e)
+            self.logger.error(f"❌ Failed to load map schema '{map_schema_file}': {e}")
+            return False
+
+        validator = Draft7Validator(map_schema)
+        errors = sorted(validator.iter_errors(map_data), key=lambda e: e.path)
 
         if not errors:
-            self.logger.info("✅ Scenario Schema is valid")
-            return
+            self.logger.info("✅ Map Schema is valid")
+            rc = ResultCollector.get_instance()
+            rc.add_schema_validation_result(
+                category="Map Schema",
+                colateral=os.path.basename(map_file_path),
+                status="SUCCESS",
+                message="Map schema is valid",
+                path="",
+            )
+            return True
 
-        self.logger.error("❌ Validation error")
+        self.logger.error(f"❌ Map Schema validation FAILED: {map_file_path}")
         for error in errors:
             path = " : ".join(str(p) for p in error.absolute_path)
-            self.logger.error(f" * {error.message}")
+            rc = ResultCollector.get_instance()
+            rc.add_schema_validation_result(
+                category="Map Schema",
+                colateral=os.path.basename(map_file_path),
+                status="ERROR",
+                message=error.message,
+                path=path,
+            )
             if path:
-                self.logger.error(f"   Path: {path} \n")
+                self.logger.debug(f"   Path: {path}\n")
+
+        return False

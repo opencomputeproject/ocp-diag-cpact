@@ -31,12 +31,13 @@ Usage:
     Call `stop_container()` or `stop_all_containers()` to clean up after execution.
 ===============================================================================
 """
+
 import time
 import docker
 
-from system_connections.connection_factory import ConnectionFactory
-from utils.logger_utils import TestLogger
-from system_connections.constants import ExecutionMode
+from cpact.system_connections.connection_factory import ConnectionFactory
+from cpact.utils.logger_utils import TestLogger
+from cpact.system_connections.constants import ExecutionMode
 
 
 class DockerExecutor:

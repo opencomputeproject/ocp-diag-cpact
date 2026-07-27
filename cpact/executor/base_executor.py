@@ -29,11 +29,12 @@ Usage:
 ===========================================================================
 """
 
+import re
 from abc import ABC, abstractmethod
-from utils.logger_utils import TestLogger
+from cpact.utils.logger_utils import TestLogger
 import ocptv.output as tv
 from concurrent.futures import ThreadPoolExecutor
-from core.context import Context
+from cpact.core.context import Context
 
 
 class BaseExecutor(ABC):

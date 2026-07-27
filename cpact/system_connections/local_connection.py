@@ -31,6 +31,7 @@ Usage:
     Use `terminate_task()` and `cleanup_all_tasks()` to manage task lifecycle.
 ===============================================================================
 """
+
 import os
 import time
 import uuid
@@ -42,8 +43,8 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List, Any
 
-from system_connections.base_connection import ConnectionInterface
-from system_connections.constants import (
+from cpact.system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.constants import (
     ExecutionMode,
     TaskStatus,
     TaskResult,

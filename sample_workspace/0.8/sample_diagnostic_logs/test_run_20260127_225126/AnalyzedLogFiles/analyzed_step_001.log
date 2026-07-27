@@ -1,0 +1,107 @@
+Installing ERR driver...
+Starting OneDiag...
+******************************************************************
+*                                                                *
+*                      FAIL FIELD DIAGNOSTIC                      *
+*                                                                *
+******************************************************************
+
+Version                  24975-0000-FLD-43749_rev15
+Base diag                r8.454.5
+Python                   /root/DiagLnx/FAIL/python/python-3.10.7-glibc-2.17-aarch64/bin/python3
+Build Date               Fri, 25 Jul 2025
+Start time               Tue, 16 Sep 2025 16:22:50
+Est. Completion time     Tue, 16 Sep 2025 17:05:05
+Logs                     /root/CPACT/Cloud-Processor-Accessibility-Compliance-Tool-ADO/cpact/logs
+Inforom logs             /root/CPACT/Cloud-Processor-Accessibility-Compliance-Tool-ADO/cpact/logs/inforom
+Product                  A1111
+Product Version          11.0
+Family                   A1111
+SKU                      123456-001
+Serial Number            12334567890
+
+Exit Code         | Virtual Id      | Test           | Component | Component Id                     | Notes
+============================================================================================================================================================================================================
+ERR-00000000000011 | inforom         | inforom        | GPU       | 0018_01_00.0                     | OK
+ERR-000000000000 | inforom         | inforom        | GPU       | 0009_01_00.0                     | OK
+ERR-000000000000 | inforom         | inforom        | GPU       | 0019_01_00.0                     | OK
+ERR-000000000000 | inforom         | inforom        | GPU       | 0054_01_00.0                     | OK
+ERR-000000000000 | Checkinforom    | checkinforom   | GPU       | 0018_41_00.0_SN_165512345t456    | OK
+ERR-000000000000 | Checkinforom    | checkinforom   | GPU       | 0009_21_00.0_SN_1655124012707    | OK
+ERR-000000000000 | Checkinforom    | checkinforom   | GPU       | 0019_11_00.0_SN_1655124014362    | OK
+ERR-000000000000 | Checkinforom    | checkinforom   | GPU       | 0008_01_00.0_SN_1655124012707    | OK
+FAIL-000000000086  | Inventory       | inventory      | System    | 0008:01:00.0_Version             | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0019:01:00.0_Version             | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0009:01:00.0_Version             | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0018:01:00.0_Version             | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0008:01:00.0_InfoROM Version     | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0008:05:00.0_Board ID            | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0019:01:00.0_InfoROM Version     | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0019:02:00.0_Board ID            | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0009:02:00.0_InfoROM Version     | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0009:02:00.0_Board ID            | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0018:11:00.0_InfoROM Version     | Flash execution failed, please check command.
+FAIL-000000000086  | Inventory       | inventory      | System    | 0018:11:00.0_Board ID            | Flash execution failed, please check command.
+FAIL-000000000000  | Inventory       | inventory      | System    | NUMA_NODE0_CPU                   | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | NUMA_NODE1_CPU                   | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMMQuantity                     | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMMBankQuantity                 | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMMSize                         | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPUNum                           | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | CPU_Num                          | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | CPU_Cores                        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | CPU_Version                      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_0_CPULocator                | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_0_TotalWidth                | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_0_DataWidth                 | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_0_Size                      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_1_CPULocator                | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_1_TotalWidth                | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_1_DataWidth                 | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | DIMM_1_Size                      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0018_02_00_0_RetimerCount    | OK
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0018_11_00_0_VBIOS_version   | 'GPU_00189_01_00_0_VBIOS_version': not found. expected '=/.*/'
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0018_21_00_0_InfoROM_version | 'GPU_00189_01_00_0_InfoROM_version': not found. expected '=/M215\.0201\.00\..*/'
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0018_54_00_0_VendorID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0018_0564_00_0_DeviceID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0018_013_00_0_SSVendorID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0018_03_00_0_SSDeviceID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0018_0145_00_0_PCIID           | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0008_015_00_0_RetimerCount    | OK
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0008_015_00_0_VBIOS_version   | 'GPU_00088_01_00_0_VBIOS_version': not found. expected '=/.*/'
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0008_017_00_0_InfoROM_version | 'GPU_00088_01_00_0_InfoROM_version': not found. expected '=/D777\.0201\.00\..*/'
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0008_017_00_0_VendorID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0008_017_00_0_DeviceID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0008_017_00_0_SSVendorID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0008_017_00_0_SSDeviceID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0008_017_00_0_PCIID           | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0009_017_00_0_RetimerCount    | OK
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0009_017_00_0_VBIOS_version   | 'GPU_00077_01_00_0_VBIOS_version': not found. expected '=/.*/'
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0009_017_00_0_InfoROM_version | 'GPU_00077_01_00_0_InfoROM_version': not found. expected '=/K4545\.0201\.00\..*/'
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0009_017_00_0_VendorID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0009_017_00_0_DeviceID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0009_019_00_0_SSVendorID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0009_019_00_0_SSDeviceID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0009_019_00_0_PCIID           | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_RetimerCount    | OK
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0019_019_00_0_VBIOS_version   | 'GPU_00177_01_00_0_VBIOS_version': not found. expected '=/.*/'
+FAIL-000000000110  | Inventory       | inventory      | System    | GPU_0019_019_00_0_InfoROM_version | 'GPU_00177_01_00_0_InfoROM_version': not found. expected '=/K4545\.0201\.00\..*/'
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_VendorID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_DeviceID        | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_SSVendorID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_SSDeviceID      | OK
+FAIL-000000000000  | Inventory       | inventory      | System    | GPU_0019_019_00_0_PCIID           | OK
+FAIL-000000000000  | AutomaticRepair | repair_utility | GPU       |                                  | OK - Nothing to repair
+
+#######     ####    ########  ###
+#######    ######   ########  ###
+##        ##    ##     ##     ###
+##        ##    ##     ##     ###
+#######   ########     ##     ###
+#######   ########     ##     ###
+##        ##    ##     ##     ###
+##        ##    ##  ########  ########
+##        ##    ##  ########  ########
+
+Final Result: FAIL
+End time: Tue, 16 Sep 2025 16:24:28 [ 1:37s elapsed ]

@@ -1,0 +1,542 @@
+2026-02-25 09:12:52,881 [INFO] 📁 Log directory created: .\sample_workspace\logs\test_run_20260225_091252
+2026-02-25 09:12:52,882 [INFO] 📝 Logging to file: .\sample_workspace\logs\test_run_20260225_091252\test_run.log
+2026-02-25 09:12:52,883 [INFO] Log directory: .\sample_workspace\logs\test_run_20260225_091252
+2026-02-25 09:12:52,884 [INFO] Starting test discovery in: .\sample_workspace\sample_diagnostic_recipes
+2026-02-25 09:12:52,936 [INFO] Found 16 matching test cases.
+2026-02-25 09:12:52,989 [INFO] Using schema version: 0.8 for .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_7.yaml
+2026-02-25 09:12:52,989 [INFO] Using schema directory: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8 for .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_7.yaml
+2026-02-25 09:12:52,989 [INFO] Using schema file: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\spec\schema\0.8\scenario_recipe_schema.json for .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_7.yaml
+2026-02-25 09:12:52,989 [INFO] Validating .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_7.yaml against scenario schema...
+2026-02-25 09:12:52,989 [INFO] Validating .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_7.yaml against scenario schema...
+2026-02-25 09:12:52,996 [INFO] ✅ Scenario Schema is valid
+2026-02-25 09:12:52,996 [INFO] 🔍 Starting MAP Schema Validation...
+2026-02-25 09:12:52,996 [INFO] 📍 Resolved map file absolute path: ./sample_workspace/map_file.json
+2026-02-25 09:12:53,004 [INFO] 📍 Attempting to load map file from: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\map_file.json
+2026-02-25 09:12:53,007 [INFO] ✅ Map Schema is valid
+2026-02-25 09:12:53,007 [INFO] map_file detected in YAML: ./sample_workspace/map_file.json
+2026-02-25 09:12:53,009 [INFO] 
+================================================================
+                    VALIDATION REPORT
+================================================================
++-----------------+------------------------------+----------+--------------------------+--------+
+| Category        | Colateral                    | Status   | Message                  | Path   |
++=================+==============================+==========+==========================+========+
+| Scenario Schema | diag_sample_log_regex_7.yaml | [36mSUCCESS[0m  | Scenario schema is valid |        |
++-----------------+------------------------------+----------+--------------------------+--------+
+|                 |                              | [36mSUCCESS[0m  | Map schema is valid      |        |
++-----------------+------------------------------+----------+--------------------------+--------+
+================================================================
+                
+2026-02-25 09:12:53,014 [INFO] 
+🚀 Running Test: .\sample_workspace\sample_diagnostic_recipes\diag_sample_log_regex_7.yaml
+2026-02-25 09:12:53,019 [INFO] 🔧 OCP TV output file: .\sample_workspace\logs\test_run_20260225_091252\ocptv_DiagSampleLogRegexInvoke7_20260225_091252.json
+2026-02-25 09:12:53,020 [INFO] Test Metadata set: ID=DG_7S
+2026-02-25 09:12:53,021 [INFO] Running 2 steps in scenario: DiagSampleLogRegexInvoke7
+2026-02-25 09:12:53,021 [INFO] Running inline steps...
+2026-02-25 09:12:53,026 [INFO] 🚀 Test Run Started: DiagSampleLogRegexInvoke7
+2026-02-25 09:12:53,033 [INFO] ================= Started Executing Step SearchForRegexAssignDRCWithFieldsLogAnalysis=================
+2026-02-25 09:12:53,033 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForRegexAssignDRCWithFieldsLogAnalysis
+2026-02-25 09:12:53,035 [INFO] Executing step: SearchForRegexAssignDRCWithFieldsLogAnalysis
+2026-02-25 09:12:53,036 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x0000023DA5A75890>
+2026-02-25 09:12:53,096 [INFO] Resolved relative path to absolute: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-02-25 09:12:56,106 [INFO] Log path: .\sample_workspace\logs\test_run_20260225_091252\AnalyzedLogFiles\analyzed_step_001.log
+2026-02-25 09:12:56,109 [INFO] Analyzing log: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-02-25 09:12:56,110 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2026-02-25 09:12:56,116 [INFO] ---------------- Applying Rule ----------------
+2026-02-25 09:12:56,118 [INFO] 🔍 Matched '(?P<Error_Code>ERR-(?=\d*[1-9])\d+)\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*[^\|]*\s*\|\s*(?P<Component_ID>[^\|]+)' → True → set error_code
+2026-02-25 09:12:56,119 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_7S': {'step_001': {'error_code': True}}}}
+2026-02-25 09:12:56,120 [INFO] ---------------- Applying Rule ----------------
+2026-02-25 09:12:56,121 [INFO] 🔍 Matched '(?P<Error_Code>FAIL-(?=\d*[1-9])\d+)\s*\|.*?\|.*?\|.*?\|(?P<Component_ID>[^\|]+)\|\s*(?P<Notes>.*?)(?=(\nFAIL-|$))' → True → set error_code
+2026-02-25 09:12:56,121 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_7S': {'step_001': {'error_code': True}}}}
+2026-02-25 09:12:56,122 [INFO] ---------------- Diagnostic Keys ----------------
+2026-02-25 09:12:56,124 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'ERR-00000000000011': [{'Error_Code': 'ERR-00000000000011', 'Component_ID': '0018_01_00.0                     '}, {'Error_Code': 'ERR-00000000000011', 'Component_ID': '0018_01_00.0                     '}], 'FAIL-000000000086': [{'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0008:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0019:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0009:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0018:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0008:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0008:05:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0019:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0019:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0009:02:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0009:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0018:11:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Error_Code': 'FAIL-000000000086', 'Component_ID': ' 0018:11:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}], 'FAIL-000000600000': [{'Error_Code': 'FAIL-000000600000', 'Component_ID': ' DIMMQuantity                     ', 'Notes': "DIMMQuantity : expected '=16'"}, {'Error_Code': 'FAIL-000000600000', 'Component_ID': ' DIMMBankQuantity                 ', 'Notes': "DIMMBankQuantity: expected '=8'"}, {'Error_Code': 'FAIL-000000600000', 'Component_ID': ' DIMMSize                         ', 'Notes': "DIMMSize: expected '=32768'"}], 'FAIL-000000600035': [{'Error_Code': 'FAIL-000000600035', 'Component_ID': ' DIMM_0_CPULocator                ', 'Notes': "DIMM_0_CPULocator not found. expected '=CPU0'"}], 'FAIL-000000600014': [{'Error_Code': 'FAIL-000000600014', 'Component_ID': ' DIMM_0_TotalWidth                ', 'Notes': "DIMM_0_TotalWidth not found. expected '=72'"}], 'FAIL-000000600033': [{'Error_Code': 'FAIL-000000600033', 'Component_ID': ' DIMM_0_DataWidth                 ', 'Notes': "DIMM_0_DataWidth not found. expected '=64'"}], 'FAIL-000000600043': [{'Error_Code': 'FAIL-000000600043', 'Component_ID': ' DIMM_0_Size                      ', 'Notes': "DIMM_0_Size not found. expected '=32768'"}], 'FAIL-000000600012': [{'Error_Code': 'FAIL-000000600012', 'Component_ID': ' DIMM_1_CPULocator                ', 'Notes': "DIMM_1_CPULocator not found. expected '=CPU1'"}], 'FAIL-000000600034': [{'Error_Code': 'FAIL-000000600034', 'Component_ID': ' DIMM_1_TotalWidth                ', 'Notes': "DIMM_1_TotalWidth not found. expected '=72'"}], 'FAIL-000000600001': [{'Error_Code': 'FAIL-000000600001', 'Component_ID': ' DIMM_1_DataWidth                 ', 'Notes': "DIMM_1_DataWidth not found. expected '=64'"}], 'FAIL-000000600023': [{'Error_Code': 'FAIL-000000600023', 'Component_ID': ' DIMM_1_Size                      ', 'Notes': "DIMM_1_Size not found. expected '=32768'"}], 'FAIL-000000000110': [{'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0018_11_00_0_VBIOS_version   ', 'Notes': "'GPU_00189_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0018_21_00_0_InfoROM_version ', 'Notes': "'GPU_00189_01_00_0_InfoROM_version': not found. expected '=/M215\\.0201\\.00\\..*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0008_015_00_0_VBIOS_version   ', 'Notes': "'GPU_00088_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0008_017_00_0_InfoROM_version ', 'Notes': "'GPU_00088_01_00_0_InfoROM_version': not found. expected '=/D777\\.0201\\.00\\..*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0009_017_00_0_VBIOS_version   ', 'Notes': "'GPU_00077_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0009_017_00_0_InfoROM_version ', 'Notes': "'GPU_00077_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0019_019_00_0_VBIOS_version   ', 'Notes': "'GPU_00177_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Error_Code': 'FAIL-000000000110', 'Component_ID': ' GPU_0019_019_00_0_InfoROM_version ', 'Notes': "'GPU_00177_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}]})
+2026-02-25 09:12:56,127 [DEBUG] ==================== Step Result SearchForRegexAssignDRCWithFieldsLogAnalysis ====================
+2026-02-25 09:12:56,127 [DEBUG] 
+Scenario ID:        DG_7S
+Step ID:            step_001
+Step Name:          SearchForRegexAssignDRCWithFieldsLogAnalysis
+Step Type:          log_analysis
+Status:             Success
+Duration:           3.092 seconds
+Message:            Log analyzed successfully.
+2026-02-25 09:12:56,128 [DEBUG] =====================================================
+2026-02-25 09:12:56,129 [INFO] ✅ Diagnosis PASS: Passed
+2026-02-25 09:12:56,134 [INFO] ✅ Diagnosis PASS: passed
+2026-02-25 09:12:56,136 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2026-02-25 09:12:56,136 [INFO] ================= Completed Executing Step SearchForRegexAssignDRCWithFieldsLogAnalysis =================
+2026-02-25 09:12:56,136 [INFO] ================= Started Executing Step SearchForRegexAssignDRCWithFieldsInvoke=================
+2026-02-25 09:12:56,140 [INFO] 🔄 Test Step Started: Step: ID:step_002_SearchForRegexAssignDRCWithFieldsInvoke
+2026-02-25 09:12:56,141 [INFO] Executing step: SearchForRegexAssignDRCWithFieldsInvoke
+2026-02-25 09:12:56,142 [INFO] 🔧 OCP TV output file: .\sample_workspace\logs\test_run_20260225_091252\ocptv_DiagSampleLogRegex6_20260225_091252.json
+2026-02-25 09:12:56,150 [INFO] Running scenario: DiagSampleLogRegex6
+2026-02-25 09:12:56,153 [INFO] 🚀 Test Run Started: DiagSampleLogRegex6
+2026-02-25 09:12:56,160 [INFO] 🔄 Test Step Started: Step: ID:step_001_SearchForRegexAssignDRCWithFields11
+2026-02-25 09:12:56,162 [INFO] Initializing LogAnalyzer with step: <ocptv.output.step.TestStep object at 0x0000023DA6322B10>
+2026-02-25 09:12:56,166 [INFO] Resolved relative path to absolute: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-02-25 09:12:59,178 [INFO] Log path: .\sample_workspace\logs\test_run_20260225_091252\AnalyzedLogFiles\analyzed_step_001.log
+2026-02-25 09:12:59,178 [INFO] Analyzing log: C:\Users\v-ajitpanda\OneDrive - Microsoft\Documents\Source\OpenComputeProjects\ocp-diag-cpact\sample_workspace\test_run.log
+2026-02-25 09:12:59,178 [INFO] Log content: Installing ERR driver...
+Starting OneDiag...
+*******************************************************...
+2026-02-25 09:12:59,187 [INFO] ---------------- Applying Rule ----------------
+2026-02-25 09:12:59,187 [INFO] 🔍 Matched '(FAIL-(?=\d*[1-9])\d+)\s*\|.*?\|.*?\|.*?\|(?P<Component_ID>[^\|]+)\|\s*(?P<Notes>.*?)(?=(\nFAIL-|$))' → True → set error_code
+2026-02-25 09:12:59,187 [INFO] 🔍 Updated diagnostic context: {'keys': {'DG_7S': {'step_001': {'error_code': True, 'step_001': True}}, 'DG_6S': {'step_001': {'error_code': True}}}}
+2026-02-25 09:12:59,187 [INFO] ---------------- Diagnostic Keys ----------------
+2026-02-25 09:12:59,187 [INFO] [LogAnalyzer] Diagnostic Analysis: defaultdict(<class 'list'>, {'FAIL-000000000123': [{'Component_ID': ' 0008:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0019:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0009:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0018:01:00.0_Version             ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0008:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0008:05:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0019:01:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0019:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0009:02:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0009:02:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0018:11:00.0_InfoROM Version     ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' 0018:11:00.0_Board ID            ', 'Notes': 'Flash execution failed, please check command.'}, {'Component_ID': ' DIMMQuantity                     ', 'Notes': "DIMMQuantity : expected '=16'"}, {'Component_ID': ' DIMMBankQuantity                 ', 'Notes': "DIMMBankQuantity: expected '=8'"}, {'Component_ID': ' DIMMSize                         ', 'Notes': "DIMMSize: expected '=32768'"}, {'Component_ID': ' DIMM_0_CPULocator                ', 'Notes': "DIMM_0_CPULocator not found. expected '=CPU0'"}, {'Component_ID': ' DIMM_0_TotalWidth                ', 'Notes': "DIMM_0_TotalWidth not found. expected '=72'"}, {'Component_ID': ' DIMM_0_DataWidth                 ', 'Notes': "DIMM_0_DataWidth not found. expected '=64'"}, {'Component_ID': ' DIMM_0_Size                      ', 'Notes': "DIMM_0_Size not found. expected '=32768'"}, {'Component_ID': ' DIMM_1_CPULocator                ', 'Notes': "DIMM_1_CPULocator not found. expected '=CPU1'"}, {'Component_ID': ' DIMM_1_TotalWidth                ', 'Notes': "DIMM_1_TotalWidth not found. expected '=72'"}, {'Component_ID': ' DIMM_1_DataWidth                 ', 'Notes': "DIMM_1_DataWidth not found. expected '=64'"}, {'Component_ID': ' DIMM_1_Size                      ', 'Notes': "DIMM_1_Size not found. expected '=32768'"}, {'Component_ID': ' GPU_0018_11_00_0_VBIOS_version   ', 'Notes': "'GPU_00189_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0018_21_00_0_InfoROM_version ', 'Notes': "'GPU_00189_01_00_0_InfoROM_version': not found. expected '=/M215\\.0201\\.00\\..*/'"}, {'Component_ID': ' GPU_0008_015_00_0_VBIOS_version   ', 'Notes': "'GPU_00088_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0008_017_00_0_InfoROM_version ', 'Notes': "'GPU_00088_01_00_0_InfoROM_version': not found. expected '=/D777\\.0201\\.00\\..*/'"}, {'Component_ID': ' GPU_0009_017_00_0_VBIOS_version   ', 'Notes': "'GPU_00077_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0009_017_00_0_InfoROM_version ', 'Notes': "'GPU_00077_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}, {'Component_ID': ' GPU_0019_019_00_0_VBIOS_version   ', 'Notes': "'GPU_00177_01_00_0_VBIOS_version': not found. expected '=/.*/'"}, {'Component_ID': ' GPU_0019_019_00_0_InfoROM_version ', 'Notes': "'GPU_00177_01_00_0_InfoROM_version': not found. expected '=/K4545\\.0201\\.00\\..*/'"}]})
+2026-02-25 09:12:59,194 [DEBUG] ==================== Step Result SearchForRegexAssignDRCWithFields11 ====================
+2026-02-25 09:12:59,194 [DEBUG] 
+Scenario ID:        DG_6S
+Step ID:            step_001
+Step Name:          SearchForRegexAssignDRCWithFields11
+Step Type:          log_analysis
+Status:             Success
+Duration:           3.032 seconds
+Message:            Log analyzed successfully.
+2026-02-25 09:12:59,194 [DEBUG] =====================================================
+2026-02-25 09:12:59,197 [INFO] ✅ Diagnosis PASS: Passed
+2026-02-25 09:12:59,201 [INFO] ✅ Diagnosis PASS: passed
+2026-02-25 09:12:59,202 [INFO] Step 'SearchForRegexAssignDRCWithFields11' completed successfully.
+2026-02-25 09:12:59,204 [INFO] ⏹️  Test Step Ended: Step 0, Status=COMPLETE
+2026-02-25 09:12:59,210 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2026-02-25 09:12:59,211 [DEBUG] ==================== Step Result SearchForRegexAssignDRCWithFieldsInvoke ====================
+2026-02-25 09:12:59,211 [DEBUG] 
+Scenario ID:        DG_7S
+Step ID:            step_002
+Step Name:          SearchForRegexAssignDRCWithFieldsInvoke
+Step Type:          invoke_scenario
+Status:             Success
+Duration:           3.049 seconds
+Message:            Scenario executed successfully.
+2026-02-25 09:12:59,211 [DEBUG] =====================================================
+2026-02-25 09:12:59,214 [INFO] ✅ Diagnosis PASS: Passed
+2026-02-25 09:12:59,216 [INFO] ✅ Diagnosis PASS: passed
+2026-02-25 09:12:59,219 [INFO] ⏹️  Test Step Ended: Step 1, Status=COMPLETE
+2026-02-25 09:12:59,219 [INFO] ================= Completed Executing Step SearchForRegexAssignDRCWithFieldsInvoke =================
+2026-02-25 09:12:59,222 [INFO] ✅ Test Run Ended: Status=COMPLETE, Result=PASS
+2026-02-25 09:12:59,224 [INFO] Finalizing continued steps...
+2026-02-25 09:12:59,224 [DEBUG] Finalizing continued steps in context: {}
+2026-02-25 09:12:59,225 [INFO] No continued steps to finalize.
+2026-02-25 09:12:59,225 [INFO] ✅ Test completed in 6.21 seconds
+2026-02-25 09:12:59,226 [INFO] ---------------------- Test Summary -------------------------
+2026-02-25 09:12:59,227 [INFO] [PASS] Step: SearchForRegexAssignDRCWithFieldsLogAnalysis | Type: log_analysis | Time: 3.09s | Msg: Log analyzed successfully.
+2026-02-25 09:12:59,227 [INFO] [PASS] Step: SearchForRegexAssignDRCWithFields11 | Type: log_analysis | Time: 3.03s | Msg: Log analyzed successfully.
+2026-02-25 09:12:59,228 [INFO] [PASS] Step: SearchForRegexAssignDRCWithFieldsInvoke | Type: invoke_scenario | Time: 3.05s | Msg: Scenario executed successfully.
+2026-02-25 09:12:59,228 [INFO] 
+❌ Detected Diagnostic Issues:
+2026-02-25 09:12:59,244 [INFO] 
++--------------------+--------------------------+-----------+----------------------+
+| Diagnostic Code    | Component_ID             | message   | Notes                |
++====================+==========================+===========+======================+
+| ERR-00000000000011 | 0018_01_00.0             |           |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000086  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600000  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600035  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600014  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600033  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600043  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600012  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600034  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600001  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000600023  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000110  |                          | Message   |                      |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0008:01:00.0_Version     |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0019:01:00.0_Version     |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0009:01:00.0_Version     |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0018:01:00.0_Version     |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0008:01:00.0_InfoROM     |           | Flash execution      |
+|                    | Version                  |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0008:05:00.0_Board ID    |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0019:01:00.0_InfoROM     |           | Flash execution      |
+|                    | Version                  |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0019:02:00.0_Board ID    |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0009:02:00.0_InfoROM     |           | Flash execution      |
+|                    | Version                  |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0009:02:00.0_Board ID    |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0018:11:00.0_InfoROM     |           | Flash execution      |
+|                    | Version                  |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | 0018:11:00.0_Board ID    |           | Flash execution      |
+|                    |                          |           | failed, please check |
+|                    |                          |           | command.             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMMQuantity             |           | DIMMQuantity :       |
+|                    |                          |           | expected '=16'       |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMMBankQuantity         |           | DIMMBankQuantity:    |
+|                    |                          |           | expected '=8'        |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMMSize                 |           | DIMMSize: expected   |
+|                    |                          |           | '=32768'             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_0_CPULocator        |           | DIMM_0_CPULocator    |
+|                    |                          |           | not found. expected  |
+|                    |                          |           | '=CPU0'              |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_0_TotalWidth        |           | DIMM_0_TotalWidth    |
+|                    |                          |           | not found. expected  |
+|                    |                          |           | '=72'                |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_0_DataWidth         |           | DIMM_0_DataWidth not |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=64'                |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_0_Size              |           | DIMM_0_Size not      |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=32768'             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_1_CPULocator        |           | DIMM_1_CPULocator    |
+|                    |                          |           | not found. expected  |
+|                    |                          |           | '=CPU1'              |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_1_TotalWidth        |           | DIMM_1_TotalWidth    |
+|                    |                          |           | not found. expected  |
+|                    |                          |           | '=72'                |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_1_DataWidth         |           | DIMM_1_DataWidth not |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=64'                |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | DIMM_1_Size              |           | DIMM_1_Size not      |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=32768'             |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0018_11_00_0_VBIOS_v |           | 'GPU_00189_01_00_0_V |
+|                    | ersion                   |           | BIOS_version': not   |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=/.*/'              |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0018_21_00_0_InfoROM |           | 'GPU_00189_01_00_0_I |
+|                    | _version                 |           | nfoROM_version': not |
+|                    |                          |           | found. expected '=/M |
+|                    |                          |           | 215\.0201\.00\..*/'  |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0008_015_00_0_VBIOS_ |           | 'GPU_00088_01_00_0_V |
+|                    | version                  |           | BIOS_version': not   |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=/.*/'              |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0008_017_00_0_InfoRO |           | 'GPU_00088_01_00_0_I |
+|                    | M_version                |           | nfoROM_version': not |
+|                    |                          |           | found. expected '=/D |
+|                    |                          |           | 777\.0201\.00\..*/'  |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0009_017_00_0_VBIOS_ |           | 'GPU_00077_01_00_0_V |
+|                    | version                  |           | BIOS_version': not   |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=/.*/'              |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0009_017_00_0_InfoRO |           | 'GPU_00077_01_00_0_I |
+|                    | M_version                |           | nfoROM_version': not |
+|                    |                          |           | found. expected '=/K |
+|                    |                          |           | 4545\.0201\.00\..*/' |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0019_019_00_0_VBIOS_ |           | 'GPU_00177_01_00_0_V |
+|                    | version                  |           | BIOS_version': not   |
+|                    |                          |           | found. expected      |
+|                    |                          |           | '=/.*/'              |
++--------------------+--------------------------+-----------+----------------------+
+| FAIL-000000000123  | GPU_0019_019_00_0_InfoRO |           | 'GPU_00177_01_00_0_I |
+|                    | M_version                |           | nfoROM_version': not |
+|                    |                          |           | found. expected '=/K |
+|                    |                          |           | 4545\.0201\.00\..*/' |
++--------------------+--------------------------+-----------+----------------------+
+2026-02-25 09:12:59,245 [INFO] 
+📊 Diagnostic Codes Summary:
+2026-02-25 09:12:59,245 [INFO] 
++--------------------+---------------+
+| Diagnostic Code    |   Occurrences |
++====================+===============+
+| ERR-00000000000011 |             1 |
++--------------------+---------------+
+| FAIL-000000000086  |             1 |
++--------------------+---------------+
+| FAIL-000000600000  |             1 |
++--------------------+---------------+
+| FAIL-000000600035  |             1 |
++--------------------+---------------+
+| FAIL-000000600014  |             1 |
++--------------------+---------------+
+| FAIL-000000600033  |             1 |
++--------------------+---------------+
+| FAIL-000000600043  |             1 |
++--------------------+---------------+
+| FAIL-000000600012  |             1 |
++--------------------+---------------+
+| FAIL-000000600034  |             1 |
++--------------------+---------------+
+| FAIL-000000600001  |             1 |
++--------------------+---------------+
+| FAIL-000000600023  |             1 |
++--------------------+---------------+
+| FAIL-000000000110  |             1 |
++--------------------+---------------+
+| FAIL-000000000123  |             1 |
++--------------------+---------------+
+2026-02-25 09:12:59,248 [INFO] 
+🔑 Final Context Keys:
+2026-02-25 09:12:59,248 [INFO] DG_7S = {'step_001': {'error_code': True, 'step_001': True}, 'step_002': {'step_002': True}}
+2026-02-25 09:12:59,248 [INFO] DG_6S = {'step_001': {'error_code': True, 'step_001': True}}
+2026-02-25 09:12:59,254 [INFO] Results saved to .\sample_workspace\logs\test_run_20260225_091252\test_results.json
+2026-02-25 09:12:59,254 [INFO] Building historical data index...
+2026-02-25 09:12:59,261 [INFO] Merging map data from './sample_workspace/map_file.json' into diagnostics for 'DiagSampleLogRegexInvoke7'
+2026-02-25 09:12:59,261 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,261 [DEBUG] Matched map entry for code 'ERR-00000000000011' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,262 [DEBUG] Updated entry for code 'ERR-00000000000011' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,262 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,262 [DEBUG] Matched map entry for code 'ERR-00000000000011' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,262 [DEBUG] Updated entry for code 'ERR-00000000000011' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,262 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,262 [DEBUG] Matched map entry for code 'ERR-00000000000011' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,262 [DEBUG] Updated entry for code 'ERR-00000000000011' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,262 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,262 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,262 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,262 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,262 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,262 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,263 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,263 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,263 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,263 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,264 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,264 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,264 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,264 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,264 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,264 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,264 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,264 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,265 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,265 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,265 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,265 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,265 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,265 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,265 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,265 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,265 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,265 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,265 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,265 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,265 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,265 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,265 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,265 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,265 [DEBUG] Matched map entry for code 'FAIL-000000000086' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,265 [DEBUG] Updated entry for code 'FAIL-000000000086' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,266 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600000'
+2026-02-25 09:12:59,266 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,266 [DEBUG] Matched map entry for code 'FAIL-000000600000' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,266 [DEBUG] Updated entry for code 'FAIL-000000600000' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,266 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,266 [DEBUG] Matched map entry for code 'FAIL-000000600000' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,267 [DEBUG] Updated entry for code 'FAIL-000000600000' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,267 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,267 [DEBUG] Matched map entry for code 'FAIL-000000600000' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,267 [DEBUG] Updated entry for code 'FAIL-000000600000' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,267 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600035'
+2026-02-25 09:12:59,267 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,267 [DEBUG] Matched map entry for code 'FAIL-000000600035' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,267 [DEBUG] Updated entry for code 'FAIL-000000600035' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,267 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600014'
+2026-02-25 09:12:59,267 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,267 [DEBUG] Matched map entry for code 'FAIL-000000600014' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,268 [DEBUG] Updated entry for code 'FAIL-000000600014' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,268 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600033'
+2026-02-25 09:12:59,268 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,268 [DEBUG] Matched map entry for code 'FAIL-000000600033' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,268 [DEBUG] Updated entry for code 'FAIL-000000600033' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,268 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600043'
+2026-02-25 09:12:59,268 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,268 [DEBUG] Matched map entry for code 'FAIL-000000600043' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,268 [DEBUG] Updated entry for code 'FAIL-000000600043' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,268 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600012'
+2026-02-25 09:12:59,268 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,268 [DEBUG] Matched map entry for code 'FAIL-000000600012' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,268 [DEBUG] Updated entry for code 'FAIL-000000600012' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,268 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600034'
+2026-02-25 09:12:59,268 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,269 [DEBUG] Matched map entry for code 'FAIL-000000600034' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,269 [DEBUG] Updated entry for code 'FAIL-000000600034' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,269 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600001'
+2026-02-25 09:12:59,269 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,269 [DEBUG] Matched map entry for code 'FAIL-000000600001' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,269 [DEBUG] Updated entry for code 'FAIL-000000600001' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,269 [DEBUG] Regex match found: '^FAIL-\d{0,}6\d{0,}$' matched code_key 'FAIL-000000600023'
+2026-02-25 09:12:59,269 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,269 [DEBUG] Matched map entry for code 'FAIL-000000600023' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,269 [DEBUG] Updated entry for code 'FAIL-000000600023' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,269 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,269 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,269 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,269 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,269 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,270 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,270 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,270 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,270 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,270 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,270 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,270 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,270 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,270 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,270 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,270 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,270 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,270 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,270 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,270 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,270 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,271 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,271 [DEBUG] Matched map entry for code 'FAIL-000000000110' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,271 [DEBUG] Updated entry for code 'FAIL-000000000110' in 'DiagSampleLogRegexInvoke7' with merged fields
+2026-02-25 09:12:59,271 [INFO] Merging map data from './sample_workspace/map_file.json' into diagnostics for 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6'
+2026-02-25 09:12:59,271 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,271 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,271 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,273 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,273 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,273 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,273 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,273 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,273 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,273 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,273 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,273 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,273 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,274 [DEBUG] Exact match found for DRC value 1
+2026-02-25 09:12:59,274 [DEBUG] Matched map entry for code 'FAIL-000000000123' with DRC_count=1 using action key=1
+2026-02-25 09:12:59,274 [DEBUG] Updated entry for code 'FAIL-000000000123' in 'DiagSampleLogRegexInvoke7.DiagSampleLogRegex6' with merged fields
+2026-02-25 09:12:59,285 [INFO] Diagnostics saved to .\sample_workspace\logs\test_run_20260225_091252\diagnostics_result_codes.json
+2026-02-25 09:12:59,285 [INFO] 
++----------------------------------------------+-----------------+----------+----------------+---------------------------------+
+| Step Name                                    | Type            | Status   |   Duration (s) | Message                         |
++==============================================+=================+==========+================+=================================+
+| SearchForRegexAssignDRCWithFieldsLogAnalysis | log_analysis    | [36mSuccess[0m  |           3.09 | Log analyzed successfully.      |
++----------------------------------------------+-----------------+----------+----------------+---------------------------------+
+| SearchForRegexAssignDRCWithFields11          | log_analysis    | [36mSuccess[0m  |           3.03 | Log analyzed successfully.      |
++----------------------------------------------+-----------------+----------+----------------+---------------------------------+
+| SearchForRegexAssignDRCWithFieldsInvoke      | invoke_scenario | [36mSuccess[0m  |           3.05 | Scenario executed successfully. |
++----------------------------------------------+-----------------+----------+----------------+---------------------------------+
+2026-02-25 09:12:59,285 [INFO] ⏱️ Total execution time: 6.21s
+
+2026-02-25 09:12:59,285 [INFO] All tests executed successfully.

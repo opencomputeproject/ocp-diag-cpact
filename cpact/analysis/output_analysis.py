@@ -31,9 +31,9 @@ Usage:
 import re
 from typing import Any, Type, List
 
-from core.context import Context
-from analysis.base_analysis import BaseAnalysis
-from result_builder.result_builder import ResultCollector
+from cpact.core.context import Context
+from cpact.analysis.base_analysis import BaseAnalysis
+from cpact.result_builder.result_builder import ResultCollector
 
 
 class OutputAnalysis(BaseAnalysis):
@@ -51,13 +51,14 @@ class OutputAnalysis(BaseAnalysis):
         super().__init__(rules, step_id=step_id)
         self.rules = rules
 
-    def analyze(self, output: Any, context: Type[Context]) -> List[dict]:
+    def analyze(self, output: Any, context: Type[Context], validator_type: str) -> List[dict]:
         """
         Analyzes the given output string against the defined rules and updates the context with diagnostic information
         based on the matches found.
         Args:
             output (str): The output string to be analyzed.
             context: The context object to be updated with diagnostic information.
+            validator_type (str): The type of validator to use for analysis.
         Returns:
             list: A list of dictionaries containing the results of the analysis.
         """

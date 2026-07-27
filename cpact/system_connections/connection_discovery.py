@@ -30,11 +30,12 @@ Usage:
     Use `export_results_to_csv()` to save results for reporting.
 ===============================================================================
 """
+
 import time
 from typing import Dict, Any, List
 
-from system_connections.connection_factory import ConnectionFactory
-from system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.connection_factory import ConnectionFactory
+from cpact.system_connections.base_connection import ConnectionInterface
 
 
 class ConnectionDiscovery:

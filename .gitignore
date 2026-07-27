@@ -5,6 +5,7 @@ logs/*
 
 *.pyc
 /.vscode
+/*workspace*/logs/*
 /workspace*/*
 docs/build/*
 /.vs

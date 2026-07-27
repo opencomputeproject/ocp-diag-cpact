@@ -29,8 +29,8 @@ Usage:
 ===========================================================================
 """
 
-from analysis.output_analysis import OutputAnalysis
-from analysis.diagnostic_analysis import DiagnosticAnalysis
+from cpact.analysis.output_analysis import OutputAnalysis
+from cpact.analysis.diagnostic_analysis import DiagnosticAnalysis
 from typing import Any, Type
 
 

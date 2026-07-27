@@ -1,0 +1,188 @@
+{
+    "diagnostic_codes": [
+        "FAIL-0000000001101",
+        "FAIL-0000000001101",
+        "FAIL-000000000086",
+        "FAIL-000000000110",
+        "FAIL-0000000001101",
+        "FAIL-0000000001101",
+        "FAIL-000000000086",
+        "FAIL-000000600000",
+        "FAIL-000000600035",
+        "FAIL-000000600014",
+        "FAIL-000000600033",
+        "FAIL-000000600043",
+        "FAIL-000000600012",
+        "FAIL-000000600034",
+        "FAIL-000000600001",
+        "FAIL-000000600023",
+        "FAIL-000000000110",
+        "FAIL-000000000123"
+    ],
+    "diagnostics": [
+        {
+            "parent_scenario": "DiagSampleLogRegex8",
+            "scenario_id": "DG_8S",
+            "step_id": "step_001",
+            "codes": {
+                "FAIL-0000000001101": [
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    },
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    }
+                ],
+                "FAIL-000000000086": {
+                    "Message": [
+                        {
+                            "FAIL-000000000086": "FAIL-000000000086"
+                        }
+                    ]
+                },
+                "FAIL-000000000110": {
+                    "Message": [
+                        {
+                            "FAIL-000000000110": "FAIL-000000000110"
+                        }
+                    ]
+                }
+            },
+            "message": "Found codes: "
+        },
+        {
+            "parent_scenario": "DiagSampleLogRegex8",
+            "scenario_id": "DG_8S",
+            "step_id": "step_002",
+            "codes": {
+                "FAIL-0000000001101": [
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    },
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    }
+                ],
+                "FAIL-000000000086": {
+                    "Message": [
+                        {
+                            "FAIL-000000000086": "FAIL-000000000086"
+                        }
+                    ]
+                },
+                "FAIL-000000600000": {
+                    "Message": [
+                        {
+                            "FAIL-000000600000": "FAIL-000000600000"
+                        }
+                    ]
+                },
+                "FAIL-000000600035": {
+                    "Message": [
+                        {
+                            "FAIL-000000600035": "FAIL-000000600035"
+                        }
+                    ]
+                },
+                "FAIL-000000600014": {
+                    "Message": [
+                        {
+                            "FAIL-000000600014": "FAIL-000000600014"
+                        }
+                    ]
+                },
+                "FAIL-000000600033": {
+                    "Message": [
+                        {
+                            "FAIL-000000600033": "FAIL-000000600033"
+                        }
+                    ]
+                },
+                "FAIL-000000600043": {
+                    "Message": [
+                        {
+                            "FAIL-000000600043": "FAIL-000000600043"
+                        }
+                    ]
+                },
+                "FAIL-000000600012": {
+                    "Message": [
+                        {
+                            "FAIL-000000600012": "FAIL-000000600012"
+                        }
+                    ]
+                },
+                "FAIL-000000600034": {
+                    "Message": [
+                        {
+                            "FAIL-000000600034": "FAIL-000000600034"
+                        }
+                    ]
+                },
+                "FAIL-000000600001": {
+                    "Message": [
+                        {
+                            "FAIL-000000600001": "FAIL-000000600001"
+                        }
+                    ]
+                },
+                "FAIL-000000600023": {
+                    "Message": [
+                        {
+                            "FAIL-000000600023": "FAIL-000000600023"
+                        }
+                    ]
+                },
+                "FAIL-000000000110": {
+                    "Message": [
+                        {
+                            "FAIL-000000000110": "FAIL-000000000110"
+                        }
+                    ]
+                },
+                "FAIL-000000000123": {
+                    "Message": [
+                        {
+                            "FAIL-000000000123": "FAIL-000000000123"
+                        }
+                    ]
+                }
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_8S": {
+            "step_001": {
+                "error_code": true,
+                "partnerdiag_fault_analysis": true,
+                "step_001": true
+            },
+            "step_002": {
+                "error_code": true,
+                "partnerdiag_fault_analysis": true,
+                "step_002": true
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_8S",
+            "step_id": "step_001",
+            "step_name": "SearchForExactStringAssignDRC",
+            "step_type": "log_analysis",
+            "status": "Success",
+            "duration": 3.07,
+            "message": "Log analyzed successfully."
+        },
+        {
+            "scenario_id": "DG_8S",
+            "step_id": "step_002",
+            "step_name": "SearchForExactStringAssignDRC1",
+            "step_type": "log_analysis",
+            "status": "Success",
+            "duration": 3.062,
+            "message": "Log analyzed successfully."
+        }
+    ]
+}

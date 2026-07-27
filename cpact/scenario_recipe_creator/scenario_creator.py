@@ -53,14 +53,14 @@ from PyQt5.QtWidgets import QStyleFactory
 # imports (add these if not already present)
 from PyQt5.QtGui import QFontDatabase, QIcon
 from PyQt5.QtGui import QIcon
-from constants import (
+from cpact.scenario_recipe_creator.constants import (
     make_button,
     MODERN_UI_QSS,
     enable_hidpi_and_fonts,
     add_card_shadows,
     APP_ICON,
 )
-from recipe_create_widget import RecipeCreator
+from cpact.scenario_recipe_creator.recipe_create_widget import RecipeCreator
 
 if platform.system() == "Windows":
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
@@ -123,7 +123,7 @@ class SchemaLoader(QWidget):
         default_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "spec",
-            "schema"
+            "schema",
         )
         path, _ = QFileDialog.getOpenFileName(
             self, "Open Schema", default_path, "JSON Files (*.json)"

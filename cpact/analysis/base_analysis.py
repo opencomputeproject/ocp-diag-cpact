@@ -29,8 +29,8 @@ Usage:
 from abc import ABC, abstractmethod
 from typing import Any, Type
 
-from utils.logger_utils import TestLogger
-from core.context import Context
+from cpact.utils.logger_utils import TestLogger
+from cpact.core.context import Context
 
 
 class BaseAnalysis(ABC):
@@ -48,7 +48,7 @@ class BaseAnalysis(ABC):
         self.logger = TestLogger().get_logger()
 
     @abstractmethod
-    def analyze(self, output: Any, context: Type[Context]) -> list:
+    def analyze(self, output: Any, context: Type[Context], validator_type: str) -> list:
         """
         Analyze the given output based on the initialized rules and context.
         """

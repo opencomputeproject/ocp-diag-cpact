@@ -40,13 +40,14 @@ Usage:
     `connect()` to establish secure access.
 ===============================================================================
 """
+
 import time
 import threading
 from typing import Dict, Any
 
 from sshtunnel import SSHTunnelForwarder
-from system_connections.redfish_connection import RedfishConnection
-from system_connections.ssh_connection import SSHConnection
+from cpact.system_connections.redfish_connection import RedfishConnection
+from cpact.system_connections.ssh_connection import SSHConnection
 
 
 class TunnelConnection(SSHConnection):

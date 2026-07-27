@@ -1,0 +1,43 @@
+{
+    "diagnostic_codes": [
+        "FAIL-0000000001145",
+        "FAIL-0000000001145"
+    ],
+    "diagnostics": [
+        {
+            "parent_scenario": "DiagSampleLogRegex4",
+            "scenario_id": "DG_4S",
+            "step_id": "step_001",
+            "codes": {
+                "FAIL-0000000001145": [
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    },
+                    {
+                        "Flash execution failed": "Flash execution failed"
+                    }
+                ]
+            },
+            "message": "Found codes: "
+        }
+    ],
+    "keys": {
+        "DG_4S": {
+            "step_001": {
+                "error_code": true,
+                "step_001": true
+            }
+        }
+    },
+    "steps": [
+        {
+            "scenario_id": "DG_4S",
+            "step_id": "step_001",
+            "step_name": "SearchForRegexAssignDRCWithFields",
+            "step_type": "log_analysis",
+            "status": "Success",
+            "duration": 3.053,
+            "message": "Log analyzed successfully."
+        }
+    ]
+}

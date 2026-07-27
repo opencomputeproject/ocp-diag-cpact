@@ -56,9 +56,6 @@ Use SSH to securely clone the repository:
 ```sh
 git clone git@github.com:your-username/your-repo.git
 
-Navigate to the project directory:
-cd cpact
-
 ```
 #### 2️⃣ **Set Up a Virtual Environment**
 ```
@@ -416,6 +413,7 @@ pip install PyQt5
 ### 💡Note: Ensure the following modules are available:
 - constants.py
 - recipe_create_widget.py
+
 ### 📂 Output
 Once the schema is loaded, the tool launches the RecipeCreator widget, allowing you to build and save scenario recipes in YAML format. These recipes can then be executed using:
 ```
@@ -501,7 +499,46 @@ test_scenario:              # ✅ (Mandatory) Defines a complete test case, incl
 
       scenario_path:        # ✅ (Mandatory for invoke_scenario) Path to another scenario YAML to invoke.
 ```
-#### 📦 Requirements
+### 🔹 Schema Selection
+```
+- The `schema_version` field allows a scenario YAML to explicitly specify which JSON schema version should be used for validation.
+- The framework attempts to load the corresponding schema file from the `spec/schema/` directory.
+- If the specified schema version is not found, the framework automatically falls back to the latest available schema version.
+
+  test_scenario:
+    test_id: <>test_id_name>
+    test_name: <test_name>
+    test_group: <test_groupiag>
+    schema_version: <schema_version>
+
+```
+### 📂 Paths Block
+```
+- The `paths` block defines all filesystem locations used by the framework, such as workspace directories, logs, map files, and scenario locations.
+- Each entry under `paths` becomes a reusable named placeholder that can be referenced anywhere in the YAML using `{placeholder_name}` syntax.
+- This helps avoid hardcoding paths and keeps scenarios clean, portable, and easy to maintain.
+- If a path value is absolute, it is used as-is.
+- If a path value is relative, it is resolved relative to the directory containing the scenario YAML file.
+
+  paths:
+    workspace_path: ./sample_workspace
+    scenario_path: ./tests
+-
+```
+### 🗺️ Map File
+```
+- The map file defines how the framework interprets log output and diagnostic results.
+- It maps plain-text or regular-expression search patterns to logical identifiers (virtual IDs) and Diagnostic Result Codes (DRCs).
+- During log-analysis or diagnostic steps, matched patterns are translated into structured results using the map file.
+- The map file path can reference placeholders defined in the `paths` block for better portability and reuse.
+ 
+  test_scenario:
+    map_file: '{workspace_path}/map_file1.json'
+    paths:
+      workspace_path: ./sample_workspace
+
+```
+### 📦 Requirements
 ___
 - Python 3.10 0r Higher Version
 
