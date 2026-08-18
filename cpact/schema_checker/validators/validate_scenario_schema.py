@@ -194,7 +194,7 @@ class ScenarioSchemaValidator(BaseSchema):
         )
         self.logger.info("🔍 Starting MAP Schema Validation...")
 
-        map_schema_validate = True
+        map_valid = True
         scenario_data, _ = resolve_paths_in_yaml(scenario_data)
 
         if scenario_data and scenario_data.get("map_file"):

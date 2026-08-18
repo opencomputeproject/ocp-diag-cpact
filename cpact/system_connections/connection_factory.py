@@ -110,7 +110,7 @@ class ConnectionFactory:
                 "nodemanager_tunnel"
             ):
                 tunnel_config = self.config.get("NodeManagerTunnel", {})
-                return TunnelConnection(connection_config, tunnel_config)
+                return TunnelConnection(self.config, connection_config, tunnel_config)
             else:
                 return SSHConnection(connection_config)
 

@@ -53,16 +53,18 @@ from cpact.system_connections.ssh_connection import SSHConnection
 class TunnelConnection(SSHConnection):
     """SSH Tunnel connection for NodeManager using sshtunnel"""
 
-    def __init__(self, config: Dict[str, Any], tunnel_config: Dict[str, Any]) -> None:
-        super().__init__(config)
+    def __init__(self, config: Dict[str, Any], connection_config: Dict[str, Any], tunnel_config: Dict[str, Any]) -> None:
+        super().__init__(connection_config)
+        self.connection_config = connection_config
         self.tunnel_config = tunnel_config
         self.ssh_tunnel = None
         self.redfish_tunnel = None
         self._tunnel_lock = threading.Lock()
+        self.total_config = config  # Store the global configuration for tunnel agent access
 
     def connect(self) -> bool:
         """Establish SSH tunnel first, then SSH connection"""
-        if self.config.get("nodemanager_tunnel"):
+        if self.connection_config.get("nodemanager_tunnel"):
             if not self._create_tunnels():
                 return False
 
@@ -84,33 +86,35 @@ class TunnelConnection(SSHConnection):
             redfish_local_port = int(
                 self.tunnel_config.get("nodemanager_tunnel_redfish_local_port", 8443)
             )
-
             # Extract tunnel credentials (could be different from target credentials)
-            tunnel_username = self.config.get("nodemanager_username", "")
-            tunnel_password = self.config.get("nodemanager_password", "")
-
+            tunnel_username = self.connection_config.get("nodemanager_username", "")
+            tunnel_password = self.connection_config.get("nodemanager_password", "")
+            ssh_host = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_host", "")
+            ssh_user = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_username", "")
+            ssh_pass = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_password", "")
+            ssh_port = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_ssh_port", 22)
             # Create SSH tunnel
             self.ssh_tunnel = SSHTunnelForwarder(
-                ssh_address_or_host=(tunnel_agent, 22),
-                ssh_username=tunnel_username,
-                ssh_password=tunnel_password,
+                ssh_address_or_host=(ssh_host, ssh_port),
+                ssh_username=ssh_user,
+                ssh_password=ssh_pass,
                 local_bind_address=(local_host, ssh_local_port),
                 remote_bind_address=(
-                    self.config["nodemanager_host"],
-                    self.config["nodemanager_ssh_port"],
+                    self.connection_config["nodemanager_host"],
+                    self.connection_config["nodemanager_ssh_port"],
                 ),
                 set_keepalive=30,
             )
 
             # Create Redfish tunnel
             self.redfish_tunnel = SSHTunnelForwarder(
-                ssh_address_or_host=(tunnel_agent, 22),
-                ssh_username=tunnel_username,
-                ssh_password=tunnel_password,
+                ssh_address_or_host=(ssh_host, ssh_port),
+                ssh_username=ssh_user,
+                ssh_password=ssh_pass,
                 local_bind_address=(local_host, redfish_local_port),
                 remote_bind_address=(
-                    self.config["nodemanager_host"],
-                    self.config["nodemanager_redfish_port"],
+                    self.connection_config["nodemanager_host"],
+                    self.connection_config["nodemanager_redfish_port"],
                 ),
                 set_keepalive=30,
             )
@@ -121,10 +125,10 @@ class TunnelConnection(SSHConnection):
                 self.redfish_tunnel.start()
 
             print(
-                f"SSH Tunnel: {local_host}:{ssh_local_port} -> {self.config['nodemanager_host']}:{self.config['nodemanager_ssh_port']}"
+                f"SSH Tunnel: {local_host}:{ssh_local_port} -> {self.connection_config['nodemanager_host']}:{self.connection_config['nodemanager_ssh_port']}"
             )
             print(
-                f"Redfish Tunnel: {local_host}:{redfish_local_port} -> {self.config['nodemanager_host']}:{self.config['nodemanager_redfish_port']}"
+                f"Redfish Tunnel: {local_host}:{redfish_local_port} -> {self.connection_config['nodemanager_host']}:{self.connection_config['nodemanager_redfish_port']}"
             )
 
             return True
@@ -155,7 +159,7 @@ class TunnelConnection(SSHConnection):
         """Override to use tunneled localhost when tunnel is active"""
         if self.ssh_tunnel and self.ssh_tunnel.is_active:
             return self.tunnel_config.get("nodemanager_tunnel_local_host", "localhost")
-        return self.config.get("nodemanager_host", "")
+        return self.connection_config.get("nodemanager_host", "")
 
     def _get_ssh_port(self) -> int:
         """Override to use local tunnel port when tunnel is active"""
@@ -163,7 +167,7 @@ class TunnelConnection(SSHConnection):
             return int(
                 self.tunnel_config.get("nodemanager_tunnel_ssh_local_port", 2222)
             )
-        return self.config.get("nodemanager_ssh_port", 22)
+        return self.connection_config.get("nodemanager_ssh_port", 22)
 
     def get_tunnel_info(self) -> Dict[str, Any]:
         """Get information about active tunnels"""
@@ -196,7 +200,7 @@ class TunnelConnection(SSHConnection):
         ssh_connected = super().is_connected()
         tunnels_active = True
 
-        if self.config.get("nodemanager_tunnel"):
+        if self.connection_config.get("nodemanager_tunnel"):
             tunnels_active = (
                 self.ssh_tunnel
                 and self.ssh_tunnel.is_active

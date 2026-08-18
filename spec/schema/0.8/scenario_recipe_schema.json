@@ -35,8 +35,8 @@
               "container_image": { "type": "string" },
               "shell": { "type": "string" },
               "container_location": { "type": "string", "enum": ["local", "remote"] },
-              "connection_type": { "type": "string", "enum": ["Local", "Inband", "RackManager", "NodeManager"] },
-              "connection": { "type": "string", "enum": ["local", "redfish", "ssh"] },
+              "connection": { "type": "string", "enum": ["Local", "Inband", "RackManager", "NodeManager"] },
+              "connection_type": { "type": "string", "enum": ["local", "redfish", "ssh"] },
               "use_sudo": { "type": "boolean" }
             },
             "required": ["container_name", "container_image", "connection_type", "connection"],
@@ -64,8 +64,8 @@
                 }
               },
               "container_name": { "type": "string" },
-              "connection_type": { "type": "string", "enum": ["Local", "Inband", "RackManager", "NodeManager"] },
-              "connection": { "type": "string", "enum": ["local", "redfish", "ssh"] },
+              "connection": { "type": "string", "enum": ["Local", "Inband", "RackManager", "NodeManager"] },
+              "connection_type": { "type": "string", "enum": ["local", "redfish", "ssh"] },
               "step_type": { "type": "string", "enum": ["command_execution", "log_analysis", "invoke_scenario"] }
             },
             "required": ["step_id", "step_name", "step_type", "connection_type", "connection"],
