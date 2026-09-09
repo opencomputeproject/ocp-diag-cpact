@@ -235,7 +235,7 @@ class ScenarioSchemaValidator(BaseSchema):
         map_file_path: str,
     ) -> tuple[bool, list[ValidationEntry]]:
         """
-        Validate the map JSON file against the latest map_recipe_schema_*.json.
+        Validate the map JSON file against the versioned DRC map schema.
         """
         entries: list[ValidationEntry] = []
         self.logger.info(
@@ -254,8 +254,7 @@ class ScenarioSchemaValidator(BaseSchema):
             self.logger.error(f"❌ Failed to resolve schema directory: {e}")
             return False, entries
 
-        # Find files like map_file_schema_0.7.json, map_file_schema_1.2.json
-        map_schema_file = os.path.join(spec_schema_dir, "map_recipe_schema.json")
+        map_schema_file = os.path.join(spec_schema_dir, "drc_map_schema.json")
         if not map_schema_file:
             self.logger.error(f"❌ No map recipe schemas found in: {self.schema_dir}")
             return False, entries
