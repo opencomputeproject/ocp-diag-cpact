@@ -192,13 +192,15 @@ class RecipeCreator(QMainWindow):
         self._docker_container_list = []
 
         self._required = (
-            schema.get("properties", {}).get("test_scenario", {}).get("required", [])
+            schema.get("properties", {}).get(
+                "test_scenario", {}).get("required", [])
             if schema
             else []
         )
 
         # Auto-save timer setup
-        self._autosave_root: Path = Path(tempfile.gettempdir()) / "cpact_autosaves"
+        self._autosave_root: Path = Path(
+            tempfile.gettempdir()) / "cpact_autosaves"
         # os.makedirs(self._autosave_dir, exist_ok=True)
         self._autosave_root.mkdir(parents=True, exist_ok=True)
         # Create a new file for this run
@@ -212,7 +214,8 @@ class RecipeCreator(QMainWindow):
 
         self.create_toolbar()
 
-        self.schema_selected.connect(self._load_scenario_data)  # connect signal
+        self.schema_selected.connect(
+            self._load_scenario_data)  # connect signal
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -241,19 +244,22 @@ class RecipeCreator(QMainWindow):
         layout = QVBoxLayout()
         # Scenario Info
         self._scenario_info_layout = QVBoxLayout()
-        scenario_schema = self.schema.get("properties", {}).get("test_scenario", {})
+        scenario_schema = self.schema.get(
+            "properties", {}).get("test_scenario", {})
         self._add_scenario_info_fields(scenario_schema)
         layout.addLayout(self._scenario_info_layout)
         # Docker Images
         docker_schema = (
-            scenario_schema.get("properties", {}).get("docker", {}).get("items", {})
+            scenario_schema.get("properties", {}).get(
+                "docker", {}).get("items", {})
         )
         docker_properties = docker_schema.get("properties", {})
         self._init_docker_ui(docker_properties, docker_schema, layout)
 
         # Steps
         step_schema = (
-            scenario_schema.get("properties", {}).get("test_steps", {}).get("items", {})
+            scenario_schema.get("properties", {}).get(
+                "test_steps", {}).get("items", {})
         )
         if not step_schema:
             show_error(self, "No step schema found in the provided schema.")
@@ -400,7 +406,8 @@ class RecipeCreator(QMainWindow):
             btn_edit = make_button("Edit Docker", "edit", group=docker_box)
             btn_edit.clicked.connect(lambda: self._edit_docker(docker_schema))
 
-            btn_remove = make_button("Remove Docker", "remove", group=docker_box)
+            btn_remove = make_button(
+                "Remove Docker", "remove", group=docker_box)
             btn_remove.clicked.connect(self._remove_docker)
 
             btns.addWidget(btn_add)
@@ -454,7 +461,8 @@ class RecipeCreator(QMainWindow):
 
         self._clear_all_fields()
         self._scenario_data = scenario_data or {}
-        scenario_schema = self.schema.get("properties", {}).get("test_scenario", {})
+        scenario_schema = self.schema.get(
+            "properties", {}).get("test_scenario", {})
         ts = self._scenario_data.get("test_scenario", {})
 
         # Update scenario info fields
@@ -498,7 +506,6 @@ class RecipeCreator(QMainWindow):
         Returns:
             None
         """
-
         fields = scenario_schema.get("properties", {})
         for key in fields.keys():
             if key in ["test_steps", "docker"]:
@@ -512,8 +519,10 @@ class RecipeCreator(QMainWindow):
             lbl = QLabel(label_text)
 
             edit = QLineEdit()
-            edit.setPlaceholderText("Enter " + key.replace("_", " ").capitalize())
-            edit.textChanged.connect(partial(self._on_scenario_fields_changed, key))
+            edit.setPlaceholderText(
+                "Enter " + key.replace("_", " ").capitalize())
+            edit.textChanged.connect(
+                partial(self._on_scenario_fields_changed, key))
 
             row.addWidget(lbl)
             row.addWidget(edit)
@@ -549,13 +558,11 @@ class RecipeCreator(QMainWindow):
             if key == "tags":
                 if isinstance(val, list):
                     text = ", ".join(str(t) for t in val if t.strip())
-                    # tags = [t.strip() for t in val if t.strip()]
                 elif isinstance(val, str):
-                    text = ", ".join(t.strip() for t in val.split(",") if t.strip())
+                    text = ", ".join(t.strip()
+                                     for t in val.split(",") if t.strip())
                 else:
                     text = ""
-                    # tags = [t.strip() for t in val.split(",") if t.strip()]
-                # line_edit.setText(", ".join(str(t) for t in tags))
             else:
                 text = str(val) if val is not None else ""
             old = edit.blockSignals(True)
@@ -563,9 +570,6 @@ class RecipeCreator(QMainWindow):
             edit.blockSignals(old)
 
             self._on_scenario_fields_changed(key, text)
-            # edit.textChanged.connect(
-            #     partial(self.update_scenario_info, key, edit))
-            # edit.blockSignals(old)
 
     def _on_scenario_fields_changed(self, key: str, text: str) -> None:
         """
@@ -579,7 +583,6 @@ class RecipeCreator(QMainWindow):
             key (str): The key in the `recipe_data` dictionary to be updated.
             line_edit (QLineEdit): The QLineEdit widget that triggered the change.
         """
-
         if key == "tags":
             tags = [t.strip() for t in text.split(",") if t.strip()]
             self._recipe_data["test_scenario"][key] = tags
@@ -613,7 +616,8 @@ class RecipeCreator(QMainWindow):
         if dialog.exec_() == QDialog.Accepted:
             d = dialog.result()
             if not all(d.get(f) for f in required_fields):
-                show_error(self, f'All fields required: {", ".join(required_fields)}')
+                show_error(
+                    self, f'All fields required: {", ".join(required_fields)}')
                 return
 
             name_key = required_fields[0] if required_fields else "container_name"
@@ -649,7 +653,8 @@ class RecipeCreator(QMainWindow):
             show_error(self, "Select a docker entry to edit")
             return
 
-        dlg = DockerDialog(self, item.data(Qt.UserRole), docker_schema=docker_schema)
+        dlg = DockerDialog(self, item.data(Qt.UserRole),
+                           docker_schema=docker_schema)
         if dlg.exec_() == QDialog.Accepted:
             data = dlg.result()
             name_key = required_fields[0] if required_fields else "container_name"
@@ -721,7 +726,8 @@ class RecipeCreator(QMainWindow):
                 )
                 return
             if not all(d.get(f) for f in required_fields):
-                show_error(self, f'All fields required: {", ".join(required_fields)}')
+                show_error(
+                    self, f'All fields required: {", ".join(required_fields)}')
                 return
 
             name = f"{d.get('step_id', 'step')} - {d.get('step_name', 'test')}"
@@ -1190,21 +1196,18 @@ class RecipeCreator(QMainWindow):
             if isinstance(value, str):
                 val = value.strip()
 
-                # Boolean conversion
                 if val.lower() == "true":
                     return True
                 if val.lower() == "false":
                     return False
 
-                # Integer conversion
                 if val.isdigit():
                     return int(val)
 
-                # Float conversion
                 try:
                     return float(val)
                 except ValueError:
-                    return value  # keep as string if not numeric
+                    return value
 
             return value
 
@@ -1231,16 +1234,14 @@ class RecipeCreator(QMainWindow):
                 cleaned = {
                     k: clean_data(v) for k, v in data.items() if v not in empties
                 }
-                return cleaned if cleaned else None  # remove empty dicts
+                return cleaned if cleaned else None
             elif isinstance(data, list):
-                cleaned_list = [clean_data(v) for v in data if v not in empties]
-                # filter out any None from recursion
+                cleaned_list = [clean_data(v)
+                                for v in data if v not in empties]
                 cleaned_list = [v for v in cleaned_list if v is not None]
-                return cleaned_list if cleaned_list else None  # remove empty lists
+                return cleaned_list if cleaned_list else None
             else:
                 return convert_type(data)
-
-        # Convert to regular dict for JSON export
 
         def to_plain(obj: Any) -> Any:
             if isinstance(obj, OrderedDict):
@@ -1282,7 +1283,8 @@ class RecipeCreator(QMainWindow):
                         path += ".json"
                     with open(path, "w", encoding="utf-8") as f:
                         json.dump(data, f, indent=4, ensure_ascii=False)
-                    QMessageBox.information(self, "Success", f"JSON exported to {path}")
+                    QMessageBox.information(
+                        self, "Success", f"JSON exported to {path}")
 
             if fmt in ("yaml", "both"):
                 path, _ = QFileDialog.getSaveFileName(
@@ -1296,7 +1298,8 @@ class RecipeCreator(QMainWindow):
                     # write sanitized data only
                     with open(path, "w", encoding="utf-8") as f:
                         yaml.dump(data, f)
-                    QMessageBox.information(self, "Success", f"YAML exported to {path}")
+                    QMessageBox.information(
+                        self, "Success", f"YAML exported to {path}")
 
         except Exception as e:
             # If yaml.safe_dump still raises, try to capture the exact first offending item for debugging
@@ -1432,7 +1435,8 @@ class RecipeCreator(QMainWindow):
             reverse=True,
         )
         if not files:
-            QMessageBox.warning(self, "Load AutoSave", "No autosave files found!")
+            QMessageBox.warning(self, "Load AutoSave",
+                                "No autosave files found!")
             return
 
         items = [os.path.basename(f) for f in files]
@@ -1471,7 +1475,8 @@ class RecipeCreator(QMainWindow):
             or not isinstance(data["test_scenario"], dict)
             or data.get("test_scenario", {}).get("test_id") is None
         ):
-            QMessageBox.critical(self, "Load AutoSave", f"Empty autosave file: {file}")
+            QMessageBox.critical(self, "Load AutoSave",
+                                 f"Empty autosave file: {file}")
             return
         self.schema_selected.emit(data)
         QMessageBox.information(self, "Load AutoSave", f"Loaded: {file}\n\n")
@@ -1522,4 +1527,5 @@ class RecipeCreator(QMainWindow):
             QMessageBox.information(self, "Success", f"Loaded {file_path}")
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load file:\n{str(e)}")
+            QMessageBox.critical(
+                self, "Error", f"Failed to load file:\n{str(e)}")

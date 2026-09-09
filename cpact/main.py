@@ -42,6 +42,7 @@ import argparse
 from email.mime import text
 import json
 import os
+import copy
 import textwrap
 import time
 from collections import defaultdict
@@ -56,6 +57,9 @@ from cpact.utils.path_resolver import resolve_paths_in_yaml
 from cpact.result_builder.result_builder import ResultCollector
 from cpact.schema_checker.schema_factory import ExecutorFactory
 from cpact.core.orchestrator import Orchestrator
+from cpact.core.recipe_filter import RecipeFilter
+from cpact.core.recipe_selector import RecipeSelector
+from cpact.core.scenario_adapter import ScenarioAdapter
 from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.system_connections.connection_discovery import ConnectionDiscovery
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
@@ -89,13 +93,89 @@ from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreat
 # --------------------------------------------------------------------------------------
 # Discovery
 # --------------------------------------------------------------------------------------
+
+
+def validate_filter_parameters(filters: Optional[argparse.Namespace]) -> None:
+    if not filters:
+        return
+    has_v08 = any(
+        [
+            getattr(filters, "test_id", None),
+            getattr(filters, "test_name", None),
+            getattr(filters, "test_group", None),
+            getattr(filters, "tags", None),
+        ]
+    )
+    has_v09 = bool(getattr(filters, "recipe_filters", None))
+    if has_v08 and has_v09:
+        raise ValueError(
+            "Cannot combine 0.8-style filters (--test_id, --test_name, --test_group, --tags) "
+            "with 0.9-style filters (--recipe-filter)."
+        )
+
+
+def discover_scenarios(
+    test_dir: str,
+    filters: Optional[argparse.Namespace],
+    logger: Optional[TestLogger] = None,
+) -> List[Tuple[str, ScenarioAdapter]]:
+    logger = logger or TestLogger().get_logger()
+    validate_filter_parameters(filters)
+    matched_scenarios: List[Tuple[str, ScenarioAdapter]] = []
+
+    recipe_filter: Optional[RecipeFilter] = None
+    recipe_filter_specs = getattr(
+        filters, "recipe_filters", None) if filters else None
+    if recipe_filter_specs:
+        recipe_filter = RecipeFilter()
+        for filter_spec in recipe_filter_specs:
+            recipe_filter.add_filter(filter_spec)
+
+    for root, _, files in os.walk(test_dir):
+        for file in files:
+            if not file.endswith((".yaml", ".yml", ".json")):
+                continue
+
+            file_path = os.path.join(root, file)
+            try:
+                data = load_yaml_file(file_path)
+                metadata = data.get("test_scenario", {})
+                adapter = ScenarioAdapter(metadata)
+
+                if filters:
+                    if getattr(filters, "test_id", None):
+                        if adapter.get_test_id() not in filters.test_id:
+                            continue
+                    if getattr(filters, "test_name", None):
+                        name = adapter.get_test_name()
+                        if filters.test_name.lower() not in name.lower():
+                            continue
+                    if getattr(filters, "test_group", None):
+                        if filters.test_group != adapter.get_test_group():
+                            continue
+                    if getattr(filters, "tags", None):
+                        scenario_tags = set(adapter.get_tags())
+                        if not scenario_tags.intersection(set(filters.tags)):
+                            continue
+                    if recipe_filter and not recipe_filter.matches(adapter):
+                        continue
+
+                matched_scenarios.append((file_path, adapter))
+            except Exception as exc:
+                CustomExceptionHandler.print_exception(exc)
+                logger.error(f"Failed to parse {file_path}: {exc}")
+                continue
+
+    return matched_scenarios
+
+
 def discover_tests(
     test_dir: str,
     filters: Optional[argparse.Namespace],
     logger: Optional[TestLogger] = None,
 ) -> List[str]:
     """
-    Discover all supported test files (YAML/YML) recursively and filter by test metadata.
+    Discover all supported scenario files (YAML/YML/JSON) recursively and filter by test metadata.
 
     Args:
         test_dir: Root directory containing test scenarios.
@@ -107,52 +187,36 @@ def discover_tests(
     Returns:
         A list of absolute file paths that match the criteria.
     """
+    return [file_path for file_path, _ in discover_scenarios(test_dir, filters, logger=logger)]
+
+
+def _prepare_launchable_scenario(
+    file_path: str,
+    scenario_data: Dict[str, Any],
+    logger: Optional[TestLogger] = None,
+) -> Tuple[Dict[str, Any], ScenarioAdapter]:
     logger = logger or TestLogger().get_logger()
-    matched_tests: List[str] = []
+    adapter = ScenarioAdapter(scenario_data)
+    if adapter.get_schema_version() != "0.9":
+        return scenario_data, adapter
 
-    for root, _, files in os.walk(test_dir):
-        for file in files:
-            # Keep behavior: only YAML/YML considered (JSON commented in original)
-            if not (file.endswith(".yaml") or file.endswith(".yml")):
-                continue
+    launchable_steps = adapter.get_launchable_steps()
+    if not launchable_steps:
+        raise ValueError(
+            f"Selected v0.9 recipe is not launchable in the current milestone: {file_path}"
+        )
 
-            file_path = os.path.join(root, file)
-            try:
-                data = load_yaml_file(file_path)
-                metadata = data.get("test_scenario", {})
+    launch_step = launchable_steps[0]
+    launch_ready = copy.deepcopy(scenario_data)
+    launch_ready["test_id"] = adapter.get_primary_id() or file_path
+    launch_ready["test_steps"] = [launch_step]
 
-                # Apply filters only if provided
-                if filters:
-                    # test_id: list of accepted IDs
-                    if getattr(filters, "test_id", None):
-                        if metadata.get("test_id") not in filters.test_id:
-                            continue
-
-                    # test_name: substring match (case-insensitive)
-                    if getattr(filters, "test_name", None):
-                        name = metadata.get("test_name", "")
-                        if filters.test_name.lower() not in name.lower():
-                            continue
-
-                    # test_group: exact match
-                    if getattr(filters, "test_group", None):
-                        if filters.test_group != metadata.get("test_group"):
-                            continue
-
-                    # tags: intersection with scenario tags
-                    if getattr(filters, "tags", None):
-                        scenario_tags = set(metadata.get("tags", []))
-                        if not scenario_tags.intersection(set(filters.tags)):
-                            continue
-
-                matched_tests.append(file_path)
-
-            except Exception as exc:
-                CustomExceptionHandler.print_exception(exc)
-                logger.error(f"Failed to parse {file_path}: {exc}")
-                continue
-
-    return matched_tests
+    logger.info(
+        "Selected v0.9 recipe %s; launching first command_execution step %s",
+        adapter.get_primary_id(),
+        launch_step.get("step_id", "unknown"),
+    )
+    return launch_ready, ScenarioAdapter(launch_ready)
 
 
 # --------------------------------------------------------------------------------------
@@ -187,8 +251,10 @@ def run_test(
     start_time = time.time()
 
     scenario_data = scenario_doc["test_scenario"]
+    scenario_data, adapter = _prepare_launchable_scenario(
+        file_path, scenario_data, logger)
     scenario_data, _ = resolve_paths_in_yaml(
-        scenario_data, scenario_data.get("paths", {})
+        scenario_data, adapter.get_paths()
     )
 
     orchestrator = Orchestrator()
@@ -196,6 +262,14 @@ def run_test(
 
     elapsed_time = time.time() - start_time
     logger.info(f"✅ Test completed in {elapsed_time:.2f} seconds")
+
+    if adapter.get_schema_version() == "0.9":
+        logger.info(
+            "Scoped v0.9 flow complete: CPACT stops after launch orchestration for %s",
+            adapter.get_primary_id() or file_path,
+        )
+        return
+
     logger.info("---------------------- Test Summary -------------------------")
 
     # Cache singleton instances to avoid repeated lookups
@@ -260,13 +334,14 @@ def list_tests(test_files: List[str], logger: Optional[TestLogger] = None) -> No
             continue
 
         test_scenario = scenario_doc["test_scenario"]
+        adapter = ScenarioAdapter(test_scenario)
         rows.append(
             [
-                str(test_scenario.get("test_id", "")),
-                str(test_scenario.get("test_name", "")),
-                str(test_scenario.get("test_group", "")),
-                ", ".join([str(tag) for tag in test_scenario.get("tags", [])]),
-                str(test_scenario.get("description", "")),
+                str(adapter.get_primary_id() or ""),
+                str(adapter.get_test_name()),
+                str(adapter.get_test_group()),
+                ", ".join([str(tag) for tag in adapter.get_tags()]),
+                str(adapter.get_test_description()),
             ]
         )
 
@@ -277,7 +352,8 @@ def list_tests(test_files: List[str], logger: Optional[TestLogger] = None) -> No
     if skipped_tests:
         logger.info(f"⚠️ Skipped {len(skipped_tests)} invalid test scenarios:")
         logger.info(
-            "\n" + tabulate(skipped_tests, headers=skipped_header, tablefmt="grid")
+            "\n" + tabulate(skipped_tests,
+                            headers=skipped_header, tablefmt="grid")
         )
 
 
@@ -367,14 +443,16 @@ def list_scenarios_with_connections(
             logger.error(f"❌ No test scenario found in {test_file}. Skipping.")
             continue
 
+        adapter = ScenarioAdapter(test_scenario)
+
         conn_details = get_scenario_connection_details(test_scenario)
         rows.append(
             [
-                test_scenario.get("test_id", ""),
-                test_scenario.get("test_name", ""),
-                test_scenario.get("test_group", ""),
-                ", ".join([str(t) for t in test_scenario.get("tags", [])]),
-                test_scenario.get("description", ""),
+                adapter.get_primary_id() or "",
+                adapter.get_test_name(),
+                adapter.get_test_group(),
+                ", ".join([str(t) for t in adapter.get_tags()]),
+                adapter.get_test_description(),
                 check_scenario_connections(conn_details, connections),
             ]
         )
@@ -459,8 +537,10 @@ def calculate_connection_statistics(
         return {}
 
     total = len(test_results)
-    success_count = sum(1 for r in test_results if r.get("status") == "SUCCESS")
-    partial_count = sum(1 for r in test_results if r.get("status") == "PARTIAL")
+    success_count = sum(
+        1 for r in test_results if r.get("status") == "SUCCESS")
+    partial_count = sum(
+        1 for r in test_results if r.get("status") == "PARTIAL")
     failed_count = sum(1 for r in test_results if r.get("status") == "FAILED")
     error_count = sum(1 for r in test_results if r.get("status") == "ERROR")
 
@@ -602,7 +682,8 @@ def validate_schema(
     if os.path.isdir(file_or_dir):
         matched_files = discover_tests(file_or_dir, None, logger=logger)
         if not matched_files:
-            logger.error(f"❌ No matching files found in directory: {file_or_dir}")
+            logger.error(
+                f"❌ No matching files found in directory: {file_or_dir}")
             return False
     else:
         matched_files = [file_or_dir]
@@ -624,7 +705,8 @@ def validate_schema(
                 logger.error(f"❌ Failed to load data from {fp}.")
                 results.append(False)
                 continue
-            schema_version = fp_data.get("test_scenario", {}).get("schema_version")
+            schema_version = fp_data.get(
+                "test_scenario", {}).get("schema_version")
             logger.info(
                 f"Using schema version: {schema_version or '-latest-'} for {fp}"
             )
@@ -637,7 +719,8 @@ def validate_schema(
             )
             logger.info(f"Using schema file: {resolved_schema_file} for {fp}")
             if not os.path.exists(resolved_schema_file):
-                logger.error(f"❌ Schema file not found: {resolved_schema_file}")
+                logger.error(
+                    f"❌ Schema file not found: {resolved_schema_file}")
                 return False
             logger.info(f"Validating {fp} against {schema_type} schema...")
             factory = ExecutorFactory().get_instance(resolved_schema_file)
@@ -658,7 +741,8 @@ def validate_schema(
     ResultCollector.get_instance().generate_schema_report(
         report,
         os.path.join(
-            TestLogger().get_log_dir(), f"{schema_type}_schema_validation_report"
+            TestLogger().get_log_dir(
+            ), f"{schema_type}_schema_validation_report"
         ),
         output_type="json",
     )
@@ -710,7 +794,8 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
             for k in r:
                 r[k] = wrap_text(r[k], 30)
             if "Status" in r:
-                r["Status"] = ResultCollector.get_instance().color_severity(r["Status"])
+                r["Status"] = ResultCollector.get_instance(
+                ).color_severity(r["Status"])
             if not first:
                 if "Category" in r:
                     r["Category"] = ""
@@ -721,7 +806,6 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
         group_breaks.append(len(all_rows))
     table_lines = tabulate(all_rows, headers="keys", tablefmt="grid")
 
-
     logger.info(
         f"""
 ================================================================
@@ -731,8 +815,9 @@ def print_validation_report(report: List[Dict[str, str]], logger: TestLogger) ->
 ================================================================
                 """
     )
-    
-    log_path = os.path.join(TestLogger().get_log_dir(), "schema_validation_report.txt")
+
+    log_path = os.path.join(TestLogger().get_log_dir(),
+                            "schema_validation_report.txt")
     with open(log_path, "w", encoding="utf-8") as f:
         f.write("VALIDATION REPORT\n")
         f.write("=" * 80 + "\n")
@@ -749,9 +834,28 @@ def get_final_results() -> bool:
         for step in step_results
     )
 
+
+def _fail_if_no_matched_files(
+    matched_files: List[str],
+    logger: TestLogger,
+    factory: ConnectionFactory,
+) -> None:
+    if matched_files:
+        return
+
+    logger.error("❌ No matching scenarios found for execution.")
+    factory.close_all_connections()
+    logger.error("❌ Final Test Result: FAIL")
+    import logging
+
+    logging.shutdown()
+    raise SystemExit(1)
+
 # --------------------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------------------
+
+
 def main() -> None:
     print("=" * 80)
     print(get_version_info())
@@ -772,6 +876,27 @@ def main() -> None:
     parser.add_argument("--test_name", type=str, help="Filter by test_name")
     parser.add_argument("--test_group", type=str, help="Filter by test_group")
     parser.add_argument("--tags", nargs="+", help="Filter by tags")
+    parser.add_argument(
+        "--recipe-filter",
+        action="append",
+        dest="recipe_filters",
+        help="Filter v0.9 recipes by metadata property, e.g. --recipe-filter supplier_id=INTEL",
+    )
+    parser.add_argument(
+        "--list-recipes",
+        action="store_true",
+        help="List discovered scenarios/recipes with version-aware identifiers",
+    )
+    parser.add_argument(
+        "--show-metadata",
+        action="store_true",
+        help="Show full recipe metadata when listing recipes",
+    )
+    parser.add_argument(
+        "--recipe-select",
+        action="store_true",
+        help="Interactively select one discovered scenario/recipe before launch",
+    )
     parser.add_argument(
         "--conn_config", "-cc", type=str, help="Path to the connection config file"
     )
@@ -859,7 +984,8 @@ def main() -> None:
         parser.error(f"Test directory does not exist: {test_dir}")
 
     workspace = args.workspace or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "workspace"
+        os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), "workspace"
     )
     print("test dir", test_dir)
     if not os.path.exists(workspace):
@@ -872,6 +998,11 @@ def main() -> None:
     log_dir = TestLogger().get_log_dir()
     logger.info(f"Log directory: {log_dir}")
     logger.info(f"Starting test discovery in: {test_dir}")
+
+    try:
+        validate_filter_parameters(args)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     # Initial discovery (no filters) for listing-only flows
     if (args.test_group or args.test_id or args.test_name or args.tags) and (args.list_scenarios or args.list):
@@ -894,6 +1025,14 @@ def main() -> None:
         list_tests(all_tests_list, logger=logger)
         return
 
+    if args.list_recipes:
+        discovered_recipes = discover_scenarios(test_dir, args, logger=logger)
+        if not discovered_recipes:
+            logger.warning("⚠️ No matching recipes found.")
+            return
+        RecipeSelector(discovered_recipes).show_list(
+            verbose=args.show_metadata)
+        return
 
     # Schema check mode (explicit)
     if args.schema_check:
@@ -907,7 +1046,8 @@ def main() -> None:
     conn_config: Dict[str, Any] = {}
     if args.conn_config:
         if not os.path.exists(args.conn_config):
-            logger.error(f"❌ Test result: FAIL, Connection config file not found: {args.conn_config}")
+            logger.error(
+                f"❌ Test result: FAIL, Connection config file not found: {args.conn_config}")
             return
         with open(args.conn_config, "r", encoding="utf-8") as cf:
             conn_config = json.load(cf)
@@ -929,11 +1069,21 @@ def main() -> None:
 
     # Prepare connection factory for execution phase
     factory = ConnectionFactory.get_instance(conn_config)
-    if args.run_all_scenarios:
+    if args.recipe_select:
+        matched_scenarios = discover_scenarios(test_dir, args, logger=logger)
+        if not matched_scenarios:
+            matched_files = []
+        else:
+            selected_path, _ = RecipeSelector(
+                matched_scenarios).interactive_select()
+            matched_files = [selected_path]
+    elif args.run_all_scenarios:
         logger.info("Running all scenarios without filtering.")
         matched_files = discover_tests(test_dir, None, logger=logger)
     else:
         matched_files = discover_tests(test_dir, args, logger=logger)
+
+    _fail_if_no_matched_files(matched_files, logger, factory)
 
     if args.run_with_schema_check:
         for matched_file in matched_files:
@@ -944,7 +1094,8 @@ def main() -> None:
                 logger=logger,
             )
             if not ok:
-                logger.error(f"❌ Recipe Schema Check Failed!!! for {matched_file}")
+                logger.error(
+                    f"❌ Recipe Schema Check Failed!!! for {matched_file}")
                 factory.close_all_connections()
                 logger.error("❌ Final Test Result: FAIL")
                 sys.exit(1)
@@ -968,6 +1119,7 @@ def main() -> None:
         logging.shutdown()
         sys.exit(1)
     logging.shutdown()
+
 
 if __name__ == "__main__":
     main()

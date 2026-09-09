@@ -35,6 +35,7 @@ from datetime import datetime, timedelta
 from typing import Any, Type, List
 
 from cpact.core.context import Context
+from cpact.core.scenario_adapter import ScenarioAdapter
 from cpact.core.scenario_runner import ScenarioRunner
 from cpact.core.step_executor import StepExecutor
 
@@ -99,12 +100,15 @@ class Orchestrator:
         Returns:
             None
         """
-        self.context.set("test_id", scenario.get("test_id"))
-        self.context.set("test_name", scenario.get("test_name"))
-        self.context.set("test_group", scenario.get("test_group"))
-        self.context.set("scenario_parent", scenario.get("test_name"))
+        adapter = ScenarioAdapter(scenario)
+        self.context.set("test_id", adapter.get_primary_id())
+        self.context.set("test_name", adapter.get_test_name())
+        self.context.set("test_group", adapter.get_test_group())
+        self.context.set("schema_version", adapter.get_schema_version())
+        self.context.set("recipe_id", adapter.get_recipe_id())
+        self.context.set("scenario_parent", adapter.get_test_name())
         self.context.set("scenario_path", scenario_path)
-        self.logger.info(f"Test Metadata set: ID={scenario.get('test_id')}")
+        self.logger.info(f"Test Metadata set: ID={adapter.get_primary_id()}")
 
     def load_dockers(self, scenario: dict = None) -> None:
         """
@@ -146,7 +150,8 @@ class Orchestrator:
         self.logger.info(
             f"Running {len(steps)} steps in scenario: {scenario.get('test_name')}"
         )
-        scenario_output = {"status": "", "start_timestamp": "", "end_timestamp": ""}
+        scenario_output = {"status": "",
+                           "start_timestamp": "", "end_timestamp": ""}
         start_time = time.time()
         if steps:
             self.logger.info(f"Running inline steps...")
@@ -230,7 +235,8 @@ class Orchestrator:
         start_timestamp = datetime.fromtimestamp(start_time).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
-        end_timestamp = datetime.fromtimestamp(end_time).strftime("%Y-%m-%d %H:%M:%S")
+        end_timestamp = datetime.fromtimestamp(
+            end_time).strftime("%Y-%m-%d %H:%M:%S")
 
         # Convert duration to HH:MM:SS
         formatted_duration = time.strftime("%H:%M:%S", time.gmtime(duration))
@@ -270,7 +276,8 @@ class Orchestrator:
         for scenario_id, scenario_info in context.continued_steps.items():
 
             for step_id, info in scenario_info.items():
-                self.logger.info(f"Finalizing continued step: {scenario_id}, {step_id}")
+                self.logger.info(
+                    f"Finalizing continued step: {scenario_id}, {step_id}")
                 if info.get("validated"):
                     self.logger.info(
                         f"Step {scenario_id} {step_id} already validated. Skipping."
@@ -280,7 +287,8 @@ class Orchestrator:
                 future = info.get("future")
                 scenario_step = info.get("step")
                 continue_step = (
-                    scenario_step.step_details if scenario_step else info.get("step")
+                    scenario_step.step_details if scenario_step else info.get(
+                        "step")
                 )
                 if not continue_step:
                     self.logger.warning(

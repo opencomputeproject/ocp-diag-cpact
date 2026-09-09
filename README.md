@@ -24,7 +24,7 @@ https://github.com/MeritedHobbit/Cloud-Processor-Accessibility-Compliance-Tool.g
     b. Out-of-band (Redfish)
     c. Out-of-band (BMC)
     d. Inbuilt tunnel creation option (to bypass ,say, a Rack manager)
-3. YAML based compliance scenario definitions 
+3. YAML and JSON based compliance scenario definitions 
     a. Internally leverages python
     b. Grouping of compliance scenarios per domain - like RAS, Debug, FWUpdate, Telemetry  etc
     c. Yaml based scenario sequencing (along with expectations) 
@@ -74,39 +74,93 @@ pip list
 ```
 
 ## 🛡️ Compliance Scenarios
+
+## Current Implementation Status
+
+The codebase currently has two active tracks:
+
+1. The established 0.8-style execution flow for scenario discovery, schema validation, connectivity handling, orchestration, and reporting.
+2. A scoped 0.9 migration that currently covers recipe discovery, metadata filtering, listing, interactive selection, and launch handoff.
+
+The current 0.9 implementation is intentionally narrow:
+
+- Mixed 0.8 and 0.9 scenario repositories can be discovered together.
+- Scenario and recipe inputs can be discovered from YAML, YML, or JSON files.
+- 0.9 recipes can be filtered using `recipe_metadata` properties.
+- The CLI can list recipes, show recipe metadata, and interactively select a recipe.
+- Execution currently reduces a selected 0.9 recipe to the first supported `command_execution` step and launches it through the existing backend.
+
+Not implemented yet in this milestone:
+
+- Full 0.9-native downstream result semantics and report ownership
+- Recursive `invoke_scenario` handling for 0.9 recipes
+- `log_analysis` as a primary 0.9 launch path
+- Broad automated coverage across the full application
+
 ## 🚀 Usage
 ### Run the Application
 ### 🧩 Command Line Options
 
 The framework extends `python` to support **custom command-line options** for flexible test case selection, listing, and configuration.
 
-You can run test cases using various filters like test ID, test name, group, tag, or folder.
+You can run scenarios using legacy 0.8-style filters or the newer 0.9 recipe workflow.
 
 ### Available Options
 
-| Option                    | Description                                                                           |
-|---------------------------|-------------------------------------------------------------------------------------- |
-| `--test_id`               | Run test case(s) by Test Case ID(s) (comma-separated).                                |
-| `--test_name`             | Run test case(s) by Test Case Name(s) (comma-separated).                              |
-| `--test_group`            | Run test case(s) by Test Group(s) (comma-separated).                                  |
-| `--tags`                  | Run test case(s) by Tag(s) (comma-separated).                                         |
-| `--test_dir`              | Path to the directory containing input test definitions or scenarios.                 |
-| `--workspace`             | Path to the workspace where logs, temporary files, and results will be stored.        |
-| `--run_all_scenarios`     | Run All scenarios.                                                                    |
-| `--run_scenario_creator`  | Run scenario creator GUI.                                                             |
-| `--no-schema-check`       | Skip schema check while running recipes.                                              |
-| `--historical_data`       | Option to provide the historical data. Like previously ran recipe results.            |
-| `--schema_check`          | Specifies the mode of schema validation. Use scenario for validating scenario YAMLs.  |
-|  `<test_yaml>`            | Path to the YAML file defining the test scenario to be validated or executed.         |
-| `<schema_json>`           | Path to the JSON schema file used for validating the test YAML.                       |
-| `--list`, `-l`                  | List all available test cases and exit without execution.                       |
-| `--conn_config`           | Path to the connection configuration JSON file.                                       |
-| `--discover_connections`, `-dc` | List all available connections without executing any tests.                     |
-| `--list_scenarios_with_connections`, `-lsc` | List all scenarios with connections without                         |    execution.                                                                                                          |
-| `--list_scenarios`, `ls` | List all scenarios without executing them.                                             |
-| `run_with_discover_connections`, `-rdc` | Discover and check all connections without executing the tests.         |
-| `run_with_schema_check`, `-rsc` | Execute tests with schema check.                                                |
-| `--log-path`              | Set the log file or folder path to save execution logs.                               |
+| Option | Description |
+|---|---|
+| `--test_dir` | Path to the directory containing YAML, YML, or JSON scenario definitions. |
+| `--workspace` | Path to the workspace where logs, temporary files, and results will be stored. |
+| `--test_id` | Filter 0.8 scenarios by test ID. |
+| `--test_name` | Filter scenarios by test name substring. |
+| `--test_group` | Filter scenarios by test group. |
+| `--tags` | Filter scenarios by tags. |
+| `--recipe-filter` | Filter 0.9 recipes by `recipe_metadata` properties such as `supplier_id=INTEL`. Repeat the flag to add more filter groups. |
+| `--list`, `-l` | List discovered scenarios in the legacy tabular format. |
+| `--list_scenarios`, `-ls` | List discovered scenarios without executing them. |
+| `--list-recipes` | List discovered scenarios and recipes with version-aware IDs. |
+| `--show-metadata` | Show full 0.9 recipe metadata while using `--list-recipes`. |
+| `--recipe-select` | Interactively select one discovered scenario or recipe before launch. |
+| `--run_all_scenarios`, `-ras` | Run all discovered scenarios without filtering. |
+| `--run_scenario_creator`, `-rsc` | Open the scenario creator GUI. |
+| `--schema_check` | Validate a config or scenario file or directory against the appropriate schema. |
+| `--no-schema-check` | Skip schema validation before execution. |
+| `--historical_data` | Provide previously generated output files for aggregated result calculation. |
+| `--conn_config`, `-cc` | Path to the connection configuration JSON file. |
+| `--discover_connections`, `-dc` | Discover and test available connections without running scenarios. |
+| `--list_scenarios_with_connections`, `-lsc` | List scenarios with connection validation status. |
+| `--run_with_discover_connections`, `-rdc` | Continue into scenario execution after `--discover_connections` completes. |
+| `--run_with_schema_check` | Enable schema validation before execution. |
+
+### v0.9 CLI Compatibility
+
+Use these options for the current v0.9 workflow:
+
+| Option | Status for v0.9 | Notes |
+|---|---|---|
+| `--recipe-filter` | Supported | Primary v0.9 filter mechanism. Matches `recipe_metadata` fields such as `recipe_id`, `supplier_id`, and `platform_id`. |
+| `--list-recipes` | Supported | Lists discovered scenarios with version-aware IDs. |
+| `--show-metadata` | Supported with `--list-recipes` | Has no effect unless `--list-recipes` is also used. |
+| `--recipe-select` | Supported | Interactively selects one discovered scenario or recipe before launch. |
+| `--test_dir` | Supported | Required in practice for pointing at your v0.9 recipe repository. |
+| `--workspace` | Supported | Recommended for log and result output. |
+| `--no-schema-check` | Supported | Skips schema validation before launch. |
+| `--run_all_scenarios` | Partially aligned | Works, but it is not v0.9-specific and will run mixed discovered content. |
+| `--test_id` | Not useful for v0.9 | v0.9 recipes expose `recipe_id`, not `test_id`. Use `--recipe-filter recipe_id=...` instead. |
+| `--test_name` | Legacy-compatible | Can still match top-level scenario fields, but it is not the preferred v0.9 selection path. |
+| `--test_group` | Legacy-compatible | Can still match top-level scenario fields, but it is not the preferred v0.9 selection path. |
+| `--tags` | Legacy-compatible | Can still match top-level scenario fields, but it is not the preferred v0.9 selection path. |
+| `--list` / `--list_scenarios` | Legacy listing | Works, but uses the legacy listing view rather than the v0.9-aware recipe view. |
+| `--list_scenarios_with_connections` | Misleading/incomplete | The argument is defined, but there is no active `main()` branch that executes this path today. |
+| `--discover_connections` | Supported but separate | Useful for connectivity checks, not specific to v0.9 recipe semantics. |
+| `--run_with_discover_connections` | Conditional | Only meaningful together with `--discover_connections`. |
+
+### v0.9 Option Rules
+
+- Do not combine `--recipe-filter` with `--test_id`, `--test_name`, `--test_group`, or `--tags`.
+- Prefer `--recipe-filter recipe_id=...` over `--test_id` for v0.9 content.
+- Use `--list-recipes` instead of `--list` when you want v0.9-aware IDs and metadata.
+- Current v0.9 execution is scoped: CPACT only launches the first supported `command_execution` step from the selected recipe.
 
 ---
 
@@ -120,6 +174,18 @@ You can run test cases using various filters like test ID, test name, group, tag
   ```
   python main.py --list
   ```
+- **List 0.9 Recipes with Metadata**
+  ```
+  python main.py --test_dir sample_workspace/0.9/sample_diagnostic_recipes --list-recipes --show-metadata
+  ```
+- **Filter 0.9 Recipes by Metadata**
+  ```
+  python main.py --test_dir sample_workspace/0.9/sample_diagnostic_recipes --recipe-filter supplier_id=OCP_DEMO --workspace /tmp/cpact_workspace
+  ```
+- **Interactively Select a Recipe Before Launch**
+  ```
+  python main.py --test_dir sample_workspace/0.9/sample_diagnostic_recipes --recipe-select --workspace /tmp/cpact_workspace
+  ```
 - **List Test Cases with Filters (Group, Tag)**
   ```
   python main.py --list --test_group "<test_group>"
@@ -131,7 +197,11 @@ You can run test cases using various filters like test ID, test name, group, tag
   ```
 - **List all Available Connections**
   ```
-  python main.py --test_dir ..\path\to\tests --conn_config ..\path\to\config_file --workspace ..\path\to\workspace --run_with_discover_connections
+  python main.py --test_dir ..\path\to\tests --conn_config ..\path\to\config_file --workspace ..\path\to\workspace --discover_connections
+  ```
+- **Discover Connections, Then Continue Into Execution**
+  ```
+  python main.py --test_dir ..\path\to\tests --conn_config ..\path\to\config_file --workspace ..\path\to\workspace --discover_connections --run_with_discover_connections
   ```
 - **Run by Test Case ID**
   ```
@@ -162,6 +232,13 @@ You can run test cases using various filters like test ID, test name, group, tag
   ```
   python main.py --test_dir ..\path\to\tests --workspace ..\path\to\workspace --conn_config ..\path\to\config_file --run_all_scenarios
   ```
+
+### Notes on Current Behavior
+
+- `--recipe-filter` cannot be combined with `--test_id`, `--test_name`, `--test_group`, or `--tags`.
+- If execution filters produce no matched scenarios, CPACT now exits with a failing result instead of reporting a misleading pass.
+- For the current 0.9 milestone, CPACT only launches the first supported `command_execution` step from a selected recipe.
+- The normal discovery and execution path now accepts recipe/scenario inputs from `.yaml`, `.yml`, and `.json` files.
 
 ## 📡 Connection Management
 
