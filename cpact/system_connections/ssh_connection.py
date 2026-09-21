@@ -44,6 +44,8 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List, Any
 
+import socket
+
 from cpact.system_connections.base_connection import ConnectionInterface
 from cpact.system_connections.constants import (
     ExecutionMode,
@@ -51,6 +53,17 @@ from cpact.system_connections.constants import (
     TaskResult,
     BackgroundTask,
 )
+from cpact.system_connections.connection_config import (
+    ConnectionConfig,
+    PRIVILEGE_NONE,
+    PRIVILEGE_SUDO,
+    PRIVILEGE_SU,
+)
+from cpact.system_connections.privilege import PrivilegedShell, PrivilegeEscalationError
+from cpact.system_connections.retry import retry_call
+
+# Exceptions that indicate a dropped/broken transport and warrant a reconnect.
+_RECONNECT_EXCEPTIONS = (paramiko.SSHException, EOFError, socket.error, OSError)
 
 
 class SSHConnection(ConnectionInterface):
@@ -59,11 +72,21 @@ class SSHConnection(ConnectionInterface):
     def __init__(self, config: Dict[str, Any]) -> None:
         super().__init__(config=config)
         self.config = config
+        # Strongly-typed view over the config; replaces the duplicated
+        # _get_host/_get_username/... ladders (see connection_config.py).
+        self.conn_config = ConnectionConfig.from_dict(config)
         self.ssh_client = None
         self.background_tasks: Dict[str, BackgroundTask] = {}
         self.completed_tasks: Dict[str, TaskResult] = {}
         self.lock = threading.Lock()
-        self.connection_lock = threading.Lock()
+        self.connection_lock = threading.RLock()
+        # Persistent elevated session state (see enable_privileged_mode()).
+        self._priv_shell: Optional[PrivilegedShell] = None
+        self._priv_mode: Optional[str] = None      # mode the shell was opened with
+        self._priv_explicit = False                # True only via enable_privileged_mode()
+        self._priv_lock = threading.Lock()
+        # Guard against infinite reconnect recursion.
+        self._reconnecting = False
 
     def connect(self) -> bool:
         """Establish SSH connection"""
@@ -82,14 +105,27 @@ class SSHConnection(ConnectionInterface):
 
                 self.logger.info(f"Connecting to {username}@{host}:{port}")
 
-                self.ssh_client.connect(
-                    hostname=host,
-                    port=port,
-                    username=username,
-                    password=password,
-                    timeout=30,
-                    allow_agent=False,
-                    look_for_keys=False,
+                retry = self.conn_config.retry
+
+                def _do_connect():
+                    self.ssh_client.connect(
+                        hostname=host,
+                        port=port,
+                        username=username,
+                        password=password,
+                        timeout=30,
+                        allow_agent=False,
+                        look_for_keys=False,
+                    )
+                    return True
+
+                retry_call(
+                    _do_connect,
+                    retries=retry.retry_count,
+                    delay=retry.retry_delay,
+                    exceptions=_RECONNECT_EXCEPTIONS,
+                    logger=self.logger,
+                    description=f"SSH connect to {host}:{port}",
                 )
 
                 self.logger.info("SSH connection established successfully")
@@ -159,6 +195,8 @@ class SSHConnection(ConnectionInterface):
         mode: ExecutionMode = ExecutionMode.SYNCHRONOUS,
         timeout: Optional[float] = None,
         wait: bool = False,
+        use_sudo: bool = False,
+        privilege_mode: Optional[str] = None,
     ) -> Optional[TaskResult]:
         """
         Execute SSH command based on the specified execution mode.
@@ -168,17 +206,44 @@ class SSHConnection(ConnectionInterface):
             mode: ExecutionMode enum (SYNCHRONOUS, BACKGROUND, BACKGROUND_WAIT)
             timeout: Timeout in seconds
             wait: If True with background mode, wait for completion after timeout
+            use_sudo: Run the command through ``sudo -i`` with interactive
+                password handling.
+            privilege_mode: Explicit escalation mode ("sudo", "su" or "none").
+                Overrides ``use_sudo`` and the config default when given.
 
         Returns:
             TaskResult for synchronous/background_wait execution,
             task_id for background execution when wait=False,
             None for background execution when wait=True but timeout exceeded
-        """
-        if not self.is_connected():
-            if not self.connect():
-                self.logger.error("Failed to establish SSH connection")
-                return None
 
+        Privileged routing precedence:
+            1. A persistent elevated session (``enable_privileged_mode``) runs
+               everything elevated.
+            2. Otherwise, an explicit ``privilege_mode`` / ``use_sudo`` reuses a
+               single elevated shell (escalated once, on first use) for this and
+               all later privileged commands. It is torn down only at
+               ``disconnect()`` — never per command.
+            3. Otherwise, the normal non-interactive ``exec_command`` path runs.
+        """
+        if not self._ensure_connected():
+            self.logger.error("Failed to establish SSH connection")
+            return None
+
+        effective_mode = self._resolve_privilege_mode(use_sudo, privilege_mode)
+
+        # (1) An explicitly enabled persistent session runs everything elevated.
+        with self._priv_lock:
+            explicit_session = self._priv_explicit and self._priv_shell is not None
+        if explicit_session and privilege_mode != PRIVILEGE_NONE:
+            return self._execute_in_persistent_shell(command, timeout)
+
+        # (2) A privileged command reuses one elevated shell (opened once). No
+        #     per-command escalation, and no per-command teardown — the shell is
+        #     closed only when the connection is disconnected.
+        if effective_mode in (PRIVILEGE_SUDO, PRIVILEGE_SU):
+            return self._execute_privileged_reused(command, effective_mode, timeout)
+
+        # (3) Normal path.
         task_id = str(uuid.uuid4())
 
         if mode == ExecutionMode.SYNCHRONOUS:
@@ -203,10 +268,275 @@ class SSHConnection(ConnectionInterface):
             # Always wait for completion in this mode
             return self.wait_for_task(task_id, timeout)
 
+    # ------------------------------------------------------------------ #
+    # Reliability: reconnect + health check
+    # ------------------------------------------------------------------ #
+    def _ensure_connected(self) -> bool:
+        """
+        Ensure the transport is live, reconnecting once if it has dropped.
+
+        Returns True if connected (or successfully reconnected).
+        """
+        if self.is_connected():
+            return True
+        if self._reconnecting:
+            return False
+        self._reconnecting = True
+        try:
+            self.logger.warning("SSH transport not active; attempting (re)connect")
+            return self.connect()
+        finally:
+            self._reconnecting = False
+
+    def health_check(self) -> bool:
+        """
+        Active liveness probe: round-trips ``echo health_check`` over the
+        transport. Returns True only if the echo comes back intact.
+        """
+        if not self.is_connected():
+            return False
+        try:
+            stdin, stdout, stderr = self.ssh_client.exec_command(
+                "echo health_check", timeout=10
+            )
+            out = stdout.read().decode("utf-8", errors="ignore").strip()
+            return out == "health_check"
+        except Exception as e:
+            self.logger.warning(f"Health check failed: {e}")
+            return False
+
+    # ------------------------------------------------------------------ #
+    # Privilege escalation
+    # ------------------------------------------------------------------ #
+    def _resolve_privilege_mode(
+        self, use_sudo: bool, privilege_mode: Optional[str]
+    ) -> str:
+        """Determine the effective escalation mode for a call."""
+        if privilege_mode is not None:
+            mode = privilege_mode.lower()
+            return mode if mode in (PRIVILEGE_SUDO, PRIVILEGE_SU, PRIVILEGE_NONE) else PRIVILEGE_NONE
+        if use_sudo:
+            return PRIVILEGE_SUDO
+        # Fall back to the configured default (may be "none").
+        return self.conn_config.privilege_mode
+
+    def _open_privileged_shell(self, mode: str) -> PrivilegedShell:
+        """Open an interactive PTY shell and escalate it to root."""
+        transport = self.ssh_client.get_transport()
+        if transport is None or not transport.is_active():
+            raise PrivilegeEscalationError("SSH transport is not active")
+
+        channel = transport.open_session()
+        channel.get_pty()
+        channel.invoke_shell()
+
+        password = self.conn_config.privilege_password(mode)
+        source = self.conn_config.privilege_password_source(mode)
+        self.logger.info(
+            f"Opening privileged shell (mode={mode}, password source={source})"
+        )
+        if source == "login-fallback":
+            self.logger.info(
+                "No dedicated %s password configured; using the SSH login "
+                "password. If your sudo/su password differs, set "
+                "'%s_%s_password' (or a bare '%s_password') in the config.",
+                mode, (self.conn_config.prefix or "<section>"), mode, mode,
+            )
+        shell = PrivilegedShell(channel, password, self.logger)
+        try:
+            shell.escalate(mode)
+        except Exception:
+            # Escalation failed (e.g. wrong sudo password). Force this
+            # interactive channel closed immediately — a leaked half-open
+            # channel is exactly what makes the transport close hang later.
+            try:
+                shell.close()
+            except Exception:
+                pass
+            raise
+        return shell
+
+    def _get_or_open_privileged_shell(self, mode: str) -> PrivilegedShell:
+        """
+        Return the connection's single elevated shell, opening and escalating it
+        on first use. Reused across commands; if a different mode is requested
+        the previous shell is closed and a new one opened.
+        """
+        with self._priv_lock:
+            if self._priv_shell is not None and self._priv_mode == mode:
+                return self._priv_shell
+            if self._priv_shell is not None:
+                # Mode changed — replace the shell.
+                try:
+                    self._priv_shell.close()
+                except Exception:
+                    pass
+                self._priv_shell = None
+                self._priv_mode = None
+            shell = self._open_privileged_shell(mode)  # may raise; nothing stored
+            self._priv_shell = shell
+            self._priv_mode = mode
+            return shell
+
+    def _execute_privileged_reused(
+        self, command: str, mode: str, timeout: Optional[float]
+    ) -> TaskResult:
+        """Run a command in the reused elevated shell. Never closes the shell."""
+        task_id = str(uuid.uuid4())
+        start_time = time.time()
+        result = TaskResult(
+            task_id=task_id,
+            command=command,
+            status=TaskStatus.RUNNING,
+            start_time=start_time,
+        )
+        try:
+            shell = self._get_or_open_privileged_shell(mode)
+            stdout, exit_code = shell.run(command, timeout=timeout)
+            result.stdout = stdout
+            result.return_code = exit_code
+            result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
+        except PrivilegeEscalationError as e:
+            self.logger.error(f"Privilege escalation failed: {e}")
+            result.status = TaskStatus.FAILED
+            result.stderr = str(e)
+            result.return_code = -1
+        except Exception as e:
+            self.logger.error(f"Privileged command error: {e}")
+            result.status = TaskStatus.FAILED
+            result.stderr = str(e)
+            result.return_code = -1
+        result.end_time = time.time()
+        result.execution_time = result.end_time - result.start_time
+        return result
+
+    def _execute_privileged_oneshot(
+        self, command: str, mode: str, timeout: Optional[float]
+    ) -> TaskResult:
+        """Escalate, run one command, tear the elevated shell down, return result."""
+        task_id = str(uuid.uuid4())
+        start_time = time.time()
+        result = TaskResult(
+            task_id=task_id,
+            command=command,
+            status=TaskStatus.RUNNING,
+            start_time=start_time,
+        )
+        shell = None
+        try:
+            self.logger.info(f"Executing privileged ({mode}) command")
+            shell = self._open_privileged_shell(mode)
+            stdout, exit_code = shell.run(command, timeout=timeout)
+            result.stdout = stdout
+            result.return_code = exit_code
+            result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
+        except PrivilegeEscalationError as e:
+            self.logger.error(f"Privilege escalation failed: {e}")
+            result.status = TaskStatus.FAILED
+            result.stderr = str(e)
+            result.return_code = -1
+        except Exception as e:
+            self.logger.error(f"Privileged command error: {e}")
+            result.status = TaskStatus.FAILED
+            result.stderr = str(e)
+            result.return_code = -1
+        finally:
+            if shell is not None:
+                shell.close()
+
+        result.end_time = time.time()
+        result.execution_time = result.end_time - result.start_time
+        return result
+
+    def _execute_in_persistent_shell(
+        self, command: str, timeout: Optional[float]
+    ) -> TaskResult:
+        """Run a command inside the already-elevated persistent shell."""
+        task_id = str(uuid.uuid4())
+        start_time = time.time()
+        result = TaskResult(
+            task_id=task_id,
+            command=command,
+            status=TaskStatus.RUNNING,
+            start_time=start_time,
+        )
+        try:
+            with self._priv_lock:
+                shell = self._priv_shell
+                if shell is None:
+                    raise PrivilegeEscalationError("no active privileged session")
+                stdout, exit_code = shell.run(command, timeout=timeout)
+            result.stdout = stdout
+            result.return_code = exit_code
+            result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
+        except Exception as e:
+            self.logger.error(f"Privileged session command error: {e}")
+            result.status = TaskStatus.FAILED
+            result.stderr = str(e)
+            result.return_code = -1
+
+        result.end_time = time.time()
+        result.execution_time = result.end_time - result.start_time
+        return result
+
+    def enable_privileged_mode(self, mode: Optional[str] = None) -> bool:
+        """
+        Open a persistent elevated shell so subsequent ``execute_command`` calls
+        run as root without re-authenticating.
+
+        Args:
+            mode: "sudo" or "su". Defaults to the configured ``privilege_mode``,
+                  or "sudo" if none is configured.
+        """
+        if not self._ensure_connected():
+            self.logger.error("Cannot enable privileged mode: not connected")
+            return False
+
+        mode = (mode or self.conn_config.privilege_mode or PRIVILEGE_SUDO).lower()
+        if mode not in (PRIVILEGE_SUDO, PRIVILEGE_SU):
+            mode = PRIVILEGE_SUDO
+
+        with self._priv_lock:
+            if self._priv_shell is not None:
+                self.logger.info("Privileged mode already enabled")
+                return True
+            try:
+                self._priv_shell = self._open_privileged_shell(mode)
+                self._priv_mode = mode
+                self._priv_explicit = True
+                self.logger.info(f"Persistent privileged mode enabled ({mode})")
+                return True
+            except Exception as e:
+                self.logger.error(f"Failed to enable privileged mode: {e}")
+                self._priv_shell = None
+                self._priv_mode = None
+                return False
+
+    def disable_privileged_mode(self) -> None:
+        """Close the persistent/reused elevated shell, if any."""
+        with self._priv_lock:
+            if self._priv_shell is not None:
+                self.logger.info("Disabling persistent privileged mode")
+                try:
+                    self._priv_shell.close()
+                except Exception:
+                    pass
+                self._priv_shell = None
+            self._priv_mode = None
+            self._priv_explicit = False
+
     def _execute_synchronous(
         self, task_id: str, command: str, timeout: Optional[float] = None
     ) -> TaskResult:
-        """Execute command synchronously and return result immediately."""
+        """Execute command synchronously and return result immediately.
+
+        If the exec channel/transport is torn down as the command runs
+        (``SSHException: Channel closed``, EOF, or a socket error — common when a
+        tunnel drops between steps, or a manager/BMC sshd closes extra sessions),
+        force one clean reconnect and retry the command a single time. A read
+        *timeout* is not a transport failure, so it maps to TIMEOUT without a
+        reconnect.
+        """
         start_time = time.time()
         result = TaskResult(
             task_id=task_id,
@@ -215,21 +545,17 @@ class SSHConnection(ConnectionInterface):
             start_time=start_time,
         )
 
-        try:
-            self.logger.info(f"Executing synchronous command: {command}")
-
-            # Execute command with timeout handling
-            stdin, stdout, stderr = self.ssh_client.exec_command(
-                command, timeout=timeout
-            )
-
-            # Set channel timeout for reading
-            if timeout:
-                stdout.channel.settimeout(timeout)
-                stderr.channel.settimeout(timeout)
-
+        attempts = 2  # initial try + one reconnect-and-retry
+        for attempt in range(attempts):
             try:
-                # Read output with timeout consideration
+                self.logger.info(f"Executing synchronous command: {command}")
+                stdin, stdout, stderr = self.ssh_client.exec_command(
+                    command, timeout=timeout
+                )
+                if timeout:
+                    stdout.channel.settimeout(timeout)
+                    stderr.channel.settimeout(timeout)
+
                 stdout_data = stdout.read().decode("utf-8", errors="ignore")
                 stderr_data = stderr.read().decode("utf-8", errors="ignore")
                 exit_code = stdout.channel.recv_exit_status()
@@ -240,33 +566,68 @@ class SSHConnection(ConnectionInterface):
                 result.status = (
                     TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
                 )
+                break  # success
+
+            except socket.timeout:
+                # Read/exec exceeded the timeout — not a transport failure.
+                result.status = TaskStatus.TIMEOUT
+                result.stderr = f"Command timeout after {timeout} seconds"
+                result.return_code = -1
+                break
+
+            except _RECONNECT_EXCEPTIONS as e:
+                # Transport/channel died (e.g. 'Channel closed'). is_connected()
+                # may still report active, so force a full reconnect and retry.
+                self.logger.warning(
+                    f"SSH channel/transport error during exec ('{e}')."
+                )
+                if attempt < attempts - 1 and self._force_reconnect():
+                    self.logger.info("Reconnected; retrying command once.")
+                    continue
+                result.status = TaskStatus.FAILED
+                result.stderr = str(e)
+                result.return_code = -1
+                break
 
             except Exception as e:
                 tb_str = "".join(
                     traceback.format_exception(type(e), e, e.__traceback__)
                 )
                 self.logger.error(f"Formatted traceback:\n{tb_str}")
-                if "timeout" in str(e).lower():
-                    result.status = TaskStatus.TIMEOUT
-                    result.stderr = f"Command timeout after {timeout} seconds"
-                else:
-                    result.status = TaskStatus.FAILED
-                    result.stderr = str(e)
+                self.logger.error(f"Error executing synchronous command: {e}")
+                result.status = TaskStatus.FAILED
+                result.stderr = str(e)
                 result.return_code = -1
-
-        except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Error executing synchronous command: {e}")
-            result.status = TaskStatus.FAILED
-            result.stderr = str(e)
-            result.return_code = -1
+                break
 
         result.end_time = time.time()
         result.execution_time = result.end_time - result.start_time
 
         self.logger.info(f"Synchronous command completed with status: {result.status}")
         return result
+
+    def _force_reconnect(self) -> bool:
+        """Tear down and re-establish the connection once.
+
+        Used to recover from a dropped transport/channel mid-command. For a
+        tunnelled connection ``connect()`` also rebuilds the tunnels, so a dead
+        tunnel is re-established too. Returns True if reconnected.
+        """
+        if getattr(self, "_reconnecting", False):
+            return False
+        self._reconnecting = True
+        try:
+            try:
+                self.disconnect()
+            except Exception:
+                pass
+            try:
+                return bool(self.connect())
+            except Exception as e:
+                self.logger.error(f"Reconnect failed: {e}")
+                return False
+        finally:
+            self._reconnecting = False
 
     def _execute_background(self, task_id: str, command: str) -> None:
         """Execute command in background thread."""
@@ -882,28 +1243,70 @@ class SSHConnection(ConnectionInterface):
         """Close SSH connection and cleanup"""
         self.logger.info("Disconnecting SSH connection...")
 
+        # Close any persistent elevated shell first.
+        self.disable_privileged_mode()
+
         # Terminate all running tasks
         terminated = self.terminate_all_tasks()
         if terminated:
             self.logger.info(f"Terminated {len(terminated)} running tasks")
-
-        # Wait briefly for tasks to cleanup
-        time.sleep(1)
+            # Wait briefly for terminated tasks to clean up. Only pay this cost
+            # when there was actually something to terminate (previously this
+            # 1s sleep ran on every disconnect, tunnels included).
+            time.sleep(1)
 
         # Close SSH connection
         with self.connection_lock:
             if self.ssh_client:
-                try:
-                    self.ssh_client.close()
+                client = self.ssh_client
+                # paramiko's close() can block indefinitely when an interactive
+                # channel is left half-open. Run it under a watchdog so a stuck
+                # close can never hang the caller; if it overruns we abandon the
+                # (daemon) thread and drop our reference — the transport socket
+                # is torn down by the OS when the process exits.
+                closed = self._close_client_bounded(client, timeout=5.0)
+                if closed:
                     self.logger.info("SSH connection closed")
-                except Exception as e:
-                    tb_str = "".join(
-                        traceback.format_exception(type(e), e, e.__traceback__)
+                else:
+                    self.logger.warning(
+                        "SSH close did not complete within 5s; abandoning the "
+                        "connection to avoid a hang"
                     )
-                    self.logger.error(f"Formatted traceback:\n{tb_str}")
-                    self.logger.warning(f"Error closing SSH connection: {e}")
-                finally:
-                    self.ssh_client = None
+                self.ssh_client = None
+
+    def _close_client_bounded(self, client, timeout: float) -> bool:
+        """Call client.close() but never block longer than ``timeout`` seconds."""
+        error: List[BaseException] = []
+
+        def _closer() -> None:
+            try:
+                # Proactively force any lingering channels down first; this is
+                # what usually unblocks a stuck transport close.
+                transport = client.get_transport()
+                if transport is not None:
+                    for chan in list(getattr(transport, "_channels", {}).values()):
+                        try:
+                            chan.close()
+                        except Exception:
+                            pass
+                client.close()
+            except BaseException as e:  # noqa: BLE001 - reported via `error`
+                error.append(e)
+
+        t = threading.Thread(target=_closer, name="ssh-close-watchdog", daemon=True)
+        t.start()
+        t.join(timeout)
+        if t.is_alive():
+            return False
+        if error:
+            tb_str = "".join(
+                traceback.format_exception(
+                    type(error[0]), error[0], error[0].__traceback__
+                )
+            )
+            self.logger.error(f"Formatted traceback:\n{tb_str}")
+            self.logger.warning(f"Error closing SSH connection: {error[0]}")
+        return True
 
     def is_connected(self) -> bool:
         """Check if SSH connection is active"""
@@ -1022,43 +1425,24 @@ class SSHConnection(ConnectionInterface):
         """Close SSH connection and cleanup all tasks (compatibility method)"""
         self.disconnect()
 
-    # Configuration helper methods
+    # Configuration helper methods.
+    #
+    # These now delegate to the centralized ConnectionConfig so host / port /
+    # username / password resolution lives in exactly one place. The method
+    # names are preserved because TunnelConnection overrides _get_host and
+    # _get_ssh_port to redirect to the local tunnel endpoint.
     def _get_host(self) -> str:
         """Extract host based on connection type"""
-        if "inband_host" in self.config:
-            return self.config["inband_host"]
-        elif "rackmanager_host" in self.config:
-            return self.config["rackmanager_host"]
-        elif "nodemanager_host" in self.config:
-            return self.config["nodemanager_host"]
-        return self.config.get("host", "")
+        return self.conn_config.host
 
     def _get_ssh_port(self) -> int:
         """Get SSH port from config"""
-        if "inband_ssh_port" in self.config:
-            return self.config["inband_ssh_port"]
-        elif "rackmanager_ssh_port" in self.config:
-            return self.config["rackmanager_ssh_port"]
-        elif "nodemanager_ssh_port" in self.config:
-            return self.config["nodemanager_ssh_port"]
-        return self.config.get("port", 22)
+        return self.conn_config.ssh_port
 
     def _get_username(self) -> str:
         """Get username from config"""
-        if "inband_username" in self.config:
-            return self.config["inband_username"]
-        elif "rackmanager_username" in self.config:
-            return self.config["rackmanager_username"]
-        elif "nodemanager_username" in self.config:
-            return self.config["nodemanager_username"]
-        return self.config.get("username", "")
+        return self.conn_config.username
 
     def _get_password(self) -> str:
         """Get password from config"""
-        if "inband_password" in self.config:
-            return self.config["inband_password"]
-        elif "rackmanager_password" in self.config:
-            return self.config["rackmanager_password"]
-        elif "nodemanager_password" in self.config:
-            return self.config["nodemanager_password"]
-        return self.config.get("password", "")
+        return self.conn_config.password

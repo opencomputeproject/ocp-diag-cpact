@@ -259,19 +259,48 @@ class ConnectionDiscovery:
                 "details": f"Exception during testing: {type(e).__name__}",
             }
 
+    @staticmethod
+    def _normalize_result(result) -> Dict[str, Any]:
+        """
+        Normalize either a TaskResult (SSH/Local) or a dict (Redfish) into a
+        common shape. The old code assumed every result was a dict and called
+        ``.get()`` on it, which raised AttributeError for SSH's TaskResult.
+        """
+        if result is None:
+            return {"success": False, "stdout": "", "stderr": "", "error": "no result"}
+        # dict-style (Redfish)
+        if isinstance(result, dict):
+            return {
+                "success": result.get("success", False),
+                "stdout": result.get("stdout", ""),
+                "stderr": result.get("stderr", ""),
+                "error": result.get("error", ""),
+                "status_code": result.get("status_code"),
+            }
+        # TaskResult-style (SSH / Local)
+        status = getattr(result, "status", None)
+        status_value = getattr(status, "value", status)
+        return {
+            "success": status_value == "completed",
+            "stdout": getattr(result, "stdout", ""),
+            "stderr": getattr(result, "stderr", ""),
+            "error": getattr(result, "stderr", "") or "",
+        }
+
     def _execute_test_command(
         self, connection: ConnectionInterface, connection_type: str, timeout: int
     ) -> Dict[str, Any]:
         """Execute appropriate test command based on connection type"""
         try:
             if connection_type == "ssh":
-                result = connection.execute_command(
+                raw = connection.execute_command(
                     'echo "SSH test successful"', timeout=timeout
                 )
+                r = self._normalize_result(raw)
                 return {
-                    "success": result.get("success", False),
-                    "output": result.get("stdout", ""),
-                    "error": result.get("stderr", "") or result.get("error", ""),
+                    "success": r["success"],
+                    "output": r["stdout"],
+                    "error": r["stderr"] or r["error"],
                 }
 
             elif connection_type == "redfish":
@@ -283,13 +312,14 @@ class ConnectionDiscovery:
                 }
 
             elif connection_type == "local":
-                result = connection.execute_command(
+                raw = connection.execute_command(
                     'echo "Local test successful"', shell=True, timeout=timeout
                 )
+                r = self._normalize_result(raw)
                 return {
-                    "success": result.get("success", False),
-                    "output": result.get("stdout", ""),
-                    "error": result.get("stderr", "") or result.get("error", ""),
+                    "success": r["success"],
+                    "output": r["stdout"],
+                    "error": r["stderr"] or r["error"],
                 }
 
             else:

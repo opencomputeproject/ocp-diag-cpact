@@ -36,6 +36,8 @@ from typing import Dict, Any
 from requests.auth import HTTPBasicAuth
 
 from cpact.system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.connection_config import ConnectionConfig, RetryPolicy
+from cpact.system_connections.retry import retry_call
 
 
 class RedfishConnection(ConnectionInterface):
@@ -45,11 +47,12 @@ class RedfishConnection(ConnectionInterface):
         """Initialize Redfish connection with config and global settings"""
         super().__init__(config)
         self.global_config = global_config
+        self.conn_config = ConnectionConfig.from_dict(config)
         self.session = None
         self.base_url = None
 
     def connect(self) -> bool:
-        """Establish Redfish connection"""
+        """Establish Redfish connection (with configurable retry)."""
         try:
             host = self._get_host()
             port = self._get_redfish_port()
@@ -69,13 +72,43 @@ class RedfishConnection(ConnectionInterface):
             if username and password:
                 self.session.auth = HTTPBasicAuth(username, password)
 
-            # Test connection with a simple GET to /redfish/v1/
-            response = self.session.get(f"{self.base_url}/redfish/v1/", timeout=30)
-            response.raise_for_status()
+            retry = RetryPolicy.from_config(self.global_config.get("Connection", {}))
 
+            def _probe():
+                response = self.session.get(
+                    f"{self.base_url}/redfish/v1/", timeout=30
+                )
+                response.raise_for_status()
+                return response
+
+            retry_call(
+                _probe,
+                retries=retry.retry_count,
+                delay=retry.retry_delay,
+                logger=self.logger,
+                description=f"Redfish connect to {host}:{port}",
+            )
+            self.logger.info(f"Redfish connection established to {host}:{port}")
             return True
         except Exception as e:
-            print(f"Redfish connection failed: {e}")
+            self.logger.error(f"Redfish connection failed: {e}")
+            if self.session:
+                try:
+                    self.session.close()
+                except Exception:
+                    pass
+                self.session = None
+            return False
+
+    def health_check(self) -> bool:
+        """Probe the service root; True only on a 2xx response."""
+        if not self.is_connected():
+            return False
+        try:
+            resp = self.session.get(f"{self.base_url}/redfish/v1/", timeout=10)
+            return resp.ok
+        except Exception as e:
+            self.logger.warning(f"Redfish health check failed: {e}")
             return False
 
     def execute_command(self, command: str, **kwargs) -> Dict[str, Any]:
@@ -116,10 +149,14 @@ class RedfishConnection(ConnectionInterface):
                 "headers": dict(response.headers),
             }
         except Exception as e:
+            # e.response (when present) is a requests.Response, which has no
+            # .get(); read its numeric .status_code attribute instead.
+            resp = getattr(e, "response", None)
+            status_code = getattr(resp, "status_code", -1) if resp is not None else -1
             return {
                 "success": False,
                 "error": str(e),
-                "status_code": getattr(e, "response", {}).get("status_code", -1),
+                "status_code": status_code,
             }
 
     def disconnect(self) -> None:
@@ -134,32 +171,18 @@ class RedfishConnection(ConnectionInterface):
 
     def _get_host(self) -> str:
         """Determine the host from config"""
-        if "rackmanager_host" in self.config:
-            return self.config["rackmanager_host"]
-        elif "nodemanager_host" in self.config:
-            return self.config["nodemanager_host"]
-        return ""
+        return self.conn_config.host
 
     def _get_redfish_port(self) -> int:
         """Determine the Redfish port from config or global settings"""
-        if "rackmanager_redfish_port" in self.config:
-            return self.config["rackmanager_redfish_port"]
-        elif "nodemanager_redfish_port" in self.config:
-            return self.config["nodemanager_redfish_port"]
+        if self.conn_config.prefix and f"{self.conn_config.prefix}_redfish_port" in self.config:
+            return self.conn_config.redfish_port
         return self.global_config.get("Connection", {}).get("redfish_port", 443)
 
     def _get_username(self) -> str:
         """Determine the username from config"""
-        if "rackmanager_username" in self.config:
-            return self.config["rackmanager_username"]
-        elif "nodemanager_username" in self.config:
-            return self.config["nodemanager_username"]
-        return ""
+        return self.conn_config.username
 
     def _get_password(self) -> str:
         """Determine the password from config"""
-        if "rackmanager_password" in self.config:
-            return self.config["rackmanager_password"]
-        elif "nodemanager_password" in self.config:
-            return self.config["nodemanager_password"]
-        return ""
+        return self.conn_config.password

@@ -86,69 +86,138 @@ class ConnectionFactory:
                 cls._instance.close_all_connections()
             cls._instance = None
 
+    # Registry mapping a *resolved* type key -> factory callable. This replaces
+    # the previous nested if/elif blocks. Adding a new connection type is now a
+    # one-line registry entry rather than another branch (Open/Closed).
+    def _build_registry(self):
+        return {
+            "ssh": lambda name, cfg: SSHConnection(cfg),
+            "redfish": lambda name, cfg: RedfishConnection(cfg, self.config),
+            "local": lambda name, cfg: LocalConnection(cfg),
+            "tunneled_ssh": lambda name, cfg: TunnelConnection(
+                self.config, cfg, self.config.get("NodeManagerTunnel", {})
+            ),
+            "tunneled_redfish": lambda name, cfg: TunneledRedfishConnection(
+                cfg, self.config, self.config.get("NodeManagerTunnel", {})
+            ),
+        }
+
+    def _resolve_type_key(
+        self, connection_name: str, connection_type: str, connection_config: Dict
+    ) -> str:
+        """
+        Map (name, type, config) to a registry key, handling the one real
+        special case: a tunneled NodeManager.
+        """
+        ctype = connection_type.lower()
+        if connection_name.lower() == "local" or ctype == "local":
+            return "local"
+
+        is_tunneled = connection_name == "NodeManager" and connection_config.get(
+            "nodemanager_tunnel"
+        )
+        if ctype == "ssh":
+            return "tunneled_ssh" if is_tunneled else "ssh"
+        if ctype == "redfish":
+            return "tunneled_redfish" if is_tunneled else "redfish"
+        raise ValueError(f"Unsupported connection type: {connection_type}")
+
     def create_connection(
         self, connection_name: str, connection_type: str
     ) -> ConnectionInterface:
         """
-        Create a connection based on connection name and type
+        Create a connection based on connection name and type.
 
         Args:
-            connection_name: Name of the connection (Inband, RackManager, NodeManager)
+            connection_name: Name of the connection (Inband, RackManager, NodeManager, local)
             connection_type: Type of connection (ssh, redfish, local)
 
         Returns:
             ConnectionInterface: Appropriate connection object
         """
-        # if connection_name not in self.config and connection_name != 'local':
-        #     print(f"Connection '{connection_name}' not found in configuration")
-        #     raise ValueError(f"Connection '{connection_name}' not found in configuration")
         connection_config = self.config.get(connection_name, {})
-
-        # Create connection based on type
-        if connection_type.lower() == "ssh":
-            if connection_name == "NodeManager" and connection_config.get(
-                "nodemanager_tunnel"
-            ):
-                tunnel_config = self.config.get("NodeManagerTunnel", {})
-                return TunnelConnection(self.config, connection_config, tunnel_config)
-            else:
-                return SSHConnection(connection_config)
-
-        elif connection_type.lower() == "redfish":
-            if connection_name == "NodeManager" and connection_config.get(
-                "nodemanager_tunnel"
-            ):
-                tunnel_config = self.config.get("NodeManagerTunnel", {})
-                return TunneledRedfishConnection(
-                    connection_config, self.config, tunnel_config
-                )
-            else:
-                return RedfishConnection(connection_config, self.config)
-
-        elif connection_name.lower() == "local":
-            return LocalConnection(connection_config)
-
-        else:
+        registry = self._build_registry()
+        type_key = self._resolve_type_key(
+            connection_name, connection_type, connection_config
+        )
+        factory = registry.get(type_key)
+        if factory is None:
             raise ValueError(f"Unsupported connection type: {connection_type}")
+        return factory(connection_name, connection_config)
 
     def get_connection(
         self, connection_name: str, connection_type: str
     ) -> ConnectionInterface:
         """
-        Get or create a connection (singleton pattern for each connection+type combo)
+        Get or create a connection (cached per connection+type combo).
+
+        Thread-safe: previously two threads could both miss the cache and each
+        create a connection, leaking one. The double-checked lock fixes that.
         """
         key = f"{connection_name}_{connection_type}"
 
-        if key not in self.connections:
-            self.connections[key] = self.create_connection(
-                connection_name, connection_type
-            )
+        conn = self.connections.get(key)
+        if conn is not None:
+            return conn
 
-        return self.connections[key]
+        with self._lock:
+            conn = self.connections.get(key)
+            if conn is None:
+                conn = self.create_connection(connection_name, connection_type)
+                self.connections[key] = conn
+            return conn
 
     def close_all_connections(self) -> None:
         """Close all active connections"""
-        for connection in self.connections.values():
-            connection.disconnect()
-        self.connections.clear()
-        print("All connections closed.")
+        with self._lock:
+            connections = list(self.connections.values())
+            self.connections.clear()
+        for connection in connections:
+            try:
+                connection.disconnect()
+            except Exception:
+                pass
+
+    # ------------------------------------------------------------------ #
+    # Backward-compatible static facade.
+    #
+    # Older CPACT consumers drive the factory through these module-level
+    # class methods rather than the instance API. They are thin wrappers over
+    # the singleton so both styles keep working. New code should prefer the
+    # instance API (get_instance(config).get_connection(...)).
+    # ------------------------------------------------------------------ #
+    @classmethod
+    def initialize(cls, config: Dict[str, Any] = None) -> "ConnectionFactory":
+        """Initialize (or update) the singleton factory with a config."""
+        return cls.get_instance(config)
+
+    @classmethod
+    def get_connections(cls) -> Dict[str, ConnectionInterface]:
+        """Return the live map of cached connections for the singleton."""
+        return cls.get_instance().connections
+
+    @classmethod
+    def execute_command(
+        cls,
+        connections: Dict[str, ConnectionInterface],
+        connection_name: str,
+        connection_type: str,
+        command: str,
+        **kwargs,
+    ):
+        """
+        Execute a command on the named connection, creating/reusing it as needed.
+
+        ``connections`` is accepted for signature compatibility with the legacy
+        API; the singleton's own cache is authoritative.
+        """
+        factory = cls.get_instance()
+        connection = factory.get_connection(connection_name, connection_type)
+        if not connection.is_connected():
+            connection.connect()
+        return connection.execute_command(command, **kwargs)
+
+    @classmethod
+    def disconnect_all(cls, connections: Dict[str, ConnectionInterface] = None) -> None:
+        """Disconnect every cached connection on the singleton."""
+        cls.get_instance().close_all_connections()

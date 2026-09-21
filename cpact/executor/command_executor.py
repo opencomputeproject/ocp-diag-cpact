@@ -39,7 +39,7 @@ from concurrent.futures import ThreadPoolExecutor
 from cpact.executor.base_executor import BaseExecutor
 from cpact.analysis.analysis_factory import AnalysisFactory
 from cpact.system_connections.connection_factory import ConnectionFactory
-from cpact.system_connections.constants import ExecutionMode
+from cpact.system_connections.constants import ExecutionMode, TaskStatus
 from cpact.utils.docker_executor import DockerExecutor
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.validator import Validator
@@ -131,21 +131,14 @@ class CommandExecutor(BaseExecutor):
                 f"Executing command: {command} on connection: {connection_name} with type: {connection_type}",
             )
             factory = ConnectionFactory.get_instance()
-            connection = factory.create_connection(connection_name, connection_type)
-            connection.connect()
+            connection = factory.get_connection(connection_name, connection_type)
             if not connection.is_connected():
-                self.logger.error(
-                    f"Failed to connect to {connection_name} of type {connection_type}."
-                )
-                self.scenario_step.add_log(
-                    LogSeverity.ERROR,
-                    f"Failed to connect to {connection_name} of type {connection_type}.",
-                )
-                return (
-                    "",
-                    False,
-                    f"Failed to connect to {connection_name} of type {connection_type}.",
-                )
+                connection.connect()
+                if not connection.is_connected():
+                    msg = f"Failed to connect to {connection_name} of type {connection_type}."
+                    self.logger.error(msg)
+                    self.scenario_step.add_log(LogSeverity.ERROR, msg)
+                    return "", False, msg
             cwd = os.getcwd()
             self.logger.info(f"Current working directory before execution: {cwd}")
             self.scenario_step.add_log(
@@ -159,29 +152,44 @@ class CommandExecutor(BaseExecutor):
                 LogSeverity.INFO,
                 f"Started executing command: {command} on connection: {connection_name} with type: {connection_type}",
             )
+            step_timeout = self.step.get("duration")
+            if step_timeout is None:
+                self.logger.warning(
+                    f"Step {self.step.get('step_id')} has no 'duration'; the command "
+                    "will run without a timeout and can hang indefinitely."
+                )
+
             result = connection.execute_command(
                 command,
                 mode=ExecutionMode.SYNCHRONOUS,
+                timeout=step_timeout,
+                use_sudo=self.step.get("use_sudo", False),
             )
 
             stdout = result.stdout or ""
             stderr = getattr(result, "stderr", "") or ""
-            exit_code = getattr(result, "returncode", None)
+            exit_code = getattr(result, "return_code", None)
+            task_status = getattr(result, "status", None)
 
             output = stdout
 
-            # 🔍 Log exit code
             self.logger.info(f"Command exit code: {exit_code}")
-
-            # 🔍 Log stdout
             if stdout:
                 self.logger.info(f"Command stdout:\n{stdout}")
-
-            # 🔍 Log stderr (CRITICAL for tar failures)
             if stderr:
                 self.logger.error(f"Command stderr:\n{stderr}")
 
-            # ❌ Fail properly
+            if task_status == TaskStatus.TIMEOUT:
+                msg = (
+                    f"Command exceeded the step 'duration' of {step_timeout}s "
+                    f"and was terminated: {command}"
+                )
+                self.logger.error(msg)
+                self.scenario_step.add_log(
+                    LogSeverity.ERROR, f"{msg}\nStderr:\n{stderr}"
+                )
+                return stdout, False, msg
+
             if exit_code not in (0, None):
                 self.scenario_step.add_log(
                     LogSeverity.ERROR,
@@ -368,7 +376,7 @@ class CommandExecutor(BaseExecutor):
                 LogSeverity.INFO, f"Executing Docker command: {command}"
             )
         factory = ConnectionFactory.get_instance()
-        connection = factory.create_connection(connection, connection_type)
+        connection = factory.get_connection(connection, connection_type)
         if not connection.is_connected():
             self.logger.info(f"Connecting to {connection} of type {connection_type}.")
             self.scenario_step.add_log(
@@ -398,6 +406,7 @@ class CommandExecutor(BaseExecutor):
         task_result = connection.execute_command(
             command,
             mode=ExecutionMode.BACKGROUND,
+            use_sudo=self.step.get("use_sudo", False),
         )
         context.add_continued_step(
             self.context.get("test_id"),

@@ -36,7 +36,7 @@ Usage:
         python test_executor.py --discover_connections --conn_config ./config.json
 ===============================================================================
 """
-
+import os, sys
 import sys
 import argparse
 from pathlib import Path
@@ -65,7 +65,7 @@ from cpact.core.context import ExecutionContext
 from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.system_connections.connection_discovery import ConnectionDiscovery
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
-from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
+# from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
 
 # import sys
 
@@ -433,7 +433,7 @@ def discover_and_test_connections(
     """
     print("🔍 DISCOVERING ALL POSSIBLE CONNECTIONS...")
 
-    factory = ConnectionFactory.get_instance(config)
+    factory = ConnectionFactory.initialize(config)
     discovery = ConnectionDiscovery(factory)
 
     # Discover all connections
@@ -801,6 +801,7 @@ def main() -> None:
     parser.set_defaults(run_with_schema_check=True)
     args = parser.parse_args()
     if args.run_scenario_creator:
+        from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
         ScenarioCreator()
         return
     test_dir = args.test_dir or os.path.join(
@@ -882,7 +883,7 @@ def main() -> None:
             return
 
     # Prepare connection factory for execution phase
-    factory = ConnectionFactory.get_instance(conn_config)
+    factory = ConnectionFactory.initialize(conn_config)
     if args.run_all_scenarios:
         logger.info("Running all scenarios without filtering.")
         matched_files = discover_tests(test_dir, None, logger=logger)

@@ -48,6 +48,8 @@ from typing import Dict, Any
 from sshtunnel import SSHTunnelForwarder
 from cpact.system_connections.redfish_connection import RedfishConnection
 from cpact.system_connections.ssh_connection import SSHConnection
+from cpact.system_connections.connection_config import TunnelAgentConfig, RetryPolicy
+from cpact.system_connections.retry import retry_call
 
 
 class TunnelConnection(SSHConnection):
@@ -74,67 +76,73 @@ class TunnelConnection(SSHConnection):
         return super().connect()
 
     def _create_tunnels(self) -> bool:
-        """Create SSH and Redfish tunnels using sshtunnel"""
-        try:
-            tunnel_agent = self.tunnel_config.get("nodemanager_tunnel_agent", "")
-            local_host = self.tunnel_config.get(
-                "nodemanager_tunnel_local_host", "localhost"
+        """Create SSH and Redfish tunnels using sshtunnel.
+
+        Tunnel *agent* (jump host) credentials are resolved independently of
+        the NodeManager target credentials via TunnelAgentConfig. This is the
+        fix for the ``No password or public key available`` failure, which
+        happened when the agent host/user/password could not be resolved and
+        SSHTunnelForwarder was handed blanks.
+        """
+        agent = TunnelAgentConfig.from_config(self.tunnel_config, self.total_config)
+
+        if not agent.valid:
+            gaps = ", ".join(agent.missing())
+            self.logger.error(
+                "Cannot create tunnels: missing tunnel agent credentials "
+                f"({gaps}). Provide tunnel_agent_host/username/password on the "
+                "NodeManagerTunnel section, or a valid nodemanager_tunnel_agent "
+                "pointing at a configured section."
             )
-            ssh_local_port = int(
-                self.tunnel_config.get("nodemanager_tunnel_ssh_local_port", 2222)
-            )
-            redfish_local_port = int(
-                self.tunnel_config.get("nodemanager_tunnel_redfish_local_port", 8443)
-            )
-            # Extract tunnel credentials (could be different from target credentials)
-            tunnel_username = self.connection_config.get("nodemanager_username", "")
-            tunnel_password = self.connection_config.get("nodemanager_password", "")
-            ssh_host = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_host", "")
-            ssh_user = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_username", "")
-            ssh_pass = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_password", "")
-            ssh_port = self.total_config.get(tunnel_agent, {}).get(f"{tunnel_agent.lower()}_ssh_port", 22)
-            # Create SSH tunnel
+            return False
+
+        target_host = self.connection_config["nodemanager_host"]
+        target_ssh_port = self.connection_config["nodemanager_ssh_port"]
+        target_redfish_port = self.connection_config["nodemanager_redfish_port"]
+
+        retry = RetryPolicy.from_config(self.tunnel_config)
+
+        def _build_and_start() -> bool:
             self.ssh_tunnel = SSHTunnelForwarder(
-                ssh_address_or_host=(ssh_host, ssh_port),
-                ssh_username=ssh_user,
-                ssh_password=ssh_pass,
-                local_bind_address=(local_host, ssh_local_port),
-                remote_bind_address=(
-                    self.connection_config["nodemanager_host"],
-                    self.connection_config["nodemanager_ssh_port"],
-                ),
-                set_keepalive=30,
+                ssh_address_or_host=(agent.host, agent.ssh_port),
+                ssh_username=agent.username,
+                ssh_password=agent.password,
+                local_bind_address=(agent.local_host, agent.ssh_local_port),
+                remote_bind_address=(target_host, target_ssh_port),
+                set_keepalive=agent.keepalive,
             )
-
-            # Create Redfish tunnel
             self.redfish_tunnel = SSHTunnelForwarder(
-                ssh_address_or_host=(ssh_host, ssh_port),
-                ssh_username=ssh_user,
-                ssh_password=ssh_pass,
-                local_bind_address=(local_host, redfish_local_port),
-                remote_bind_address=(
-                    self.connection_config["nodemanager_host"],
-                    self.connection_config["nodemanager_redfish_port"],
-                ),
-                set_keepalive=30,
+                ssh_address_or_host=(agent.host, agent.ssh_port),
+                ssh_username=agent.username,
+                ssh_password=agent.password,
+                local_bind_address=(agent.local_host, agent.redfish_local_port),
+                remote_bind_address=(target_host, target_redfish_port),
+                set_keepalive=agent.keepalive,
             )
-
-            # Start tunnels
             with self._tunnel_lock:
                 self.ssh_tunnel.start()
                 self.redfish_tunnel.start()
-
-            print(
-                f"SSH Tunnel: {local_host}:{ssh_local_port} -> {self.connection_config['nodemanager_host']}:{self.connection_config['nodemanager_ssh_port']}"
-            )
-            print(
-                f"Redfish Tunnel: {local_host}:{redfish_local_port} -> {self.connection_config['nodemanager_host']}:{self.connection_config['nodemanager_redfish_port']}"
-            )
-
             return True
 
+        try:
+            retry_call(
+                _build_and_start,
+                retries=retry.retry_count,
+                delay=retry.retry_delay,
+                logger=self.logger,
+                description=f"tunnel via agent {agent.host}:{agent.ssh_port}",
+            )
+            self.logger.info(
+                f"SSH tunnel up: {agent.local_host}:{agent.ssh_local_port} -> "
+                f"{target_host}:{target_ssh_port} (agent {agent.host}, {agent.source})"
+            )
+            self.logger.info(
+                f"Redfish tunnel up: {agent.local_host}:{agent.redfish_local_port} -> "
+                f"{target_host}:{target_redfish_port}"
+            )
+            return True
         except Exception as e:
-            print(f"Failed to create tunnels: {e}")
+            self.logger.error(f"Failed to create tunnels: {e}")
             self._cleanup_tunnels()
             return False
 
@@ -222,6 +230,7 @@ class TunneledRedfishConnection(RedfishConnection):
     ) -> None:
         super().__init__(config, global_config)
         self.tunnel_config = tunnel_config or {}
+        self.global_config = global_config or {}
         self.tunnel = None
         self._tunnel_lock = threading.Lock()
 
@@ -235,41 +244,56 @@ class TunneledRedfishConnection(RedfishConnection):
         return super().connect()
 
     def _create_tunnel(self) -> bool:
-        """Create Redfish tunnel"""
-        try:
-            tunnel_agent = self.tunnel_config.get("nodemanager_tunnel_agent", "")
-            local_host = self.tunnel_config.get(
-                "nodemanager_tunnel_local_host", "localhost"
-            )
-            redfish_local_port = int(
-                self.tunnel_config.get("nodemanager_tunnel_redfish_local_port", 8443)
-            )
+        """Create Redfish tunnel.
 
-            tunnel_username = self.config.get("nodemanager_username", "")
-            tunnel_password = self.config.get("nodemanager_password", "")
+        Previously this passed the tunnel-agent *section name* (e.g.
+        "RackManager") straight into SSHTunnelForwarder as if it were a
+        hostname, and reused NodeManager credentials for the jump host. Both
+        were bugs. We now resolve the real agent host/credentials the same way
+        the SSH tunnel does.
+        """
+        agent = TunnelAgentConfig.from_config(self.tunnel_config, self.global_config)
 
+        if not agent.valid:
+            gaps = ", ".join(agent.missing())
+            self.logger.error(
+                f"Cannot create Redfish tunnel: missing tunnel agent credentials ({gaps})."
+            )
+            return False
+
+        retry = RetryPolicy.from_config(self.tunnel_config)
+
+        def _build_and_start() -> bool:
             self.tunnel = SSHTunnelForwarder(
-                ssh_address_or_host=(tunnel_agent, 22),
-                ssh_username=tunnel_username,
-                ssh_password=tunnel_password,
-                local_bind_address=(local_host, redfish_local_port),
+                ssh_address_or_host=(agent.host, agent.ssh_port),
+                ssh_username=agent.username,
+                ssh_password=agent.password,
+                local_bind_address=(agent.local_host, agent.redfish_local_port),
                 remote_bind_address=(
                     self.config["nodemanager_host"],
                     self.config["nodemanager_redfish_port"],
                 ),
-                set_keepalive=30,
+                set_keepalive=agent.keepalive,
             )
-
             with self._tunnel_lock:
                 self.tunnel.start()
-
-            print(
-                f"Redfish Tunnel: {local_host}:{redfish_local_port} -> {self.config['nodemanager_host']}:{self.config['nodemanager_redfish_port']}"
-            )
             return True
 
+        try:
+            retry_call(
+                _build_and_start,
+                retries=retry.retry_count,
+                delay=retry.retry_delay,
+                logger=self.logger,
+                description=f"Redfish tunnel via agent {agent.host}:{agent.ssh_port}",
+            )
+            self.logger.info(
+                f"Redfish tunnel up: {agent.local_host}:{agent.redfish_local_port} -> "
+                f"{self.config['nodemanager_host']}:{self.config['nodemanager_redfish_port']}"
+            )
+            return True
         except Exception as e:
-            print(f"Failed to create Redfish tunnel: {e}")
+            self.logger.error(f"Failed to create Redfish tunnel: {e}")
             return False
 
     def _get_host(self) -> str:

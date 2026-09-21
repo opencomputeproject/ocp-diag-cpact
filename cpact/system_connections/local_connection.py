@@ -36,7 +36,10 @@ import os
 import time
 import uuid
 import queue
+import signal
+import shutil
 import platform
+import tempfile
 import threading
 import subprocess
 from enum import Enum
@@ -50,7 +53,6 @@ from cpact.system_connections.constants import (
     TaskResult,
     BackgroundTask,
 )
-import shutil
 
 
 class LocalConnection(ConnectionInterface):
@@ -105,26 +107,31 @@ class LocalConnection(ConnectionInterface):
     def _prepare_command(
         self, command: str, is_sudo: bool = False, sudo_password: Optional[str] = None
     ) -> Tuple[Any, bool]:
-        """Prepare command for execution based on the operating system."""
+        """Prepare command for execution based on the operating system.
+
+        Returns the command to hand to Popen and the ``shell`` flag to use with
+        it. On Windows we never ask Popen for a shell: complex commands already
+        get an explicit ``cmd /c`` wrapper here, so letting Popen add a second
+        cmd.exe would only break quoting.
+        """
         if self.is_windows:
-            # On Windows, handle commands differently
             if is_sudo:
                 self.logger.warning(
                     "Sudo commands are not supported on Windows. Running as regular command."
                 )
 
-            # For Windows, we need to handle shell commands properly
             if "&&" in command or "||" in command or "|" in command:
-                # Use cmd.exe for complex shell operations
-                return f'cmd /c "{command}"', True
+                # Explicit cmd.exe invocation for complex shell operations.
+                return f'cmd /c "{command}"', False
             else:
-                # Simple command
-                return command, True
+                return command, False
         else:
             # Unix/Linux handling
             if is_sudo and sudo_password:
                 return ["sudo", "-S"] + command.split(), False
             else:
+                # A bare string needs shell=True on POSIX, otherwise Popen
+                # treats the entire string as the executable name.
                 return command, True
 
     def execute_command(
@@ -135,6 +142,7 @@ class LocalConnection(ConnectionInterface):
         timeout: Optional[float] = None,
         wait: bool = False,
         shell: bool = True,
+        use_sudo: bool = False
     ) -> Optional[TaskResult]:
         """
         Execute a command based on the specified execution mode.
@@ -166,7 +174,9 @@ class LocalConnection(ConnectionInterface):
         prepared_command, use_shell = self._prepare_command(
             actual_command, is_sudo_command, sudo_password
         )
-        print(f"Prepared command: {prepared_command}, use_shell: {use_shell}")
+        self.logger.debug(
+            f"Prepared command: {prepared_command}, use_shell: {use_shell}, timeout: {timeout}"
+        )
 
         if mode == ExecutionMode.SYNCHRONOUS:
             return self._execute_synchronous(
@@ -204,95 +214,149 @@ class LocalConnection(ConnectionInterface):
     def _execute_synchronous(
         self,
         task_id: str,
-        command: str,
+        command: Any,
         timeout: Optional[float],
         shell: bool,
         is_sudo: bool = False,
         sudo_password: Optional[str] = None,
     ) -> TaskResult:
-        """Execute command synchronously and return result immediately."""
+        """Execute a command synchronously and return the result.
+
+        Output goes to temporary files rather than pipes. A pipe only reaches
+        EOF once *every* process holding the write handle has exited, so a tool
+        that spawns a helper which outlives it leaves ``communicate()`` blocked
+        forever even after the tool itself returned 0. Files have no such
+        dependency, and they preserve partial output when a command is killed
+        on timeout.
+        """
         start_time = time.time()
         result = TaskResult(
             task_id=task_id,
-            command=command,
+            command=str(command),
             status=TaskStatus.RUNNING,
             start_time=start_time,
         )
 
+        tmp_dir = tempfile.mkdtemp(prefix="cpact_cmd_")
+        stdout_path = os.path.join(tmp_dir, "stdout.log")
+        stderr_path = os.path.join(tmp_dir, "stderr.log")
+        process = None
+
         try:
-            if is_sudo and sudo_password:
-                # Handle sudo commands properly
-                process = subprocess.Popen(
-                    ["sudo", "-S"] + command.split(),
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                )
+            with open(stdout_path, "wb") as out_f, open(stderr_path, "wb") as err_f:
+                popen_kwargs: Dict[str, Any] = {
+                    "stdout": out_f,
+                    "stderr": err_f,
+                    "shell": shell,
+                }
+
+                if is_sudo and sudo_password and not self.is_windows:
+                    # Keep stdin open so the sudo password can be injected.
+                    popen_kwargs["stdin"] = subprocess.PIPE
+                    popen_kwargs["text"] = True
+                else:
+                    # Never inherit the parent's stdin: a tool that prompts for
+                    # input would otherwise block until the timeout fires.
+                    popen_kwargs["stdin"] = subprocess.DEVNULL
+
+                if self.is_windows:
+                    # Own process group, so the whole tree can be killed later.
+                    popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+                else:
+                    popen_kwargs["start_new_session"] = True
+
+                process = subprocess.Popen(command, **popen_kwargs)
+
+                if popen_kwargs["stdin"] == subprocess.PIPE and process.stdin:
+                    try:
+                        process.stdin.write(f"{sudo_password}\n")
+                        process.stdin.flush()
+                    finally:
+                        process.stdin.close()
 
                 try:
-                    stdout, stderr = process.communicate(
-                        input=f"{sudo_password}\n", timeout=timeout
-                    )
-                    result.return_code = process.returncode
-                    result.stdout = stdout
-                    result.stderr = stderr
+                    result.return_code = process.wait(timeout=timeout)
                     result.status = (
                         TaskStatus.COMPLETED
-                        if process.returncode == 0
+                        if result.return_code == 0
                         else TaskStatus.FAILED
                     )
-
                 except subprocess.TimeoutExpired:
-                    process.kill()
-                    stdout, stderr = process.communicate()
-                    result.stdout = stdout
-                    result.stderr = stderr
+                    self.logger.error(
+                        f"Command timed out after {timeout}s, killing process tree: {command}"
+                    )
+                    self._kill_process_tree(process)
                     result.status = TaskStatus.TIMEOUT
                     result.return_code = -1
 
-            else:
-                # Handle regular commands
-                process = subprocess.Popen(
-                    command,
-                    shell=shell,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                )
+            result.stdout = self._read_output_file(stdout_path)
+            result.stderr = self._read_output_file(stderr_path)
 
-                try:
-                    stdout, stderr = process.communicate(timeout=timeout)
-                    result.return_code = process.returncode
-                    result.stdout = stdout
-                    result.stderr = stderr
-                    result.status = (
-                        TaskStatus.COMPLETED
-                        if process.returncode == 0
-                        else TaskStatus.FAILED
-                    )
-
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    stdout, stderr = process.communicate()
-                    result.stdout = stdout
-                    result.stderr = stderr
-                    result.status = TaskStatus.TIMEOUT
-                    result.return_code = -1
+            if result.status == TaskStatus.TIMEOUT:
+                result.stderr = (
+                    f"{result.stderr}\n"
+                    f"[cpact] Command exceeded the step 'duration' of {timeout}s "
+                    f"and its process tree was terminated."
+                ).strip()
 
         except Exception as e:
+            self.logger.error(f"Failed to execute command {command}: {e}")
+            if process is not None:
+                self._kill_process_tree(process)
             result.status = TaskStatus.FAILED
             result.stderr = str(e)
             result.return_code = -1
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
         result.end_time = time.time()
         result.execution_time = result.end_time - result.start_time
 
         return result
+
+    @staticmethod
+    def _read_output_file(path: str, limit: int = 50 * 1024 * 1024) -> str:
+        """Read a captured output file, tolerating undecodable bytes."""
+        try:
+            with open(path, "rb") as f:
+                data = f.read(limit)
+            return data.decode("utf-8", errors="replace")
+        except OSError:
+            return ""
+
+    def _kill_process_tree(self, process: subprocess.Popen) -> None:
+        """Kill a process *and every process it spawned*.
+
+        ``Popen.kill()`` only signals the direct child. Grandchildren keep
+        running and keep inherited handles open, which is what makes a
+        timed-out step impossible to clean up.
+        """
+        if process.poll() is not None:
+            return
+
+        try:
+            if self.is_windows:
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=30,
+                    check=False,
+                )
+            else:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        except Exception as e:
+            self.logger.warning(f"Process tree kill failed for pid {process.pid}: {e}")
+
+        # Make sure the direct child is gone and reaped either way.
+        try:
+            process.kill()
+        except Exception:
+            pass
+        try:
+            process.wait(timeout=10)
+        except Exception:
+            self.logger.warning(f"Process {process.pid} did not exit after kill")
 
     def _execute_background(
         self,
@@ -686,7 +750,7 @@ class LocalConnection(ConnectionInterface):
             background_task = self.background_tasks[actual_task_id]
 
         try:
-            background_task.process.terminate()
+            self._kill_process_tree(background_task.process)
             # Give it a moment to terminate gracefully
             time.sleep(0.1)
 

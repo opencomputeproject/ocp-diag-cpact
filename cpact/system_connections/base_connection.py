@@ -68,3 +68,37 @@ class ConnectionInterface(ABC):
     def is_connected(self) -> bool:
         """Check if connection is active"""
         pass
+
+    # ------------------------------------------------------------------ #
+    # Optional capabilities.
+    #
+    # These are concrete (not abstract) so existing subclasses keep working
+    # unchanged. Transports that support privilege escalation (SSH) override
+    # them; transports that don't (Redfish) inherit the safe defaults. This
+    # keeps the interface honest under Liskov substitution: calling these on
+    # any ConnectionInterface is always well-defined.
+    # ------------------------------------------------------------------ #
+    def enable_privileged_mode(self) -> bool:
+        """
+        Establish a persistent elevated (root) session. Default: unsupported.
+
+        Returns:
+            bool: True if an elevated session is active, False otherwise.
+        """
+        self.logger.warning(
+            f"{type(self).__name__} does not support privileged mode"
+        )
+        return False
+
+    def disable_privileged_mode(self) -> None:
+        """Tear down a persistent elevated session. Default: no-op."""
+        return None
+
+    def health_check(self) -> bool:
+        """
+        Lightweight liveness probe. Default: delegate to ``is_connected``.
+
+        Concrete transports may override to send an actual round-trip (e.g.
+        ``echo health_check`` over SSH).
+        """
+        return self.is_connected()
