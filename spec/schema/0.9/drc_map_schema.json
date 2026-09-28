@@ -156,6 +156,10 @@
               "minimum": 0,
               "maximum": 100,
               "description": "Confidence level (0-100) that the DRC correctly identifies the root cause."
+            },
+            "follow_up_recipe_id": {
+              "type": "string",
+              "description": "Optional recipe id to run as a follow-up for this diagnostic result code."
             }
           },
           "additionalProperties": true
