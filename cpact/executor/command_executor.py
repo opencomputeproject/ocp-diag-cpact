@@ -111,14 +111,16 @@ class CommandExecutor(BaseExecutor):
             connection_name = self.step.get("connection")
             connection_type = self.step.get("connection_type")
             if not connection_name or not connection_type:
-                self.logger.error("Connection name or type not provided in step data.")
+                self.logger.error(
+                    "Connection name or type not provided in step data.")
                 self.scenario_step.add_log(
                     LogSeverity.ERROR,
                     "Connection name or type not provided in step data.",
                 )
                 return "", False, "Connection name or type not provided in step data."
             cwd = os.getcwd()
-            self.logger.info(f"Current working directory before execution: {cwd}")
+            self.logger.info(
+                f"Current working directory before execution: {cwd}")
             self.scenario_step.add_log(
                 LogSeverity.INFO,
                 f"Current working directory before execution: {cwd}",
@@ -131,7 +133,8 @@ class CommandExecutor(BaseExecutor):
                 f"Executing command: {command} on connection: {connection_name} with type: {connection_type}",
             )
             factory = ConnectionFactory.get_instance()
-            connection = factory.get_connection(connection_name, connection_type)
+            connection = factory.get_connection(
+                connection_name, connection_type)
             if not connection.is_connected():
                 connection.connect()
                 if not connection.is_connected():
@@ -140,7 +143,8 @@ class CommandExecutor(BaseExecutor):
                     self.scenario_step.add_log(LogSeverity.ERROR, msg)
                     return "", False, msg
             cwd = os.getcwd()
-            self.logger.info(f"Current working directory before execution: {cwd}")
+            self.logger.info(
+                f"Current working directory before execution: {cwd}")
             self.scenario_step.add_log(
                 LogSeverity.INFO,
                 f"Current working directory before execution: {cwd}",
@@ -200,7 +204,8 @@ class CommandExecutor(BaseExecutor):
             output_dir = os.path.join(log_dir, "command_outputs")
             os.makedirs(output_dir, exist_ok=True)
             step_id = self.step.get("step_id", f"step_{int(time.time())}")
-            step_name = re.sub(r"\W+", "_", self.step.get("step_name", "unnamed_step"))
+            step_name = re.sub(
+                r"\W+", "_", self.step.get("step_name", "unnamed_step"))
             output_file_name = (
                 f"{self.context.get('test_id')}_{step_id}_{step_name}.txt"
             )
@@ -242,14 +247,16 @@ class CommandExecutor(BaseExecutor):
             return output, True, "Command executed successfully and output validated."
         except AssertionError as e:
             CustomExceptionHandler.print_exception(e)
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Output validation failed: {e}")
             self.logger.error(f"Output validation failed: {e}")
             return output, False, str(e)
         except KeyError as e:
             CustomExceptionHandler.print_exception(e)
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Key error during command execution: {e}")
             self.scenario_step.add_log(
@@ -258,7 +265,8 @@ class CommandExecutor(BaseExecutor):
             return "", False, f"Key error during command execution: {str(e)}"
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Command execution failed: {str(e)}")
             return "", False, str(e)
@@ -272,7 +280,8 @@ class CommandExecutor(BaseExecutor):
         Returns:
             None"""
         analyzer_cls = AnalysisFactory.get_analyzer("output_analysis")
-        analyzer = analyzer_cls(output_analysis, step_id=self.step.get("step_id"))
+        analyzer = analyzer_cls(
+            output_analysis, step_id=self.step.get("step_id"))
         out_result = analyzer.analyze(output, self.context)
         self.logger.info(f"[LogAnalyzer] Output Analysis: {out_result}")
         self.scenario_step.add_log(
@@ -328,7 +337,8 @@ class CommandExecutor(BaseExecutor):
             return output, status, message
         except AssertionError as e:
             CustomExceptionHandler.print_exception(e)
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Output validation failed: {e}")
             self.scenario_step.add_log(
@@ -337,7 +347,8 @@ class CommandExecutor(BaseExecutor):
             return output, False, str(e)
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Command execution failed: {e}")
             self.scenario_step.add_log(
@@ -378,7 +389,8 @@ class CommandExecutor(BaseExecutor):
         factory = ConnectionFactory.get_instance()
         connection = factory.get_connection(connection, connection_type)
         if not connection.is_connected():
-            self.logger.info(f"Connecting to {connection} of type {connection_type}.")
+            self.logger.info(
+                f"Connecting to {connection} of type {connection_type}.")
             self.scenario_step.add_log(
                 LogSeverity.INFO,
                 f"Connecting to {connection} of type {connection_type}.",
@@ -439,7 +451,8 @@ class CommandExecutor(BaseExecutor):
             or step_id not in context.continued_steps[context.get("scenario_id")]
         ):
             return {"status": "fail", "error": f"Invalid step_id: {step_id}"}
-        step_info = context.continued_steps[context.get("scenario_id")][step_id]
+        step_info = context.continued_steps[context.get(
+            "scenario_id")][step_id]
         # future = step_info["future"]
         output = ""
         self.logger.info(f"Validating continued step: {step_id}")
@@ -451,7 +464,8 @@ class CommandExecutor(BaseExecutor):
                 step_id
             ]["step"]
             step = (
-                scenario_step.step_details if scenario_step else step_info.get("step")
+                scenario_step.step_details if scenario_step else step_info.get(
+                    "step")
             )
             # mark as validated
             context.continued_steps[context.get("scenario_id")][step_id][
@@ -462,7 +476,8 @@ class CommandExecutor(BaseExecutor):
             output, err, exit_code, status = connection.wait_for_task_with_details(
                 task_id=task_id,
                 wait=True,
-                timeout=step.get("duration", 30),  # wait for it if still running
+                # wait for it if still running
+                timeout=step.get("duration", 30),
             )
 
             self.logger.info(f"Output for continued step {step_id}: {output}")
@@ -508,7 +523,8 @@ class CommandExecutor(BaseExecutor):
                     step_name=step.get("step_name"),
                     step_type=step.get("step_type"),
                     status="success" if status else "fail",
-                    duration=round(time.time() - self.context.get("start_time"), 3),
+                    duration=round(
+                        time.time() - self.context.get("start_time"), 3),
                     message=message,
                 )
                 if not status:
@@ -521,7 +537,8 @@ class CommandExecutor(BaseExecutor):
 
         except Exception as e:
             CustomExceptionHandler.print_exception(e)
-            self.logger.error(f"Error validating continued step {step_id}: {e}")
+            self.logger.error(
+                f"Error validating continued step {step_id}: {e}")
             self.scenario_step.add_log(
                 LogSeverity.ERROR,
                 f"Error validating continued step {step_id}: {str(e)}",
