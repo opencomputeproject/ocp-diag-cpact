@@ -36,8 +36,11 @@ Usage:
 
 import time
 import uuid
+import stat
 import queue
+import fnmatch
 import paramiko
+import posixpath
 import traceback
 import threading
 from enum import Enum
@@ -63,7 +66,8 @@ from cpact.system_connections.privilege import PrivilegedShell, PrivilegeEscalat
 from cpact.system_connections.retry import retry_call
 
 # Exceptions that indicate a dropped/broken transport and warrant a reconnect.
-_RECONNECT_EXCEPTIONS = (paramiko.SSHException, EOFError, socket.error, OSError)
+_RECONNECT_EXCEPTIONS = (paramiko.SSHException,
+                         EOFError, socket.error, OSError)
 
 
 class SSHConnection(ConnectionInterface):
@@ -82,8 +86,10 @@ class SSHConnection(ConnectionInterface):
         self.connection_lock = threading.RLock()
         # Persistent elevated session state (see enable_privileged_mode()).
         self._priv_shell: Optional[PrivilegedShell] = None
-        self._priv_mode: Optional[str] = None      # mode the shell was opened with
-        self._priv_explicit = False                # True only via enable_privileged_mode()
+        # mode the shell was opened with
+        self._priv_mode: Optional[str] = None
+        # True only via enable_privileged_mode()
+        self._priv_explicit = False
         self._priv_lock = threading.Lock()
         # Guard against infinite reconnect recursion.
         self._reconnecting = False
@@ -96,7 +102,8 @@ class SSHConnection(ConnectionInterface):
                     self.disconnect()
 
                 self.ssh_client = paramiko.SSHClient()
-                self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                self.ssh_client.set_missing_host_key_policy(
+                    paramiko.AutoAddPolicy())
 
                 host = self._get_host()
                 port = self._get_ssh_port()
@@ -163,7 +170,8 @@ class SSHConnection(ConnectionInterface):
             )
             return True
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Failed to download file: {e}")
             return False
@@ -172,7 +180,8 @@ class SSHConnection(ConnectionInterface):
         """Upload file to remote server"""
         if not self.is_connected():
             if not self.connect():
-                self.logger.error("Failed to establish SSH connection for file upload")
+                self.logger.error(
+                    "Failed to establish SSH connection for file upload")
                 return False
 
         try:
@@ -184,10 +193,69 @@ class SSHConnection(ConnectionInterface):
             )
             return True
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Failed to upload file: {e}")
             return False
+
+    def list_files(self, path_or_pattern: str) -> List[str]:
+        """
+        Enumerate remote regular files via SFTP. Wildcards are honoured only in
+        the final path component; SFTP is used instead of a remote shell so
+        recipe-supplied patterns can never be interpreted as a command.
+        """
+        if not self.is_connected():
+            if not self.connect():
+                self.logger.error(
+                    "Failed to establish SSH connection for file enumeration"
+                )
+                return []
+
+        try:
+            sftp = self.ssh_client.open_sftp()
+        except Exception as e:
+            self.logger.error(f"Failed to open SFTP channel: {e}")
+            return []
+
+        try:
+            parent = posixpath.dirname(path_or_pattern) or "."
+            leaf = posixpath.basename(path_or_pattern)
+            files: List[str] = []
+
+            if any(ch in leaf for ch in "*?["):
+                for attr in sftp.listdir_attr(parent):
+                    if fnmatch.fnmatch(attr.filename, leaf):
+                        self._sftp_collect(
+                            sftp, posixpath.join(parent, attr.filename), files
+                        )
+            else:
+                self._sftp_collect(sftp, path_or_pattern, files)
+
+            return sorted(set(files))
+        except Exception as e:
+            self.logger.error(f"Failed to enumerate '{path_or_pattern}': {e}")
+            return []
+        finally:
+            try:
+                sftp.close()
+            except Exception:
+                pass
+
+    def _sftp_collect(self, sftp, remote_path: str, acc: List[str]) -> None:
+        """Append `remote_path` to `acc`, descending into it when it is a directory."""
+        try:
+            attr = sftp.stat(remote_path)
+        except Exception as e:
+            self.logger.warning(f"Cannot stat remote path {remote_path}: {e}")
+            return
+
+        if stat.S_ISDIR(attr.st_mode):
+            for child in sftp.listdir(remote_path):
+                self._sftp_collect(
+                    sftp, posixpath.join(remote_path, child), acc)
+        elif stat.S_ISREG(attr.st_mode):
+            acc.append(remote_path)
 
     def execute_command(
         self,
@@ -283,7 +351,8 @@ class SSHConnection(ConnectionInterface):
             return False
         self._reconnecting = True
         try:
-            self.logger.warning("SSH transport not active; attempting (re)connect")
+            self.logger.warning(
+                "SSH transport not active; attempting (re)connect")
             return self.connect()
         finally:
             self._reconnecting = False
@@ -373,7 +442,8 @@ class SSHConnection(ConnectionInterface):
                     pass
                 self._priv_shell = None
                 self._priv_mode = None
-            shell = self._open_privileged_shell(mode)  # may raise; nothing stored
+            shell = self._open_privileged_shell(
+                mode)  # may raise; nothing stored
             self._priv_shell = shell
             self._priv_mode = mode
             return shell
@@ -464,7 +534,8 @@ class SSHConnection(ConnectionInterface):
             with self._priv_lock:
                 shell = self._priv_shell
                 if shell is None:
-                    raise PrivilegeEscalationError("no active privileged session")
+                    raise PrivilegeEscalationError(
+                        "no active privileged session")
                 stdout, exit_code = shell.run(command, timeout=timeout)
             result.stdout = stdout
             result.return_code = exit_code
@@ -504,7 +575,8 @@ class SSHConnection(ConnectionInterface):
                 self._priv_shell = self._open_privileged_shell(mode)
                 self._priv_mode = mode
                 self._priv_explicit = True
-                self.logger.info(f"Persistent privileged mode enabled ({mode})")
+                self.logger.info(
+                    f"Persistent privileged mode enabled ({mode})")
                 return True
             except Exception as e:
                 self.logger.error(f"Failed to enable privileged mode: {e}")
@@ -603,7 +675,8 @@ class SSHConnection(ConnectionInterface):
         result.end_time = time.time()
         result.execution_time = result.end_time - result.start_time
 
-        self.logger.info(f"Synchronous command completed with status: {result.status}")
+        self.logger.info(
+            f"Synchronous command completed with status: {result.status}")
         return result
 
     def _force_reconnect(self) -> bool:
@@ -635,10 +708,12 @@ class SSHConnection(ConnectionInterface):
             self.logger.info(f"Starting background task {task_id}: {command}")
 
             thread = threading.Thread(
-                target=self._background_worker, args=(task_id, command), daemon=True
+                target=self._background_worker, args=(
+                    task_id, command), daemon=True
             )
 
-            background_task = BackgroundTask(task_id, command, self.ssh_client, thread)
+            background_task = BackgroundTask(
+                task_id, command, self.ssh_client, thread)
 
             with self.lock:
                 self.background_tasks[task_id] = background_task
@@ -647,9 +722,11 @@ class SSHConnection(ConnectionInterface):
             self.logger.info(f"Started background task {task_id}")
 
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Failed to start background task {task_id}: {e}")
+            self.logger.error(
+                f"Failed to start background task {task_id}: {e}")
             result = TaskResult(
                 task_id=task_id,
                 command=command,
@@ -675,7 +752,8 @@ class SSHConnection(ConnectionInterface):
             # Store channels in background task for potential termination
             with self.lock:
                 if task_id in self.background_tasks:
-                    self.background_tasks[task_id].channels = (stdin, stdout, stderr)
+                    self.background_tasks[task_id].channels = (
+                        stdin, stdout, stderr)
 
             # Read output with streaming capability
             stdout_data = ""
@@ -692,7 +770,8 @@ class SSHConnection(ConnectionInterface):
                         task_id in self.background_tasks
                         and self.background_tasks[task_id].terminated
                     ):
-                        self.logger.info(f"Background task {task_id} was terminated")
+                        self.logger.info(
+                            f"Background task {task_id} was terminated")
                         break
 
                 try:
@@ -734,7 +813,8 @@ class SSHConnection(ConnectionInterface):
                     self.logger.error(f"Formatted traceback:\n{tb_str}")
                     # Check if it's a timeout (normal) or real error
                     if "timeout" not in str(e).lower():
-                        self.logger.warning(f"Error reading from channels: {e}")
+                        self.logger.warning(
+                            f"Error reading from channels: {e}")
                         break
 
             # Get exit code
@@ -778,9 +858,11 @@ class SSHConnection(ConnectionInterface):
             result.execution_time = result.end_time - result.start_time
 
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Error in background worker for task {task_id}: {e}")
+            self.logger.error(
+                f"Error in background worker for task {task_id}: {e}")
             result = TaskResult(
                 task_id=task_id,
                 command=command,
@@ -900,12 +982,14 @@ class SSHConnection(ConnectionInterface):
                     return result
 
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Error waiting for task {task_id}: {e}")
             # Even on error, try to return something useful
             actual_task_id = (
-                str(task_id) if not hasattr(task_id, "task_id") else task_id.task_id
+                str(task_id) if not hasattr(
+                    task_id, "task_id") else task_id.task_id
             )
             return TaskResult(
                 task_id=actual_task_id,
@@ -1046,7 +1130,8 @@ class SSHConnection(ConnectionInterface):
         # wait_for_task now always returns a result (even for timeouts), so this should not be None
         if result is None:
             # This should rarely happen now, but handle it just in case
-            self.logger.warning(f"Unexpected None result for task {actual_task_id}")
+            self.logger.warning(
+                f"Unexpected None result for task {actual_task_id}")
             return ("", f"Task {actual_task_id} returned None result", -1, "error")
 
         # Return result as tuple
@@ -1086,7 +1171,8 @@ class SSHConnection(ConnectionInterface):
                         "has_result": True,
                     }
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Error getting all tasks: {e}")
 
@@ -1135,15 +1221,19 @@ class SSHConnection(ConnectionInterface):
                         traceback.format_exception(type(e), e, e.__traceback__)
                     )
                     self.logger.error(f"Formatted traceback:\n{tb_str}")
-                    self.logger.warning(f"Could not send termination signal: {e}")
+                    self.logger.warning(
+                        f"Could not send termination signal: {e}")
 
-            self.logger.info(f"Initiated termination for task {actual_task_id}")
+            self.logger.info(
+                f"Initiated termination for task {actual_task_id}")
             return True
 
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Failed to terminate task {actual_task_id}: {e}")
+            self.logger.error(
+                f"Failed to terminate task {actual_task_id}: {e}")
 
             # Even if termination failed, create a terminated result to ensure we return something
             try:
@@ -1293,7 +1383,8 @@ class SSHConnection(ConnectionInterface):
             except BaseException as e:  # noqa: BLE001 - reported via `error`
                 error.append(e)
 
-        t = threading.Thread(target=_closer, name="ssh-close-watchdog", daemon=True)
+        t = threading.Thread(
+            target=_closer, name="ssh-close-watchdog", daemon=True)
         t.start()
         t.join(timeout)
         if t.is_alive():

@@ -32,6 +32,7 @@ Usage:
 from concurrent.futures import ThreadPoolExecutor
 from cpact.core.context import Context
 from cpact.core.step_executor import StepExecutor
+from cpact.executor.artifact_collector import collect_scenario_artifacts
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.logger_utils import OCPTVFileWriter
 from cpact.scoring.score_manager import ScoreManager
@@ -67,9 +68,11 @@ class ScenarioRunner:
         self.logger = TestLogger().get_logger()
         self.scenario = scenario
         self.context = context
-        self.executor_continue = thread_executor or ThreadPoolExecutor(max_workers=5)
+        self.executor_continue = thread_executor or ThreadPoolExecutor(
+            max_workers=5)
         self.validate_continue = validate_continue
         self.score_manager = ScoreManager.instance() if not score_manager else score_manager
+
     def run(self) -> tuple[None, bool, str]:
         """
         Runs the test scenario by executing the defined test steps and managing the test run lifecycle.
@@ -90,7 +93,8 @@ class ScenarioRunner:
         self.context.set("test_id", data.get("test_id"))
         self.context.set("test_name", data.get("test_name"))
         run = tv.TestRun(name=self.scenario.get("test_name"), version="1.0")
-        dut = tv.Dut(id=self.scenario["test_id"], name=self.scenario["test_name"])
+        dut = tv.Dut(id=self.scenario["test_id"],
+                     name=self.scenario["test_name"])
         run.start(dut=dut)
         run.add_log(
             message=f"Running Test Scenario: {self.scenario.get('test_name')}",
@@ -151,6 +155,8 @@ class ScenarioRunner:
                     self.logger.info(
                         f"Step '{step.get('step_name')}' completed successfully."
                     )
+
+        collect_scenario_artifacts(self.scenario, self.context, run)
 
         if not run_status:
             run.add_log(

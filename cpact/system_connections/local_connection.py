@@ -35,6 +35,7 @@ Usage:
 import os
 import time
 import uuid
+import glob
 import queue
 import signal
 import shutil
@@ -93,6 +94,24 @@ class LocalConnection(ConnectionInterface):
         except Exception as e:
             self.logger.error(f"Failed to upload file: {e}")
             return False
+
+    def list_files(self, path_or_pattern: str) -> List[str]:
+        """Enumerate regular files under a local path, directory or glob pattern."""
+        try:
+            matches = glob.glob(path_or_pattern)
+        except Exception as e:
+            self.logger.error(f"Failed to expand '{path_or_pattern}': {e}")
+            return []
+
+        files: List[str] = []
+        for match in matches:
+            if os.path.isfile(match):
+                files.append(os.path.abspath(match))
+            elif os.path.isdir(match):
+                for root, _, names in os.walk(match):
+                    files.extend(os.path.abspath(os.path.join(root, n))
+                                 for n in names)
+        return sorted(set(files))
 
     def disconnect(self) -> None:
         """Disconnect method for LocalConnection."""
@@ -346,7 +365,8 @@ class LocalConnection(ConnectionInterface):
             else:
                 os.killpg(os.getpgid(process.pid), signal.SIGKILL)
         except Exception as e:
-            self.logger.warning(f"Process tree kill failed for pid {process.pid}: {e}")
+            self.logger.warning(
+                f"Process tree kill failed for pid {process.pid}: {e}")
 
         # Make sure the direct child is gone and reaped either way.
         try:
@@ -356,7 +376,8 @@ class LocalConnection(ConnectionInterface):
         try:
             process.wait(timeout=10)
         except Exception:
-            self.logger.warning(f"Process {process.pid} did not exit after kill")
+            self.logger.warning(
+                f"Process {process.pid} did not exit after kill")
 
     def _execute_background(
         self,
@@ -394,7 +415,8 @@ class LocalConnection(ConnectionInterface):
                 daemon=True,
             )
 
-            background_task = BackgroundTask(task_id, str(command), process, thread)
+            background_task = BackgroundTask(
+                task_id, str(command), process, thread)
 
             with self.lock:
                 self.background_tasks[task_id] = background_task
@@ -403,7 +425,8 @@ class LocalConnection(ConnectionInterface):
             self.logger.info(f"Started background task {task_id}: {command}")
 
         except Exception as e:
-            self.logger.error(f"Failed to start background task {task_id}: {e}")
+            self.logger.error(
+                f"Failed to start background task {task_id}: {e}")
             result = TaskResult(
                 task_id=task_id,
                 command=str(command),
@@ -429,7 +452,8 @@ class LocalConnection(ConnectionInterface):
         try:
             if is_sudo and sudo_password and not self.is_windows:
                 # For sudo commands on Unix/Linux, send password via stdin
-                stdout, stderr = process.communicate(input=f"{sudo_password}\n")
+                stdout, stderr = process.communicate(
+                    input=f"{sudo_password}\n")
             else:
                 # For regular commands or Windows
                 stdout, stderr = process.communicate()
@@ -543,7 +567,8 @@ class LocalConnection(ConnectionInterface):
             self.logger.error(f"Error waiting for task {task_id}: {e}")
             # Even on error, try to return something useful
             actual_task_id = (
-                str(task_id) if not hasattr(task_id, "task_id") else task_id.task_id
+                str(task_id) if not hasattr(
+                    task_id, "task_id") else task_id.task_id
             )
             return TaskResult(
                 task_id=actual_task_id,
@@ -779,7 +804,8 @@ class LocalConnection(ConnectionInterface):
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to terminate task {actual_task_id}: {e}")
+            self.logger.error(
+                f"Failed to terminate task {actual_task_id}: {e}")
 
             # Even if termination failed, create a terminated result to ensure we return something
             try:

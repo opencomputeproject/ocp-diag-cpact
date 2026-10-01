@@ -29,7 +29,7 @@ Usage:
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, List, Optional, Union
 
 from cpact.utils.logger_utils import TestLogger
 
@@ -93,6 +93,20 @@ class ConnectionInterface(ABC):
     def disable_privileged_mode(self) -> None:
         """Tear down a persistent elevated session. Default: no-op."""
         return None
+
+    def list_files(self, path_or_pattern: str) -> List[str]:
+        """
+        Enumerate regular files reachable from a path, directory, or glob
+        pattern. Glob wildcards are only honoured in the final path component.
+
+        Returns:
+            List[str]: Absolute paths of matching regular files. Empty when the
+            transport cannot enumerate files (default).
+        """
+        self.logger.warning(
+            f"{type(self).__name__} does not support file enumeration"
+        )
+        return []
 
     def health_check(self) -> bool:
         """
