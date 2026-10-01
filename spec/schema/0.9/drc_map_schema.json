@@ -121,7 +121,8 @@
                     "COLD_REBOOT_WITH_DELAY",
                     "WARM_REBOOT",
                     "AC_POWER_CYCLE",
-                    "FURTHER_TRIAGE_NEEDED"
+                    "FURTHER_TRIAGE_NEEDED",
+                    "FOLLOWUP_RECIPE"
                   ]
                 },
                 {

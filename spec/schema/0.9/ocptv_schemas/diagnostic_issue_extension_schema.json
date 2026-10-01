@@ -19,8 +19,7 @@
         },
         "drc": {
             "type": "string",
-            "pattern": "^[A-Z]+-ERR-[0-9]+$",
-            "description": "Debug Result Code identifying the issue signature, e.g. 'INTEL-ERR-00001'."
+            "description": "Debug Result Code identifying the issue signature."
         },
         "message": {
             "type": "string",
@@ -73,7 +72,8 @@
                         "COLD_REBOOT_WITH_DELAY",
                         "WARM_REBOOT",
                         "AC_POWER_CYCLE",
-                        "FURTHER_TRIAGE_NEEDED"
+                        "FURTHER_TRIAGE_NEEDED",
+                        "FOLLOWUP_RECIPE"
                     ]
                 },
                 {
