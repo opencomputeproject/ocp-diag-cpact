@@ -32,6 +32,7 @@ Usage:
 from concurrent.futures import ThreadPoolExecutor
 from cpact.core.context import Context
 from cpact.core.step_executor import StepExecutor
+from cpact.executor.artifact_collector import collect_scenario_artifacts
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.logger_utils import OCPTVFileWriter
 from cpact.scoring.score_manager import ScoreManager
@@ -166,6 +167,8 @@ class ScenarioRunner:
                     self.logger.info(
                         f"Step '{step.get('step_name')}' completed successfully."
                     )
+
+        collect_scenario_artifacts(self.scenario, self.context, run)
 
         if not run_status:
             run.add_log(

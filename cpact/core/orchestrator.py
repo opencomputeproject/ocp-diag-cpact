@@ -38,6 +38,7 @@ from cpact.core.context import Context, ExecutionContext
 from cpact.core.scenario_adapter import ScenarioAdapter
 from cpact.core.scenario_runner import ScenarioRunner
 from cpact.core.step_executor import StepExecutor
+from cpact.executor.artifact_collector import collect_scenario_artifacts
 
 from concurrent.futures import ThreadPoolExecutor
 from cpact.result_builder.result_builder import ResultCollector
@@ -229,6 +230,7 @@ class Orchestrator:
                 self.logger.info(
                     f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} ================="
                 )
+            collect_scenario_artifacts(scenario, self.context, run)
         if not run_status:
             run.end(status=TestStatus.ERROR, result=TestResult.FAIL)
         else:

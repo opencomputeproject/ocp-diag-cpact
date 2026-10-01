@@ -36,7 +36,10 @@ Usage:
 
 import time
 import uuid
+import fnmatch
+import posixpath
 import paramiko
+import stat
 import traceback
 import threading
 from typing import Dict, Optional, Tuple, List, Any
@@ -195,6 +198,59 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Failed to upload file: {e}")
             return False
+
+    def list_files(self, path_or_pattern: str) -> List[str]:
+        """List remote regular files using SFTP, never a remote shell."""
+        if not self.is_connected() and not self.connect():
+            self.logger.error(
+                "Failed to establish SSH connection for file enumeration"
+            )
+            return []
+
+        try:
+            sftp = self.ssh_client.open_sftp()
+        except Exception as e:
+            self.logger.error(f"Failed to open SFTP channel: {e}")
+            return []
+
+        try:
+            parent = posixpath.dirname(path_or_pattern) or "."
+            leaf = posixpath.basename(path_or_pattern)
+            files: List[str] = []
+
+            if any(char in leaf for char in "*?["):
+                for attr in sftp.listdir_attr(parent):
+                    if fnmatch.fnmatch(attr.filename, leaf):
+                        self._sftp_collect(
+                            sftp, posixpath.join(parent, attr.filename), files
+                        )
+            else:
+                self._sftp_collect(sftp, path_or_pattern, files)
+
+            return sorted(set(files))
+        except Exception as e:
+            self.logger.error(f"Failed to enumerate '{path_or_pattern}': {e}")
+            return []
+        finally:
+            try:
+                sftp.close()
+            except Exception:
+                pass
+
+    def _sftp_collect(self, sftp, remote_path: str, files: List[str]) -> None:
+        try:
+            attributes = sftp.stat(remote_path)
+        except Exception as e:
+            self.logger.warning(f"Cannot stat remote path {remote_path}: {e}")
+            return
+
+        if stat.S_ISDIR(attributes.st_mode):
+            for child in sftp.listdir(remote_path):
+                self._sftp_collect(
+                    sftp, posixpath.join(remote_path, child), files
+                )
+        elif stat.S_ISREG(attributes.st_mode):
+            files.append(remote_path)
 
     def execute_command(
         self,
