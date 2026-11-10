@@ -44,15 +44,17 @@ import sys
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from tabulate import tabulate
 
 from cpact.core.context import ExecutionContext
+from cpact.core.context import Context
 from cpact.core.orchestrator import Orchestrator
 from cpact.core.recipe_filter import RecipeFilter
 from cpact.core.recipe_selector import RecipeSelector
 from cpact.core.scenario_adapter import ScenarioAdapter
+from cpact.analysis.followup_resolver import FollowUpResolver
 from cpact.result_builder.result_builder import ResultCollector
 from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
 from cpact.schema_checker import ValidationRequest
@@ -66,6 +68,8 @@ from cpact.utils.logger_utils import TestLogger
 from cpact.utils.path_resolver import resolve_paths_in_yaml
 from cpact.utils.scenario_parser import load_yaml_file
 from cpact.versions import get_version_info, __version__
+
+DEFAULT_MAX_FOLLOWUP_DEPTH = 10
 
 # import sys
 
@@ -231,7 +235,7 @@ def run_test(
     historical_data: Optional[List[str]] = None,
     score_weights_path: Optional[str] = None,
     run_schema_check: bool = True,
-) -> None:
+) -> List[str]:
     """
     Run a single test scenario from the given file path.
 
@@ -244,7 +248,7 @@ def run_test(
         run_schema_check: Whether to validate the recipe (and its children) before execution.
 
     Returns:
-        None
+        Recipe ids this run asked to be executed as follow-ups.
     """
     logger = logger or TestLogger().get_logger()
     logger.info(f"\n\U0001F680 Running Test: {file_path}")
@@ -252,7 +256,7 @@ def run_test(
     scenario_doc = load_yaml_file(file_path)
     if not scenario_doc or "test_scenario" not in scenario_doc:
         logger.error(f"\u274c Invalid test scenario in {file_path}. Skipping.")
-        return
+        return []
 
     start_time = time.time()
 
@@ -280,11 +284,15 @@ def run_test(
 
     if not valid:
         score_manager.end_run(execution_id=execution_id)
-        return
+        return []
 
     orchestrator.run(scenario_data, file_path)
 
     score_manager.end_run(execution_id=execution_id)
+
+    follow_up_recipe_ids = FollowUpResolver(
+        scenario_data, Context.get_instance().get("artifact_manifest")
+    ).resolve()
 
     elapsed_time = time.time() - start_time
     logger.info(f"\u2705 Test completed in {elapsed_time:.2f} seconds")
@@ -294,7 +302,7 @@ def run_test(
             "Scoped v0.9 flow complete: CPACT stops after launch orchestration for %s",
             execution_id or file_path,
         )
-        return
+        return follow_up_recipe_ids
 
     logger.info("---------------------- Test Summary -------------------------")
 
@@ -322,6 +330,92 @@ def run_test(
     )
     rc.print_summary_table()
     logger.info(f"\u23f1\ufe0f Total execution time: {elapsed_time:.2f}s\n")
+    return follow_up_recipe_ids
+
+
+def build_recipe_index(
+    test_dir: str, logger: Optional[TestLogger] = None
+) -> Dict[str, str]:
+    """Map every discoverable recipe id to its scenario file path."""
+    index: Dict[str, str] = {}
+    for file_path, adapter in discover_scenarios(test_dir, None, logger=logger):
+        recipe_id = adapter.get_primary_id()
+        if recipe_id and recipe_id not in index:
+            index[recipe_id] = file_path
+    return index
+
+
+def run_test_chain(
+    file_path: str,
+    workspace: str,
+    recipe_index: Dict[str, str],
+    logger: Optional[TestLogger] = None,
+    historical_data: Optional[List[str]] = None,
+    score_weights_path: Optional[str] = None,
+    run_schema_check: bool = True,
+    max_depth: int = DEFAULT_MAX_FOLLOWUP_DEPTH,
+) -> None:
+    """
+    Run a recipe, then keep running whatever follow-up recipes its OCPTV output
+    requests until the chain reports none left.
+
+    A recipe is executed at most once per chain, so a DRC that points back at an
+    earlier recipe terminates instead of looping forever.
+    """
+    logger = logger or TestLogger().get_logger()
+    pending: List[Tuple[str, int]] = [(file_path, 0)]
+    executed: Set[str] = set()
+
+    while pending:
+        current_path, depth = pending.pop(0)
+        if current_path in executed:
+            logger.info(
+                f"Skipping already-executed recipe in this chain: {current_path}")
+            continue
+        executed.add(current_path)
+
+        follow_up_ids = run_test(
+            file_path=current_path,
+            workspace=workspace,
+            logger=logger,
+            historical_data=historical_data,
+            score_weights_path=score_weights_path,
+            run_schema_check=run_schema_check,
+        ) or []
+
+        if not follow_up_ids:
+            continue
+
+        if max_depth <= 0:
+            logger.info(
+                f"Follow-up launching is disabled; not launching {', '.join(follow_up_ids)}."
+            )
+            continue
+
+        if depth + 1 > max_depth:
+            logger.warning(
+                f"\u26a0\ufe0f Follow-up depth limit ({max_depth}) reached; not launching "
+                f"{', '.join(follow_up_ids)}. Raise --max-followup-depth to continue."
+            )
+            continue
+
+        for recipe_id in follow_up_ids:
+            next_path = recipe_index.get(recipe_id)
+            if not next_path:
+                logger.error(
+                    f"\u274c Follow-up recipe '{recipe_id}' was requested but no recipe "
+                    "with that id was discovered in the test directory."
+                )
+                continue
+            if next_path in executed:
+                logger.info(
+                    f"Follow-up recipe '{recipe_id}' already ran in this chain; stopping that branch."
+                )
+                continue
+            logger.info(
+                f"\U0001F501 Queuing follow-up recipe '{recipe_id}' ({next_path}) at depth {depth + 1}"
+            )
+            pending.append((next_path, depth + 1))
 
 
 # --------------------------------------------------------------------------------------
@@ -836,6 +930,15 @@ def main() -> None:
         help="Interactively select one discovered scenario/recipe before launch",
     )
     parser.add_argument(
+        "--max-followup-depth",
+        type=int,
+        default=DEFAULT_MAX_FOLLOWUP_DEPTH,
+        help=(
+            "Maximum follow-up recipe chain depth triggered by DiagnosticIssue "
+            "entries requesting FOLLOWUP_RECIPE. Use 0 to disable follow-up launching."
+        ),
+    )
+    parser.add_argument(
         "--conn_config", "-cc", type=str, help="Path to the connection config file"
     )
     parser.add_argument(
@@ -1028,15 +1131,18 @@ def main() -> None:
     _fail_if_no_matched_files(matched_files, logger, factory)
 
     print("Matched Files are: ", matched_files)
+    recipe_index = build_recipe_index(test_dir, logger=logger)
     for file_path in matched_files:
         print("Runnig File: ", file_path)
-        run_test(
+        run_test_chain(
             file_path=file_path,
             workspace=workspace,
+            recipe_index=recipe_index,
             logger=logger,
             historical_data=args.historical_data,
             score_weights_path=score_weights_path,
             run_schema_check=args.run_with_schema_check,
+            max_depth=args.max_followup_depth,
         )
 
     ScorePrinter(logger=logger).print_framework_report()

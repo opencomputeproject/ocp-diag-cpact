@@ -70,6 +70,18 @@ class ArtifactCollector:
         self.test_run = test_run
         self.logger = TestLogger().get_logger()
         self.metadata = self.scenario.get("recipe_metadata", {}) or {}
+        self.run_key = _sanitize_component(
+            str(
+                self.metadata.get("recipe_id")
+                or self.scenario.get("test_id")
+                or self.scenario.get("test_name")
+                or "scenario"
+            )
+        )
+        # Chained follow-up runs share one log dir, so each run gets its own subtree.
+        self.artifacts_root = os.path.join(
+            TestLogger().get_log_dir(), ARTIFACTS_DIRNAME, self.run_key
+        )
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -112,8 +124,7 @@ class ArtifactCollector:
             self._write_manifest(manifest)
             return manifest
 
-        artifacts_root = os.path.join(
-            TestLogger().get_log_dir(), ARTIFACTS_DIRNAME)
+        artifacts_root = self.artifacts_root
 
         for artifact_type, url in sources:
             unresolved = _UNRESOLVED_PLACEHOLDER.search(url)
@@ -247,10 +258,8 @@ class ArtifactCollector:
         return entries
 
     def _write_manifest(self, manifest: Dict[str, Any]) -> None:
-        artifacts_root = os.path.join(
-            TestLogger().get_log_dir(), ARTIFACTS_DIRNAME)
-        os.makedirs(artifacts_root, exist_ok=True)
-        manifest_path = os.path.join(artifacts_root, MANIFEST_FILENAME)
+        os.makedirs(self.artifacts_root, exist_ok=True)
+        manifest_path = os.path.join(self.artifacts_root, MANIFEST_FILENAME)
         try:
             with open(manifest_path, "w", encoding="utf-8") as handle:
                 json.dump(manifest, handle, indent=2)
@@ -275,7 +284,10 @@ def collect_scenario_artifacts(
 ) -> Optional[Dict[str, Any]]:
     """Run the collection phase without ever letting it fail the scenario."""
     try:
-        return ArtifactCollector(scenario, context, test_run).collect()
+        manifest = ArtifactCollector(scenario, context, test_run).collect()
+        if context is not None:
+            context.set("artifact_manifest", manifest)
+        return manifest
     except Exception as e:
         TestLogger().get_logger().error(f"Artifact collection failed: {e}")
         if test_run is not None:

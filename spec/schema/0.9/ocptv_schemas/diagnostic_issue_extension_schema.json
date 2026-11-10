@@ -49,12 +49,20 @@
             "description": "Hardware or firmware component class affected by this issue."
         },
         "severity": {
-            "type": "string",
-            "enum": [
-                "FATAL",
-                "RECOVERABLE",
-                "CORRECTED",
-                "INFORMATIONAL"
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": [
+                        "FATAL",
+                        "RECOVERABLE",
+                        "CORRECTED",
+                        "INFORMATIONAL"
+                    ]
+                },
+                {
+                    "type": "string",
+                    "pattern": "^OEM_[A-Za-z0-9_]+$"
+                }
             ],
             "description": "Severity of the issue. Aligns with CPER ErrorSeverity hierarchy."
         },
@@ -82,6 +90,10 @@
                 }
             ],
             "description": "Recommended remediation action for this issue."
+        },
+        "followUpRecipeId": {
+            "type": "string",
+            "description": "Optional recipe id to run as a follow-up, carried over from the DRC map's follow_up_recipe_id. Expected when action is 'FOLLOWUP_RECIPE'."
         },
         "confidence": {
             "type": "integer",
