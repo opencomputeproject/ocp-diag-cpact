@@ -18,8 +18,9 @@ resolve schema locations without duplicating path-management logic.
 The utility methods support:
 
 - Resolving the active schema directory.
-- Selecting a specific schema version when requested.
-- Automatically falling back to the latest available schema version.
+- Selecting a specific schema version when requested (unknown versions are
+  rejected rather than silently replaced).
+- Defaulting to the latest available schema version when none is given.
 - Constructing schema definition file paths for supported schema types.
 
 Classes
@@ -68,14 +69,14 @@ class SchemaUtils:
         """
         Retrieve the schema directory for a specified schema version.
 
-        If a valid schema version is provided, the corresponding schema
-        directory is returned. Otherwise, the most recent available schema
-        version is automatically selected.
+        If ``schema_version`` is given it must match an available version
+        directory; otherwise the most recent version (compared numerically,
+        so ``0.10`` is newer than ``0.9``) is returned.
 
         Args:
             schema_version (str | None, optional):
-                Target schema version to retrieve. If not provided or
-                unavailable, the latest schema version is used.
+                Target schema version to retrieve. If not provided, the latest
+                schema version is used.
 
         Returns:
             str:
@@ -84,6 +85,8 @@ class SchemaUtils:
         Raises:
             FileNotFoundError:
                 If the schema root directory does not exist.
+            ValueError:
+                If ``schema_version`` is given but no such version exists.
 
         Notes:
             Available schema versions are determined by enumerating
@@ -98,15 +101,40 @@ class SchemaUtils:
             "schema",
         )
 
-        versions = sorted(os.listdir(root))
+        versions = SchemaUtils.available_versions(root)
+        if not versions:
+            raise FileNotFoundError(f"No schema versions found under {root}")
 
-        version = (
-            schema_version
-            if schema_version and schema_version in versions
-            else versions[-1]
-        )
+        if schema_version not in (None, ""):
+            version = str(schema_version).strip()
+            if version not in versions:
+                raise ValueError(
+                    f"Unsupported schema_version '{version}'. "
+                    f"Available versions: {', '.join(versions)}"
+                )
+        else:
+            version = versions[-1]
 
         return os.path.join(root, version)
+
+    @staticmethod
+    def available_versions(root: str) -> list[str]:
+        """Return the version directories under ``root``, oldest first."""
+
+        def version_key(name: str) -> tuple:
+            parts = []
+            for part in name.split("."):
+                parts.append((0, int(part), "") if part.isdigit() else (1, 0, part))
+            return tuple(parts)
+
+        return sorted(
+            (
+                name
+                for name in os.listdir(root)
+                if os.path.isdir(os.path.join(root, name))
+            ),
+            key=version_key,
+        )
 
     @staticmethod
     def get_schema_file(
@@ -136,7 +164,13 @@ class SchemaUtils:
             '/spec/schema/v1.0/config_recipe_schema.json'
         """
 
-        return os.path.join(
+        recipe_schema = os.path.join(
             schema_dir,
             f"{schema_type}_recipe_schema.json",
         )
+        if os.path.exists(recipe_schema):
+            return recipe_schema
+
+        # Some schema types (e.g. config) are published as <type>_schema.json
+        plain_schema = os.path.join(schema_dir, f"{schema_type}_schema.json")
+        return plain_schema if os.path.exists(plain_schema) else recipe_schema

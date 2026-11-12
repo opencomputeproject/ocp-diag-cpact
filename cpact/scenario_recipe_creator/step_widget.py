@@ -49,7 +49,6 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QGroupBox,
     QFileDialog,
-    QListWidget,
     QListWidgetItem,
     QDialogButtonBox,
     QDialog,
@@ -617,12 +616,12 @@ class StepDialog(QDialog):
             return
         self.diag_list.takeItem(self.diag_list.row(item))
 
-    def build_display_name(self, data: dict, required_fields: list[list[str]]) -> str:
+    def build_display_name(self, data: list[dict], required_fields: list[list[str]]) -> str:
         """
         Return a readable display name for a diagnostic entry based on satisfied required fields.
         Args:
             self (StepDialog): The instance of the step dialog class.
-            data (dict): The diagnostic entry data.
+            data (list[dict]): Rows returned by DiagnosticAnalysisDialog.result().
             required_fields (list): List of required field groups.
         Returns:
             str: The constructed display name.
@@ -636,13 +635,13 @@ class StepDialog(QDialog):
         return "Unnamed"
 
     def validate_required_fields(
-        self, data: dict, required_fields: list[list[str]]
+        self, data: list[dict], required_fields: list[list[str]]
     ) -> tuple[bool, str]:
         """
         Validate that at least one required field group is satisfied.
         Args:
             self (StepDialog): The instance of the step dialog class.
-            data (dict): The diagnostic entry data.
+            data (list[dict]): Rows returned by DiagnosticAnalysisDialog.result().
             required_fields (list): List of required field groups.
         Returns:
             tuple: A tuple containing a boolean indicating validation success and a message.

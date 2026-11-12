@@ -14,7 +14,7 @@ Features:
 - Establishes Redfish sessions using basic authentication.
 - Supports GET, POST, PUT, PATCH, and DELETE operations.
 - Automatically constructs base URLs from configuration and global settings.
-- Handles SSL verification and connection testing.
+- Verifies TLS certificates by default (configurable via verify_ssl / ca_bundle).
 - Provides structured response output including status codes, headers, and JSON payloads.
 
 Attributes:
@@ -31,13 +31,36 @@ Usage:
 ===============================================================================
 """
 
+import os
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, Union
+from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 
 from cpact.system_connections.base_connection import ConnectionInterface
-from cpact.system_connections.connection_config import ConnectionConfig, RetryPolicy
+from cpact.system_connections.connection_config import (
+    ConnectionConfig,
+    RetryPolicy,
+    parse_optional_bool,
+)
 from cpact.system_connections.retry import retry_call
+
+
+class ServerHostnameAdapter(HTTPAdapter):
+    """
+    HTTPS adapter that verifies the certificate against ``server_hostname``
+    instead of the URL host. Used when Redfish traffic goes through a local SSH
+    tunnel (URL host is localhost) but the certificate belongs to the real BMC.
+    """
+
+    def __init__(self, server_hostname: str, **kwargs: Any) -> None:
+        self.server_hostname = server_hostname
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
+        kwargs["server_hostname"] = self.server_hostname
+        kwargs["assert_hostname"] = self.server_hostname
+        super().init_poolmanager(*args, **kwargs)
 
 
 class RedfishConnection(ConnectionInterface):
@@ -62,9 +85,8 @@ class RedfishConnection(ConnectionInterface):
             self.base_url = f"{protocol}://{host}:{port}"
 
             self.session = requests.Session()
-            self.session.verify = (
-                False  # For development - use proper certs in production
-            )
+            self.session.verify = self._get_tls_verify()
+            self._configure_session(self.session)
 
             username = self._get_username()
             password = self._get_password()
@@ -142,12 +164,20 @@ class RedfishConnection(ConnectionInterface):
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
-            return {
-                "success": True,
+            try:
+                body = response.json() if response.content else {}
+            except ValueError:
+                body = {"raw": response.text}
+
+            result = {
+                "success": response.ok,
                 "status_code": response.status_code,
-                "response": response.json() if response.content else {},
+                "response": body,
                 "headers": dict(response.headers),
             }
+            if not response.ok:
+                result["error"] = f"HTTP {response.status_code} {response.reason or ''}".strip()
+            return result
         except Exception as e:
             # e.response (when present) is a requests.Response, which has no
             # .get(); read its numeric .status_code attribute instead.
@@ -172,6 +202,39 @@ class RedfishConnection(ConnectionInterface):
     def _get_host(self) -> str:
         """Determine the host from config"""
         return self.conn_config.host
+
+    def _get_tls_verify(self) -> Union[bool, str]:
+        """
+        Resolve the requests ``verify`` value for this connection.
+
+        Per-section ``<prefix>_verify_ssl`` / ``<prefix>_ca_bundle`` override the
+        global ``Connection.verify_ssl`` / ``Connection.ca_bundle``. Verification
+        is on by default; a CA bundle path is returned when configured.
+        """
+        global_conn = self.global_config.get("Connection", {}) or {}
+        verify = parse_optional_bool(self.conn_config.verify_ssl)
+        if verify is None:
+            verify = parse_optional_bool(global_conn.get("verify_ssl"))
+        if verify is None:
+            verify = True
+
+        if not verify:
+            self.logger.warning(
+                f"TLS certificate verification is DISABLED for Redfish host "
+                f"{self._get_host()} (verify_ssl=false). Credentials sent to this "
+                "host can be intercepted; configure ca_bundle instead where possible."
+            )
+            return False
+
+        ca_bundle = self.conn_config.ca_bundle or global_conn.get("ca_bundle", "")
+        if ca_bundle:
+            if not os.path.exists(ca_bundle):
+                raise FileNotFoundError(f"Redfish ca_bundle not found: {ca_bundle}")
+            return ca_bundle
+        return True
+
+    def _configure_session(self, session: requests.Session) -> None:
+        """Hook for subclasses to customise the session before the first request."""
 
     def _get_redfish_port(self) -> int:
         """Determine the Redfish port from config or global settings"""

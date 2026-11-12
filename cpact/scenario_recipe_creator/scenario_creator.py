@@ -40,7 +40,6 @@ import ctypes
 import platform
 from PyQt5.QtWidgets import QApplication, QStyleFactory
 from PyQt5.QtWidgets import (
-    QApplication,
     QWidget,
     QVBoxLayout,
     QLabel,
@@ -48,10 +47,8 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QStyleFactory
 
 # imports (add these if not already present)
-from PyQt5.QtGui import QFontDatabase, QIcon
 from PyQt5.QtGui import QIcon
 from cpact.scenario_recipe_creator.constants import (
     make_button,

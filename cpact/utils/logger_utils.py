@@ -15,6 +15,7 @@ Features:
 - Console and file handlers with colored output and timestamped logs.
 - Automatic log directory creation with timestamped naming.
 - Integration with OCP TV output via OCPTVFileWriter.
+- Passwords/tokens are redacted from log records and OCP TV output.
 - Context-managed JSON writing via JsonWriter.
 
 Classes:
@@ -53,6 +54,9 @@ from colorlog import ColoredFormatter
 import ocptv.output as tv
 from typing import Dict, Any
 
+from cpact.utils.redaction import RedactingFilter, redact, redact_data
+from cpact.utils.path_guard import safe_filename
+
 
 class TestLogger:
     """
@@ -83,28 +87,48 @@ class TestLogger:
 
     _instance = None
 
-    def __new__(cls, log_dir: str = None) -> "TestLogger":
+    def __new__(cls, log_dir: str = None, use_exact_dir: bool = False) -> "TestLogger":
         if cls._instance is None:
             cls._instance = super(TestLogger, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, log_dir: str = None) -> None:
+    def __init__(self, log_dir: str = None, use_exact_dir: bool = False) -> None:
+        """
+        Args:
+            log_dir: Base directory for logs. A timestamped ``test_run_<ts>``
+                sub-folder is created inside it unless ``use_exact_dir`` is True.
+            use_exact_dir: When True, ``log_dir`` is used as-is as the log folder
+                (manual override). It is reused if it already exists, otherwise
+                it is created. No timestamped sub-folder is created.
+        """
         if self._initialized:
             return  # Already initialized
+        previous_dir = getattr(self, "_closed_log_dir", None)
+        if previous_dir and not log_dir:
+            # Re-initialised after cleanup(): keep writing to the same folder.
+            log_dir, use_exact_dir = previous_dir, True
         self.log_dir = log_dir
         print("log_dir", log_dir)
         self.logger = logging.getLogger("test_logger")
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False  # Prevent duplicate output via root logger
+        # Mask passwords/tokens in every record, whichever handler emits it.
+        if not any(isinstance(f, RedactingFilter) for f in self.logger.filters):
+            self.logger.addFilter(RedactingFilter())
         # Determine log directory
-        if not log_dir:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if use_exact_dir and log_dir:
+            log_dir = os.path.abspath(log_dir)
+            reused = os.path.isdir(log_dir)
+            print(
+                f"Using log override directory ({'existing' if reused else 'new'}): {log_dir}"
+            )
+        elif not log_dir:
             print("No log directory provided. Using default.")
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             log_dir = os.path.join("logs", f"test_run_{timestamp}")
         else:
             print(f"Using provided log directory: {log_dir}")
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             log_dir = os.path.join(log_dir, f"test_run_{timestamp}")
         os.makedirs(log_dir, exist_ok=True)
 
@@ -136,7 +160,7 @@ class TestLogger:
         file_handler.setFormatter(file_formatter)
         self.logger.addHandler(file_handler)
 
-        self.logger.info(f"📁 Log directory created: {log_dir}")
+        self.logger.info(f"📁 Log directory: {log_dir}")
         self.logger.info(f"📝 Logging to file: {log_file}")
 
         self._initialized = True
@@ -159,6 +183,10 @@ class TestLogger:
             handler.close()
             self.logger.removeHandler(handler)
         logging.shutdown()
+        # Allow a later TestLogger() to rebuild handlers instead of returning
+        # a logger that silently drops every record.
+        self._closed_log_dir = self.log_dir
+        self._initialized = False
 
 
 class JsonWriter:
@@ -242,7 +270,8 @@ class OCPTVFileWriter(tv.Writer):
         # Create OCP TV specific log file path
         timestamp = test_logger.get_timestamp()
         ocptv_file = os.path.join(
-            test_logger.get_log_dir(), f"ocptv_{test_name}_{timestamp}.json"
+            test_logger.get_log_dir(),
+            f"ocptv_{safe_filename(test_name, default='ocptv_test')}_{timestamp}.json",
         )
 
         self.ocptv_file = ocptv_file
@@ -263,6 +292,10 @@ class OCPTVFileWriter(tv.Writer):
         try:
             # Parse JSON to validate and pretty-print if needed
             json_data = json.loads(buffer)
+            redacted_data = redact_data(json_data)
+            if redacted_data != json_data:
+                json_data = redacted_data
+                buffer = json.dumps(redacted_data)
 
             # Write to JSONL format (one JSON object per line)
             with open(self.ocptv_file, "a", encoding="utf-8") as f:
@@ -276,7 +309,7 @@ class OCPTVFileWriter(tv.Writer):
             self.logger.error(f"Invalid JSON in OCP TV output: {e}")
             # Still write the raw buffer for debugging
             with open(self.ocptv_file, "a", encoding="utf-8") as f:
-                f.write(f"# INVALID JSON: {buffer}\n")
+                f.write(f"# INVALID JSON: {redact(buffer)}\n")
         except Exception as e:
             self.logger.error(f"Error writing OCP TV output: {e}")
 

@@ -31,7 +31,7 @@ Usage:
 
 from cpact.analysis.output_analysis import OutputAnalysis
 from cpact.analysis.diagnostic_analysis import DiagnosticAnalysis
-from typing import Any, Type
+from typing import Type
 
 
 class AnalysisFactory:

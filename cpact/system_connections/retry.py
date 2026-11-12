@@ -11,7 +11,7 @@ tunnel creation.
 from __future__ import annotations
 
 import time
-from typing import Callable, Iterable, Optional, Tuple, Type, TypeVar
+from typing import Callable, Optional, Tuple, Type, TypeVar
 
 T = TypeVar("T")
 
@@ -25,6 +25,7 @@ def retry_call(
     logger=None,
     description: str = "operation",
     success_predicate: Optional[Callable[[T], bool]] = None,
+    give_up_on: Tuple[Type[BaseException], ...] = (),
 ) -> T:
     """
     Call ``func`` up to ``retries`` times.
@@ -33,6 +34,9 @@ def retry_call(
     that fails ``success_predicate`` (when provided). This lets us retry
     functions that signal failure by returning ``False`` (like ``connect()``)
     as well as ones that raise.
+
+    Exceptions in ``give_up_on`` are re-raised immediately without retrying,
+    even if they also match ``exceptions``.
 
     Returns the last result. Re-raises the last exception only if every attempt
     raised.
@@ -55,6 +59,8 @@ def retry_call(
                     f"{description} attempt {attempt}/{retries} did not succeed"
                 )
         except exceptions as exc:  # noqa: B902 - intentional broad-ish catch
+            if give_up_on and isinstance(exc, give_up_on):
+                raise
             last_exc = exc
             if logger:
                 logger.warning(

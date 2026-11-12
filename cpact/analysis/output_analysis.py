@@ -28,12 +28,12 @@ Usage:
 ==============================================================================
 """
 
-import re
 from typing import Any, Type, List
 
 from cpact.core.context import Context
 from cpact.analysis.base_analysis import BaseAnalysis
 from cpact.result_builder.result_builder import ResultCollector
+from cpact.utils.regex_guard import check_input_size, compile_recipe_regex, timed_match
 
 
 class OutputAnalysis(BaseAnalysis):
@@ -65,12 +65,14 @@ class OutputAnalysis(BaseAnalysis):
         diagnostic_code = {}
         results = []
         self.logger.info(f"🔍 Analyzing output with {len(self.rules)} rules")
+        check_input_size(output, what="output analysis input")
         for rule in self.rules:
             self.logger.info("---------------- Applying Rule ----------------")
             self.logger.info(f"🔍 Applying rule: {rule}")
             pattern = rule["regex"]
             key = rule["parameter_to_set"]
-            match = re.search(pattern, output)
+            with timed_match(f"output_analysis {pattern!r}"):
+                match = compile_recipe_regex(pattern).search(output)
             value = bool(match)
             self.logger.info(f"🔍 Matched '{pattern}' → {value} → set {key}")
             context.update_diagnostic_context(

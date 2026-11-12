@@ -99,3 +99,7 @@ class BackgroundTask:
         self.completed = threading.Event()
         self.terminated = False
         self.channels = None
+        # PID of the remote shell (process-group leader) for SSH tasks, if known.
+        self.remote_pid: Optional[int] = None
+        # Dedicated escalated shell for privileged SSH background tasks.
+        self.priv_shell = None

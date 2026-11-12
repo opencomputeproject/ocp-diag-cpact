@@ -36,14 +36,13 @@ import os
 import time
 import uuid
 import queue
+import shlex
 import signal
 import shutil
 import platform
 import tempfile
 import threading
 import subprocess
-from enum import Enum
-from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List, Any
 
 from cpact.system_connections.base_connection import ConnectionInterface
@@ -105,14 +104,19 @@ class LocalConnection(ConnectionInterface):
         return True
 
     def _prepare_command(
-        self, command: str, is_sudo: bool = False, sudo_password: Optional[str] = None
+        self,
+        command: str,
+        is_sudo: bool = False,
+        sudo_password: Optional[str] = None,
+        shell: bool = True,
     ) -> Tuple[Any, bool]:
         """Prepare command for execution based on the operating system.
 
         Returns the command to hand to Popen and the ``shell`` flag to use with
         it. On Windows we never ask Popen for a shell: complex commands already
         get an explicit ``cmd /c`` wrapper here, so letting Popen add a second
-        cmd.exe would only break quoting.
+        cmd.exe would only break quoting. With ``shell=False`` the command is
+        run directly without any shell interpretation.
         """
         if self.is_windows:
             if is_sudo:
@@ -120,7 +124,7 @@ class LocalConnection(ConnectionInterface):
                     "Sudo commands are not supported on Windows. Running as regular command."
                 )
 
-            if "&&" in command or "||" in command or "|" in command:
+            if shell and ("&&" in command or "||" in command or "|" in command):
                 # Explicit cmd.exe invocation for complex shell operations.
                 return f'cmd /c "{command}"', False
             else:
@@ -128,11 +132,16 @@ class LocalConnection(ConnectionInterface):
         else:
             # Unix/Linux handling
             if is_sudo and sudo_password:
-                return ["sudo", "-S"] + command.split(), False
-            else:
-                # A bare string needs shell=True on POSIX, otherwise Popen
-                # treats the entire string as the executable name.
-                return command, True
+                if not shell:
+                    return ["sudo", "-S", "--"] + shlex.split(command), False
+                # Keep the user's shell syntax intact (quoting, pipes, &&) and
+                # only make the leading sudo read its password from stdin.
+                return f"sudo -S {command}", True
+            if not shell:
+                return shlex.split(command), False
+            # A bare string needs shell=True on POSIX, otherwise Popen
+            # treats the entire string as the executable name.
+            return command, True
 
     def execute_command(
         self,
@@ -153,7 +162,10 @@ class LocalConnection(ConnectionInterface):
             sudo_password: Password for sudo commands (if needed)
             timeout: Timeout in seconds
             wait: If True with background mode, wait for completion after timeout
-            shell: Whether to use shell for command execution
+            shell: Run through the platform shell (default). With False the
+                command is split into arguments and executed directly.
+            use_sudo: Accepted for interface compatibility with SSHConnection;
+                ignored locally. Prefix the command with ``sudo`` instead.
 
         Returns:
             TaskResult for synchronous/background_wait execution,
@@ -172,7 +184,7 @@ class LocalConnection(ConnectionInterface):
 
         # Prepare command for the current OS
         prepared_command, use_shell = self._prepare_command(
-            actual_command, is_sudo_command, sudo_password
+            actual_command, is_sudo_command, sudo_password, shell=shell
         )
         self.logger.debug(
             f"Prepared command: {prepared_command}, use_shell: {use_shell}, timeout: {timeout}"
@@ -344,7 +356,10 @@ class LocalConnection(ConnectionInterface):
                     check=False,
                 )
             else:
-                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                pgid = os.getpgid(process.pid)
+                # Never signal our own group: that would kill CPACT itself.
+                if pgid != os.getpgrp():
+                    os.killpg(pgid, signal.SIGKILL)
         except Exception as e:
             self.logger.warning(f"Process tree kill failed for pid {process.pid}: {e}")
 
@@ -368,24 +383,34 @@ class LocalConnection(ConnectionInterface):
     ) -> None:
         """Execute command in background thread."""
         try:
+            # Own process group/session, so _kill_process_tree() can stop the
+            # whole tree without signalling CPACT's own process group.
+            group_kwargs: Dict[str, Any] = (
+                {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP}
+                if self.is_windows
+                else {"start_new_session": True}
+            )
             if is_sudo and sudo_password and not self.is_windows:
                 # Handle sudo commands on Unix/Linux
                 process = subprocess.Popen(
-                    command,  # command is already prepared as list for sudo
+                    command,
+                    shell=shell,
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
+                    **group_kwargs,
                 )
             else:
                 # Handle regular commands (Windows and Unix)
                 process = subprocess.Popen(
                     command,
                     shell=shell,
+                    stdin=subprocess.DEVNULL,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    creationflags=subprocess.CREATE_NO_WINDOW if self.is_windows else 0,
+                    **group_kwargs,
                 )
 
             thread = threading.Thread(
@@ -512,6 +537,24 @@ class LocalConnection(ConnectionInterface):
                     # Check completed tasks again
                     with self.lock:
                         return self.completed_tasks.get(actual_task_id)
+
+            # Timed out: stop the process tree (as SSHConnection and the
+            # synchronous path do) and keep whatever output it produced.
+            self.logger.error(
+                f"Background task {actual_task_id} exceeded {timeout}s, killing process tree"
+            )
+            self._kill_process_tree(background_task.process)
+            background_task.completed.wait(timeout=15)
+            with self.lock:
+                result = self.completed_tasks.get(actual_task_id)
+                if result is not None:
+                    result.status = TaskStatus.TIMEOUT
+                    result.return_code = -1
+                    result.stderr = (
+                        f"{result.stderr or ''}\n[cpact] Task exceeded {timeout}s "
+                        "and its process tree was terminated."
+                    ).strip()
+                    return result
             try:
                 return background_task.result_queue.get_nowait()
             except queue.Empty:
@@ -519,18 +562,14 @@ class LocalConnection(ConnectionInterface):
                     if actual_task_id in self.completed_tasks:
                         return self.completed_tasks[actual_task_id]
 
-                    # If still not in completed tasks, create a timeout result with partial data
-                    # Try to get any partial output that might be available
-                    partial_stdout = ""
-                    partial_stderr = ""
-
-                    # Create timeout result
+                    # Worker never finished: record a timeout result and stop tracking it.
+                    self.background_tasks.pop(actual_task_id, None)
                     result = TaskResult(
                         task_id=actual_task_id,
                         command=background_task.command,
                         status=TaskStatus.TIMEOUT,
                         return_code=-1,
-                        stdout=partial_stdout,
+                        stdout="",
                         stderr=f"Task timed out after {timeout} seconds",
                         start_time=background_task.start_time,
                         end_time=time.time(),
@@ -556,13 +595,6 @@ class LocalConnection(ConnectionInterface):
                 end_time=time.time(),
                 execution_time=0,
             )
-            # Timeout occurred
-            # self.logger.warning(f"Timeout waiting for task {actual_task_id}")
-            # return None
-
-        except Exception as e:
-            self.logger.error(f"Error waiting for task {actual_task_id}: {e}")
-            return None
 
     def wait_for_all_tasks(
         self, timeout: Optional[float] = None
@@ -873,7 +905,7 @@ class LocalConnection(ConnectionInterface):
         self.logger.info(f"Closed {len(closed_task_ids)} completed tasks")
         return closed_task_ids
 
-    def cleanup_task(self, task_id: str):
+    def cleanup_task(self, task_id: str) -> bool:
         """Clean up task resources (compatibility method)"""
         # Ensure task_id is a string
         if hasattr(task_id, "task_id"):
@@ -881,7 +913,7 @@ class LocalConnection(ConnectionInterface):
         else:
             actual_task_id = str(task_id)
 
-        self.close_task(actual_task_id)
+        return self.close_task(actual_task_id)
 
     def cleanup_all_tasks(self) -> int:
         """Clean up all tasks (completed and running) (compatibility method)"""

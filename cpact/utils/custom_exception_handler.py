@@ -3,6 +3,8 @@ import traceback
 import datetime
 import linecache
 
+from cpact.utils.redaction import redact
+
 
 class CustomExceptionHandler:
     @staticmethod
@@ -48,4 +50,4 @@ class CustomExceptionHandler:
 
     @staticmethod
     def print_exception(exc: Exception):
-        print(CustomExceptionHandler.format_exception(exc), file=sys.stderr)
+        print(redact(CustomExceptionHandler.format_exception(exc)), file=sys.stderr)

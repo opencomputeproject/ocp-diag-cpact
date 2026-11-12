@@ -41,11 +41,13 @@ import threading
 from typing import Dict, Any
 
 from cpact.system_connections.base_connection import ConnectionInterface
+from cpact.system_connections.connection_config import ConnectionConfig
 from cpact.system_connections.local_connection import LocalConnection
 from cpact.system_connections.ssh_connection import SSHConnection
 from cpact.system_connections.redfish_connection import RedfishConnection
 from cpact.system_connections.tunnel_connection import TunneledRedfishConnection
 from cpact.system_connections.tunnel_connection import TunnelConnection
+from cpact.utils.redaction import register_secrets_from_config
 
 
 class ConnectionFactory:
@@ -72,6 +74,7 @@ class ConnectionFactory:
         elif config:
             # Update config if provided
             self.config.update(config)
+        register_secrets_from_config(config)
 
     @classmethod
     def get_instance(cls, config: Dict[str, Any] = None) -> "ConnectionFactory":
@@ -81,10 +84,14 @@ class ConnectionFactory:
     @classmethod
     def reset_instance(cls):
         """Reset singleton instance (useful for testing)"""
+        # close_all_connections() takes cls._lock itself, so detach the
+        # instance under the lock and close it afterwards (the lock is not
+        # re-entrant; holding it here used to deadlock).
         with cls._lock:
-            if cls._instance:
-                cls._instance.close_all_connections()
+            instance = cls._instance
             cls._instance = None
+        if instance:
+            instance.close_all_connections()
 
     # Registry mapping a *resolved* type key -> factory callable. This replaces
     # the previous nested if/elif blocks. Adding a new connection type is now a
@@ -140,6 +147,19 @@ class ConnectionFactory:
         type_key = self._resolve_type_key(
             connection_name, connection_type, connection_config
         )
+        if type_key != "local":
+            # SSH/Redfish read host and credentials only from this section; an
+            # empty host used to be retried against the local machine.
+            if not isinstance(connection_config, dict) or not connection_config:
+                raise ValueError(
+                    f"Connection '{connection_name}' is not defined in the connection "
+                    f"config (no '{connection_name}' section)."
+                )
+            if not ConnectionConfig.from_dict(connection_config).host:
+                raise ValueError(
+                    f"Connection '{connection_name}' has no host configured "
+                    f"(expected '{connection_name.lower()}_host')."
+                )
         factory = registry.get(type_key)
         if factory is None:
             raise ValueError(f"Unsupported connection type: {connection_type}")

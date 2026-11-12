@@ -39,12 +39,10 @@ from cpact.executor.base_executor import BaseExecutor
 from cpact.analysis.analysis_factory import AnalysisFactory
 from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.utils.logger_utils import TestLogger
+from cpact.utils.path_guard import resolve_allowed_path, safe_filename
+from cpact.utils.regex_guard import check_file_size, compile_recipe_regex
 from ocptv.output import (
-    DiagnosisType,
     LogSeverity,
-    SoftwareType,
-    TestResult,
-    TestStatus,
 )
 
 
@@ -81,11 +79,17 @@ class LogAnalyzer(BaseExecutor):
 
         log_path = self.step.get("log_analysis_path")
         log_file_path = self.get_log_file(log_path)
+        if log_file_path:
+            log_file_path = resolve_allowed_path(
+                log_file_path,
+                purpose="log_analysis_path",
+                recipe_path=self.context.get("scenario_path"),
+            )
         log_dir = TestLogger().get_log_dir()
         log_path = os.path.join(
             log_dir,
             "AnalyzedLogFiles",
-            f"analyzed_{self.step.get('step_id', 'default')}.log",
+            f"analyzed_{safe_filename(self.step.get('step_id', 'default'))}.log",
         )
 
         if not os.path.exists(log_file_path) or not log_file_path:
@@ -95,6 +99,7 @@ class LogAnalyzer(BaseExecutor):
             )
             return None, False, "Log path is required for LogAnalyzer step."
 
+        check_file_size(log_file_path, what="log_analysis_path")
         log_content = ""
         with open(log_file_path, "r", encoding="utf-8") as file:
             log_content = file.read()
@@ -247,6 +252,12 @@ class LogAnalyzer(BaseExecutor):
             self.logger.info(msg)
             self.scenario_step.add_log(LogSeverity.INFO, msg)
             return ""
+        # Never walk a directory tree outside the allowed roots.
+        search_dir = resolve_allowed_path(
+            search_dir,
+            purpose="log_analysis_path",
+            recipe_path=self.context.get("scenario_path"),
+        )
 
         self.logger.info(f"Searching under base directory: {search_dir}")
         self.scenario_step.add_log(
@@ -264,12 +275,13 @@ class LogAnalyzer(BaseExecutor):
             + post_regex
         )
         regex_path = re.sub(r"//+", "/", regex_path)  # clean slashes
+        path_regex = compile_recipe_regex(regex_path)
         matched_files = []
         for dirpath, _, filenames in os.walk(search_dir):
             for filename in filenames:
                 full_path = os.path.join(dirpath, filename)
                 rel_path = os.path.relpath(full_path, search_dir)
-                if re.fullmatch(regex_path, rel_path):
+                if path_regex.fullmatch(rel_path):
                     matched_files.append(full_path)
 
         # -------------------------------------------------------------------------

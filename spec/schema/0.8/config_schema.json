@@ -15,12 +15,14 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["ssh", "redfish"]
+            "enum": ["ssh", "redfish", "local", "subprocess"]
           }
         },
         "redfish_port": { "type": "integer" },
         "protocol": { "type": "string" },
-        "use_ssl": { "type": "boolean" }
+        "use_ssl": { "type": "boolean" },
+        "verify_ssl": { "type": "boolean" },
+        "ca_bundle": { "type": "string" }
       },
       "required": ["connections", "connection_types"]
     },
@@ -42,6 +44,7 @@
   "allOf": [
     {
       "if": {
+        "required": ["Connection"],
         "properties": {
           "Connection": {
             "properties": {
@@ -72,6 +75,7 @@
 
     {
       "if": {
+        "required": ["NodeManager"],
         "properties": {
           "NodeManager": {
             "properties": {
@@ -88,6 +92,7 @@
 
     {
       "if": {
+        "required": ["Connection"],
         "properties": {
           "Connection": {
             "properties": {
@@ -116,6 +121,7 @@
 
     {
       "if": {
+        "required": ["Connection"],
         "properties": {
           "Connection": {
             "properties": {
@@ -145,6 +151,7 @@
 
     {
       "if": {
+        "required": ["Connection"],
         "properties": {
           "Connection": {
             "properties": {

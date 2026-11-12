@@ -110,7 +110,6 @@ class SchemaValidator:
             results.append(result)
 
         passed = sum(result.passed for result in results)
-
         return ValidationResult(
             success=(passed == len(results)),
             total=len(results),

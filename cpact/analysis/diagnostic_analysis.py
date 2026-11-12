@@ -33,11 +33,12 @@ Usage:
 
 import json
 import re
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from cpact.analysis.base_analysis import BaseAnalysis
 from cpact.result_builder.result_builder import ResultCollector
 from cpact.core.context import Context
 from cpact.utils.json_validator import JSONValidator
+from cpact.utils.regex_guard import check_input_size, compile_recipe_regex, timed_match
 
 from typing import Any, Type
 
@@ -65,6 +66,7 @@ class DiagnosticAnalysis(BaseAnalysis):
         Returns:
             list: A list of diagnostic findings or results.
         """
+        check_input_size(output, what="diagnostic analysis input")
         for rule in self.rules:
             diagnostics_map = defaultdict(list)
             self.logger.info("---------------- Applying Rule ----------------")
@@ -73,7 +75,8 @@ class DiagnosticAnalysis(BaseAnalysis):
             diagnostic_search_string = rule.get("diagnostic_search_string")
             if search_string and diagnostic_search_string:
                 self.logger.warning(
-                    "Both search_string and diagnostic_search_string are provided in rule. Using diagnostic_search_string for analysis."
+                    "Invalid diagnostic rule: search_string and diagnostic_search_string "
+                    "cannot be combined. Skipping this rule."
                 )
                 continue
             if search_string and not diagnostic_result_code:
@@ -83,7 +86,8 @@ class DiagnosticAnalysis(BaseAnalysis):
                 continue
             if diagnostic_search_string and diagnostic_result_code:
                 self.logger.warning(
-                    "diagnostic_search_string provided with diagnostic_result_code. Using diagnostic_search_string for analysis."
+                    "Invalid diagnostic rule: diagnostic_search_string cannot be combined "
+                    "with diagnostic_result_code. Skipping this rule."
                 )
                 continue
             pattern = search_string or diagnostic_search_string
@@ -173,8 +177,9 @@ class DiagnosticAnalysis(BaseAnalysis):
         Returns:
             dict: Updated diagnostics map with found results.
         """
-        pattern = re.compile(regex_key, re.DOTALL | re.MULTILINE)
-        matches = pattern.finditer(log_data)
+        pattern = compile_recipe_regex(regex_key, re.DOTALL | re.MULTILINE)
+        with timed_match(f"diagnostic rule {regex_key!r}"):
+            matches = list(pattern.finditer(log_data))
         for match in matches:
             diagnostic_result_code = None
             matched_groups = match.groupdict()

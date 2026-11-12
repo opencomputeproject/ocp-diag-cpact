@@ -33,25 +33,21 @@ import os
 import re
 import time
 import traceback
-import subprocess
 from cpact.core.context import Context
 from concurrent.futures import ThreadPoolExecutor
 from cpact.executor.base_executor import BaseExecutor
 from cpact.analysis.analysis_factory import AnalysisFactory
 from cpact.system_connections.connection_factory import ConnectionFactory
 from cpact.system_connections.constants import ExecutionMode, TaskStatus
-from cpact.utils.docker_executor import DockerExecutor
+from cpact.utils.docker_executor import validate_container_name
+from cpact.utils.path_guard import resolve_allowed_path, safe_filename
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.validator import Validator
 from cpact.result_builder.result_builder import ResultCollector
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
 
 from ocptv.output import (
-    DiagnosisType,
     LogSeverity,
-    SoftwareType,
-    TestResult,
-    TestStatus,
 )
 
 
@@ -101,7 +97,8 @@ class CommandExecutor(BaseExecutor):
 
             check_docker_step = self.check_docker_step(self.step)
             if check_docker_step:
-                command = f'docker exec {self.step.get("container_name")} {command}'
+                container_name = validate_container_name(self.step.get("container_name"))
+                command = f"docker exec {container_name} {command}"
                 self.logger.info(f"Executing Docker command: {command}")
                 self.scenario_step.add_log(
                     LogSeverity.INFO, f"Executing Docker command: {command}"
@@ -199,13 +196,13 @@ class CommandExecutor(BaseExecutor):
             log_dir = TestLogger().get_log_dir()
             output_dir = os.path.join(log_dir, "command_outputs")
             os.makedirs(output_dir, exist_ok=True)
-            step_id = self.step.get("step_id", f"step_{int(time.time())}")
+            step_id = safe_filename(self.step.get("step_id", f"step_{int(time.time())}"))
             step_name = re.sub(r"\W+", "_", self.step.get("step_name", "unnamed_step"))
             output_file_name = (
-                f"{self.context.get('test_id')}_{step_id}_{step_name}.txt"
+                f"{safe_filename(self.context.get('test_id'))}_{step_id}_{step_name}.txt"
             )
             output_path = os.path.join(output_dir, output_file_name)
-            with open(output_path, "w") as f:
+            with open(output_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(output)
             self.logger.info(f"Command output written to: {output_path}")
             self.logger.info(f"Command executed successfully: {command}")
@@ -306,15 +303,18 @@ class CommandExecutor(BaseExecutor):
                 )
             if expected_output_path and expected_output:
                 self.logger.info(
-                    f"Both expected_output and expected_output_path are provided. Using expected_output_path for validation."
+                    "Both expected_output and expected_output_path are provided. Using expected_output_path for validation."
                 )
                 self.scenario_step.add_log(
                     LogSeverity.INFO,
-                    f"Both expected_output and expected_output_path are provided. Using expected_output_path for validation.",
+                    "Both expected_output and expected_output_path are provided. Using expected_output_path for validation.",
                 )
-                with open(expected_output_path, "r") as file:
-                    expected_output = file.read()
             if expected_output_path:
+                expected_output_path = resolve_allowed_path(
+                    expected_output_path,
+                    purpose="expected_output_path",
+                    recipe_path=self.context.get("scenario_path"),
+                )
                 with open(expected_output_path, "r") as file:
                     expected_output = file.read()
             status, message = Validator._search_recursive(
@@ -361,16 +361,10 @@ class CommandExecutor(BaseExecutor):
         connection_type = step.get("connection_type")
         command = step["step_command"]
         step_id = step["step_id"]
-        log_dir = TestLogger().get_log_dir()
-        output_dir = os.path.join(log_dir, "continued_steps")
-        os.makedirs(output_dir, exist_ok=True)
-        stdout_path = os.path.join(output_dir, f"{step_id}_stdout.txt")
-        stderr_path = os.path.join(output_dir, f"{step_id}_stderr.txt")
-        out = open(stdout_path, "w")
-        err = open(stderr_path, "w")
         check_docker_step = self.check_docker_step(self.step)
         if check_docker_step:
-            command = f'docker exec {step.get("container_name")} {command}'
+            container_name = validate_container_name(step.get("container_name"))
+            command = f"docker exec {container_name} {command}"
             self.logger.info(f"Executing Docker command: {command}")
             self.scenario_step.add_log(
                 LogSeverity.INFO, f"Executing Docker command: {command}"
@@ -438,7 +432,7 @@ class CommandExecutor(BaseExecutor):
             not step_id
             or step_id not in context.continued_steps[context.get("scenario_id")]
         ):
-            return {"status": "fail", "error": f"Invalid step_id: {step_id}"}
+            return {"status": "fail", "message": f"Invalid step_id: {step_id}"}
         step_info = context.continued_steps[context.get("scenario_id")][step_id]
         # future = step_info["future"]
         output = ""
@@ -479,6 +473,28 @@ class CommandExecutor(BaseExecutor):
                     f"Output analysis enabled with rules: {output_analysis}",
                 )
                 self.output_analysis(output, output_analysis)
+
+            # Judge the background command like a synchronous one: it must have
+            # completed (not timed out / terminated / errored) with exit code 0.
+            task_status = str(status or "").lower()
+            if task_status != "completed" or exit_code not in (0, None):
+                message = (
+                    f"Continued step {step_id} did not complete successfully "
+                    f"(status={task_status or 'unknown'}, exit code={exit_code})"
+                )
+                if err:
+                    message += f". Stderr:\n{str(err)[-2000:]}"
+                self.logger.error(message)
+                self.scenario_step.add_log(LogSeverity.ERROR, message)
+                ResultCollector().get_instance().update_step_result(
+                    step_id=step.get("step_id"),
+                    step_name=step.get("step_name"),
+                    step_type=step.get("step_type"),
+                    status="fail",
+                    duration=round(time.time() - self.context.get("start_time"), 3),
+                    message=message,
+                )
+                return {"status": "fail", "message": message}
 
             expected_output = step.get("expected_output")
             expected_output_path = step.get("expected_output_path")

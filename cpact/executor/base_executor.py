@@ -29,7 +29,6 @@ Usage:
 ===========================================================================
 """
 
-import re
 from abc import ABC, abstractmethod
 from cpact.utils.logger_utils import TestLogger
 import ocptv.output as tv

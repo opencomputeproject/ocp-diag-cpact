@@ -46,7 +46,7 @@ from cpact.utils.logger_utils import TestLogger
 
 from cpact.schema_checker import ValidationResult, ValidationRequest
 
-from cpact.schema_checker.validators.schema_validaror import SchemaValidator
+from cpact.schema_checker.validators.schema_validator import SchemaValidator
 from cpact.schema_checker.reports.schema_reports import SchemaReporter
 
 

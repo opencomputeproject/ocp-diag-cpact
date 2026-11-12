@@ -33,9 +33,10 @@ from jsonschema import Draft7Validator
 from collections import defaultdict
 from ruamel.yaml import YAML
 import os
-from pathlib import Path
 from cpact.utils.path_resolver import resolve_paths_in_yaml
+from cpact.utils.path_guard import PathNotAllowedError, resolve_allowed_path
 from cpact.schema_checker.base_schema import BaseSchema
+from cpact.schema_checker.utils.case_normalizer import normalize_data, normalize_schema
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
 from cpact.result_builder.result_builder import ResultCollector
 from cpact.schema_checker import ValidationEntry, SchemaValidationResult
@@ -149,13 +150,15 @@ class ScenarioSchemaValidator(BaseSchema):
                 schema_version="",
                 recipe_schema_valid=False,
                 map_schema_valid=False,
-                config_schema_valid=False,
+                config_schema_valid=None,
                 entries=entries,
             )
         scenario_data = data.get("test_scenario", {})
-        # Validate the data against the schema
-        validator = Draft7Validator(self.schema)
-        errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
+        # Validate the data against the schema (connection fields are case-insensitive)
+        validator = Draft7Validator(normalize_schema(self.schema))
+        errors = sorted(
+            validator.iter_errors(normalize_data(data)), key=lambda e: e.path
+        )
         if errors:
             for error in errors:
                 path = " : ".join(str(p) for p in error.absolute_path)
@@ -178,7 +181,7 @@ class ScenarioSchemaValidator(BaseSchema):
                 map_file=scenario_data.get("map_file", ""),
                 recipe_schema_valid=False,
                 map_schema_valid=False,
-                config_schema_valid=False,
+                config_schema_valid=None,
                 schema_version=scenario_data.get("schema_version", ""),
                 entries=entries,
             )
@@ -204,6 +207,30 @@ class ScenarioSchemaValidator(BaseSchema):
                 resolved_map_file = scenario_map_file
             else:
                 resolved_map_file = os.path.join(scenario_dir, scenario_map_file)
+            try:
+                resolved_map_file = resolve_allowed_path(
+                    resolved_map_file, purpose="map_file", recipe_path=data_file
+                )
+            except PathNotAllowedError as exc:
+                self.logger.error(f"❌ {exc}")
+                entries.append(
+                    ValidationEntry(
+                        category="Map Schema",
+                        collateral=os.path.basename(str(scenario_map_file)),
+                        status="FAIL",
+                        message=str(exc),
+                    )
+                )
+                return SchemaValidationResult(
+                    recipe_name=scenario_data.get("test_name", ""),
+                    config_name="",
+                    map_file=scenario_map_file,
+                    schema_version=scenario_data.get("schema_version", ""),
+                    recipe_schema_valid=False,
+                    map_schema_valid=False,
+                    config_schema_valid=None,
+                    entries=entries,
+                )
             self.logger.info(f"📍 Resolved map file absolute path: {resolved_map_file}")
 
             self.logger.info(f"map_file detected in YAML: {resolved_map_file}")
@@ -218,7 +245,6 @@ class ScenarioSchemaValidator(BaseSchema):
             #         config_schema_valid=False,
             #         metadata={"error": f"Map file validation failed: {resolved_map_file}"},
             #     )
-
         return SchemaValidationResult(
             recipe_name=scenario_data.get("test_name", ""),
             config_name="",
@@ -226,7 +252,7 @@ class ScenarioSchemaValidator(BaseSchema):
             schema_version=scenario_data.get("schema_version", ""),
             recipe_schema_valid=(len(errors) == 0),
             map_schema_valid=map_valid,
-            config_schema_valid=False,
+            config_schema_valid=None,
             entries=entries,
         )
 

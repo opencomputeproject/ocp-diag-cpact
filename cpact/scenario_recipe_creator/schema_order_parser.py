@@ -28,7 +28,7 @@ Usage:
 
 import json
 from collections import OrderedDict
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 
 class SchemaOrderParser:

@@ -109,7 +109,7 @@ class PrivilegedShell:
 
     def diagnostics(self, tail: int = 500) -> str:
         """Return a redacted tail of the shell transcript for troubleshooting."""
-        return self._redact(self._transcript[-tail:])
+        return self._redact(self._transcript)[-tail:]
 
     # ------------------------------------------------------------------ #
     # Low-level IO
@@ -144,17 +144,28 @@ class PrivilegedShell:
                     buf += decoded
                     self._transcript += decoded
                     got = True
+                elif self._channel_closed():
+                    # EOF on a closed channel: nothing more will ever arrive.
+                    return buf
             except socket.timeout:
                 pass
             except Exception:
                 # transient read error / closed channel — keep polling until the
                 # deadline, then return what we have.
-                pass
+                if self._channel_closed():
+                    return buf
             if predicate(buf):
                 return buf
             if not got:
                 time.sleep(0.02)
         return buf
+
+    def _channel_closed(self) -> bool:
+        """True once the channel is closed or the remote end sent EOF."""
+        return bool(
+            getattr(self._chan, "closed", False)
+            or getattr(self._chan, "eof_received", False)
+        )
 
     def _send_line(self, text: str) -> None:
         self._chan.send((text + "\n").encode(self._encoding))
@@ -226,7 +237,7 @@ class PrivilegedShell:
             self._log.info("No password prompt detected; assuming passwordless escalation")
 
         if not self._verify_elevated():
-            hint = self._redact(self._transcript[-400:]).strip()
+            hint = self._redact(self._transcript)[-400:].strip()
             self._log.error(
                 "Privilege escalation could not be confirmed as root. "
                 "Last shell output (password redacted):\n%s", hint
@@ -281,13 +292,40 @@ class PrivilegedShell:
         if not match:
             self._log.warning(
                 "Command marker not found before timeout. Last shell output "
-                "(password redacted):\n%s", self._redact(out[-400:]).strip()
+                "(password redacted):\n%s", self._redact(out)[-400:].strip()
             )
+            # Stop the command so the (shared) shell is usable again; this is a
+            # PTY, so Ctrl+C really interrupts the foreground job.
+            self.interrupt()
             return self._strip_echo(out, wrapped, marker), -1
 
         exit_code = int(match.group(1))
         body = out[: match.start()]
         return self._strip_echo(body, wrapped, marker), exit_code
+
+    def interrupt(self, resync_timeout: float = 5.0) -> bool:
+        """
+        Send Ctrl+C to the foreground command and wait for the shell to accept
+        commands again. Returns True if the shell answered a resync marker.
+        """
+        if self._channel_closed():
+            return False
+        try:
+            self._chan.send(b"\x03")
+        except Exception:
+            return False
+        self._read_until(lambda b: False, timeout=0.3)
+        # The PTY echoes our input, so wait for text only execution can produce.
+        resync = f"{self._marker_prefix}resync_{uuid.uuid4().hex[:8]}"
+        try:
+            self._send_line(f"echo {resync}_$((40+2))")
+        except Exception:
+            return False
+        out = self._read_until(lambda b: f"{resync}_42" in b, timeout=resync_timeout)
+        ok = f"{resync}_42" in out
+        if not ok:
+            self._log.warning("Shell did not respond after interrupting a timed-out command")
+        return ok
 
     def _strip_echo(self, text: str, wrapped_cmd: str, marker: str) -> str:
         """

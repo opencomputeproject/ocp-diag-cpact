@@ -100,21 +100,28 @@ class SchemaValidationResult:
 
     schema_version: str
 
-    recipe_schema_valid: bool
+    # None means the check does not apply to this validation (e.g. a
+    # scenario validation never validates a config file).
+    recipe_schema_valid: bool | None
 
-    map_schema_valid: bool
+    map_schema_valid: bool | None
 
-    config_schema_valid: bool
+    config_schema_valid: bool | None
 
     entries: list[ValidationEntry] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
-        return (
-            self.recipe_schema_valid
-            and self.map_schema_valid
-            and self.config_schema_valid
-        )
+        checks = [
+            check
+            for check in (
+                self.recipe_schema_valid,
+                self.map_schema_valid,
+                self.config_schema_valid,
+            )
+            if check is not None
+        ]
+        return bool(checks) and all(checks)
 
 
 # ---------------------------------------------------------------------

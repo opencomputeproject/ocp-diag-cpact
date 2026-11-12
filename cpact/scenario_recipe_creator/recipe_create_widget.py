@@ -29,12 +29,8 @@ Usage:
 # ============================ IMPORTS =============================
 
 from __future__ import annotations
-import os
-import time
-import glob
 import json
 import yaml
-import tempfile
 from pathlib import Path
 from functools import partial
 from collections import OrderedDict
@@ -55,10 +51,8 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QListWidgetItem,
     QDialog,
-    QCheckBox,
     QToolBar,
     QAction,
-    QWidgetAction,
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtCore import pyqtSignal
@@ -66,6 +60,14 @@ from PyQt5.QtCore import pyqtSignal
 from cpact.scenario_recipe_creator.step_widget import StepDialog
 from cpact.scenario_recipe_creator.docker_widget import DockerDialog
 from cpact.scenario_recipe_creator.schema_order_parser import SchemaOrderParser
+from cpact.scenario_recipe_creator.autosave_store import AutosaveStore
+from cpact.scenario_recipe_creator.recipe_serialization import (
+    find_first_nonprimitive,
+    flatten_once,
+    normalize_item_list,
+    normalize_step,
+    sanitize,
+)
 from cpact.scenario_recipe_creator.constants import (
     show_error,
     make_button,
@@ -197,14 +199,8 @@ class RecipeCreator(QMainWindow):
             else []
         )
 
-        # Auto-save timer setup
-        self._autosave_root: Path = Path(tempfile.gettempdir()) / "cpact_autosaves"
-        # os.makedirs(self._autosave_dir, exist_ok=True)
-        self._autosave_root.mkdir(parents=True, exist_ok=True)
-        # Create a new file for this run
-        self._current_autosave_file = (
-            self._autosave_root / f"autosave_{int(time.time())}.yaml"
-        )
+        # Auto-save: one uniquely named file per window, newest AUTOSAVE_KEEP kept
+        self._autosave = AutosaveStore(keep=AUTOSAVE_KEEP)
 
         # Timer for autosave
         self._autosave_timer: QTimer = QTimer(self)
@@ -784,235 +780,28 @@ class RecipeCreator(QMainWindow):
     # ----------------------------- Data Handling Methods -----------------------------
 
     def __sanitize(self, obj: Any) -> Any:
-        """
-        Recursively sanitizes an object by ensuring all dictionary keys are strings
-        and converting unsupported or unknown object types to strings.
-        Args:
-            obj (Any): The object to sanitize. It can be of any type, including
-                       dictionaries, lists, primitive data types (str, int, float, bool),
-                       or None.
-        Returns:
-            Any: The sanitized object. Dictionaries will have string keys, lists will
-                 have sanitized elements, and unsupported or unknown types will be
-                 converted to strings. Primitive data types and None are returned as-is.
-        Body:
-            - If the input is a dictionary, recursively sanitize its keys and values.
-            - If the input is a list, recursively sanitize its elements.
-            - If the input is a primitive type (str, int, float, bool) or None, return it as-is.
-            - For unsupported or unknown types, convert the object to a string.
-        """
-
-        if isinstance(obj, dict):
-            return {str(k): self.__sanitize(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [self.__sanitize(v) for v in obj]
-        if isinstance(obj, (str, int, float, bool)) or obj is None:
-            return obj
-        # fallback: convert unknown objects to string
-        return str(obj)
+        """Make ``obj`` YAML/JSON-safe (see recipe_serialization.sanitize)."""
+        return sanitize(obj)
 
     def _flatten_once(self, lst: Any) -> Any:
-        """
-        Flattens a single level of nesting in a list.
-        This method takes a list that may contain nested lists and flattens it
-        by one level, returning a new list with the elements of the nested lists
-        extracted and added to the top-level list.
-        Args:
-            lst (Any): The input to be flattened. If the input is not a list,
-                       it is returned as-is.
-        Returns:
-            Any: A new list with one level of nesting flattened if the input
-                 is a list. If the input is not a list, it is returned unchanged.
-        """
-
-        if not isinstance(lst, list):
-            return lst
-        out = []
-        for el in lst:
-            if isinstance(el, list):
-                for sub in el:
-                    out.append(sub)
-            else:
-                out.append(el)
-        return out
+        """Flatten one level of nested lists (see recipe_serialization.flatten_once)."""
+        return flatten_once(lst)
 
     def _normalize_diagnostic(self, diag: Any) -> List[Dict[str, Any]]:
-        """
-        Normalize the diagnostic data into a standardized list of dictionaries.
-        This method processes the input diagnostic data, ensuring it is sanitized,
-        flattened, and converted into a consistent structure. The resulting structure
-        is a list of dictionaries, where each dictionary represents a diagnostic item.
-        Args:
-            diag (Any): The diagnostic data to normalize. It can be of any type, but
-                        typically it is expected to be a dictionary, a list of dictionaries,
-                        or a nested list structure.
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries representing the normalized
-                                  diagnostic data. If the input is None or cannot be
-                                  normalized, an empty list is returned.
-        Body:
-            - If `diag` is None, return an empty list.
-            - Sanitize the input using the `_sanitize` method.
-            - If `diag` is a dictionary, wrap it in a list and return.
-            - If `diag` is a list, flatten it one level and ensure all items are dictionaries.
-              - If an item is not a dictionary, convert it to a dictionary with a "value" key.
-            - For any other type of input, return an empty list as a fallback.
-        """
-
-        if diag is None:
-            return []
-        # sanitize then flatten
-        diag = self.__sanitize(diag)
-        # If diag is a dict (old shape), wrap it
-        if isinstance(diag, dict):
-            return [diag]
-        if isinstance(diag, list):
-            # flatten nested lists one level, then ensure items are dicts (or convert fallback to dict)
-            diag = self._flatten_once(diag)
-            norm = []
-            for item in diag:
-                if isinstance(item, dict):
-                    norm.append(item)
-                else:
-                    # primitive or unexpected structure -> store as {"value": str(item)}
-                    norm.append({"value": item})
-            return norm
-        # else fallback
-        return []
+        """Normalize diagnostic_analysis to a list of dicts."""
+        return normalize_item_list(diag)
 
     def _normalize_output_analysis(self, out: Any) -> List[Dict[str, Any]]:
-        """
-        Normalize the output analysis data into a standardized list of dictionaries.
-        This method processes the input `out` and ensures that the output is a list of dictionaries,
-        regardless of whether the input is a dictionary, a list, or other data types. If the input
-        is `None`, an empty list is returned.
-        Args:
-            out (Any): The input data to be normalized. It can be of any type, including `None`,
-                       a dictionary, or a list.
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries representing the normalized output.
-                                  If the input is a dictionary, it is wrapped in a list.
-                                  If the input is a list, its elements are processed to ensure
-                                  they are dictionaries. Non-dictionary elements are converted
-                                  into dictionaries with a "value" key.
-        """
-
-        if out is None:
-            return []
-        out = self.__sanitize(out)
-        if isinstance(out, dict):
-            return [out]
-        if isinstance(out, list):
-            out = self._flatten_once(out)
-            norm = []
-            for item in out:
-                if isinstance(item, dict):
-                    norm.append(item)
-                else:
-                    norm.append({"value": item})
-            return norm
-        return []
+        """Normalize output_analysis to a list of dicts."""
+        return normalize_item_list(out)
 
     def _normalize_entry_criteria(self, ec: Any) -> List[Dict[str, Any]]:
-        """
-        Normalize the input entry criteria into a standardized list of dictionaries.
-        This method ensures that the input `ec` is transformed into a list of dictionaries,
-        where each dictionary represents an entry criterion. If the input is a single dictionary,
-        it is wrapped in a list. If the input is a list, it is flattened and each item is processed
-        to ensure it is a dictionary. Non-dictionary items in the list are converted into dictionaries
-        with a "value" key.
-        Args:
-            ec (Any): The input entry criteria, which can be of any type. It is expected to be
-                  either None, a dictionary, or a list of dictionaries/values.
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries representing the normalized entry criteria.
-                      If the input is None, an empty list is returned. If the input is
-                      not a dictionary or a list, an empty list is also returned.
-        """
-
-        if ec is None:
-            return []
-        ec = self.__sanitize(ec)
-        if isinstance(ec, dict):
-            return [ec]
-        if isinstance(ec, list):
-            ec = self._flatten_once(ec)
-            norm = []
-            for item in ec:
-                if isinstance(item, dict):
-                    norm.append(item)
-                else:
-                    norm.append({"value": item})
-            return norm
-        return []
+        """Normalize entry_criteria to a list of dicts."""
+        return normalize_item_list(ec)
 
     def _normalize_step(self, step: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Normalize a step dictionary by sanitizing its content, applying normalization rules,
-        and ensuring compliance with specific step type constraints.
-        ### Arguments:
-        - `step` (Optional[Dict[str, Any]]):
-          A dictionary representing a step, which may contain keys such as `entry_criteria`,
-          `step_type`, `output_analysis`, and `diagnostic_analysis`. If `None`, an empty
-          dictionary is used.
-        ### Body:
-        - Sanitizes the input step dictionary to remove invalid or unexpected data.
-        - Normalizes the `entry_criteria` field.
-        - Normalizes `output_analysis` and `diagnostic_analysis` fields based on the step type.
-        - Enforces rules for specific step types:
-          - `command_execution`: Excludes `diagnostic_analysis`.
-          - `log_analysis`: Excludes `output_analysis`.
-          - `invoke_scenario`: Excludes both `diagnostic_analysis` and `output_analysis`.
-        - Adds normalized fields back to the step dictionary only if they are allowed
-          and non-empty.
-        ### Returns:
-        - `Dict[str, Any]`:
-          A normalized step dictionary with sanitized and validated fields based on the
-          step type and normalization rules.
-        """
-
-        step = self.__sanitize(step or {})
-        # normalize entry criteria always
-        step["entry_criteria"] = self._normalize_entry_criteria(
-            step.get("entry_criteria", [])
-        )
-
-        step_type = (step.get("step_type") or "").strip().lower()
-
-        # Prepare normalized lists (but don't yet force them into step)
-        normalized_output = self._normalize_output_analysis(
-            step.get("output_analysis", [])
-        )
-        normalized_diag = self._normalize_diagnostic(
-            step.get("diagnostic_analysis", [])
-        )
-
-        # Rules:
-        # - command_execution: DO NOT add diagnostic_analysis
-        # - log_analysis: DO NOT add output_analysis
-        # - invoke_scenario: DO NOT add either diagnostic_analysis or output_analysis
-        is_command = step_type == "command_execution"
-        is_log = step_type == "log_analysis"
-        is_invoke = step_type == "invoke_scenario"
-
-        # Remove any disallowed keys if present in raw data
-        # (prevents stale or invalid fields from leaking through)
-        if is_command and "diagnostic_analysis" in step:
-            step.pop("diagnostic_analysis", None)
-        if is_log and "output_analysis" in step:
-            step.pop("output_analysis", None)
-        if is_invoke:
-            step.pop("diagnostic_analysis", None)
-            step.pop("output_analysis", None)
-
-        # Only add normalized keys when they are allowed AND non-empty
-        if not is_log and not is_invoke and normalized_output:
-            step["output_analysis"] = normalized_output
-
-        if not is_command and not is_invoke and normalized_diag:
-            step["diagnostic_analysis"] = normalized_diag
-
-        return step
+        """Sanitize a step and apply the step-type field rules (see recipe_serialization)."""
+        return normalize_step(step)
 
     def _collect_all_data_ordered(self) -> OrderedDict:
         """
@@ -1105,44 +894,8 @@ class RecipeCreator(QMainWindow):
     def _find_first_nonprimitive(
         self, obj: Any, path: str = "root"
     ) -> Optional[Tuple[str, Any, type]]:
-        """
-        Recursively finds the first non-primitive object in a nested structure.
-        This method traverses a nested structure (which can include dictionaries,
-        ordered dictionaries, lists, and tuples) to locate the first object that
-        is not a primitive type. Primitive types are defined as `str`, `int`,
-        `float`, `bool`, and `NoneType`.
-        Args:
-            obj (Any): The object to search through. This can be a primitive,
-                       a container (e.g., dict, list, tuple), or a custom object.
-            path (str, optional): The string representation of the current path
-                                  in the nested structure. Defaults to "root".
-        Returns:
-            Optional[Tuple[str, Any, type]]: A tuple containing:
-                - The path to the first non-primitive object as a string.
-                - The first non-primitive object itself.
-                - The type of the first non-primitive object.
-              Returns `None` if all objects in the structure are primitives.
-        """
-
-        primitives = (str, int, float, bool, type(None))
-        if isinstance(obj, primitives):
-            return None
-        if isinstance(obj, (dict, OrderedDict)):
-            for k, v in dict(obj).items():
-                p = f"{path}['{k}']"
-                res = self._find_first_nonprimitive(v, p)
-                if res:
-                    return res
-            return None
-        if isinstance(obj, (list, tuple)):
-            for idx, v in enumerate(obj):
-                p = f"{path}[{idx}]"
-                res = self._find_first_nonprimitive(v, p)
-                if res:
-                    return res
-            return None
-        # if here, it's not a primitive nor a container
-        return (path, obj, type(obj))
+        """Locate the first non-serializable value (used in export error messages)."""
+        return find_first_nonprimitive(obj, path)
 
     def get_scenario_data(self) -> Tuple[Dict[str, Any], OrderedDict]:
         """
@@ -1338,133 +1091,37 @@ class RecipeCreator(QMainWindow):
 
     def _perform_autosave(self) -> None:
         """
-        Performs autosave by writing the current scenario data to a file and maintaining a limited history.
-        Description:
-            - Retrieves the current scenario data using `get_scenario_data()`.
-            - Saves the data to the current autosave file in YAML format.
-            - Logs the autosave operation with a timestamp.
-            - Maintains only the latest `AUTOSAVE_KEEP` autosave files by deleting older ones.
-            - Updates the autosave menu to reflect the latest state.
-        Arguments:
-            self: Instance of the class containing autosave configuration and methods.
-        Body:
-            - Calls `get_scenario_data()` to fetch the data to be saved.
-            - Writes the data to `self._current_autosave_file` using `yaml.safe_dump`.
-            - Prints a confirmation message with timestamp and data.
-            - Uses `glob` to find all autosave files and retains only the latest ones.
-            - Calls `self._update_autosave_menu()` to refresh the UI or menu state.
-        Returns:
-            None
+        Write the current scenario to this window's autosave file (keeping the
+        newest AUTOSAVE_KEEP files). Runs on a Qt timer, so failures are reported
+        in the status bar instead of raising into the event loop.
         """
-
-        data, stored = self.get_scenario_data()
-        with open(self._current_autosave_file, "w") as f:
-            yaml.safe_dump(data, f, indent=4)
-
-        # Keep only 5 latest run files
-        files = sorted(
-            glob.glob(os.path.join(self._autosave_root, "autosave_*.yaml")),
-            key=os.path.getmtime,
-            reverse=True,
-        )
-        for old_file in files[AUTOSAVE_KEEP:]:
-            os.remove(old_file)
-
-        self._update_autosave_menu()
-
-    def _update_autosave_menu(self) -> None:
-        """
-        Updates the autosave menu with available autosave files.
-        Description:
-            - Scans the autosave directory for files matching the pattern 'autosave_*.yaml'.
-            - If no autosave files are found, adds a disabled menu item indicating that.
-            - Otherwise, adds each autosave file as a selectable menu item.
-            - Each menu item is connected to a handler that loads the corresponding autosave file.
-        Arguments:
-            self: The instance of the class containing autosave configuration and menu references.
-        Body:
-            - Uses `glob` to find autosave files and sorts them by modification time (newest first).
-            - Creates a `QAction` for each file and connects it to `_load_autosave_file`.
-            - Handles the case where no autosave files are present by adding a disabled placeholder action.
-        Returns:
-            None
-        """
-
-        files = sorted(
-            glob.glob(os.path.join(self._autosave_root, "autosave_*.yaml")),
-            key=os.path.getmtime,
-            reverse=True,
-        )
-
-        if not files:
-            no_action = QAction("No AutoSave Found", self)
-            no_action.setEnabled(False)
-            return
-
-        for file in files:
-            label = os.path.basename(file)
-            action = QAction(label, self)
-            action.triggered.connect(
-                lambda checked, f=file: self._load_autosave_file(f)
-            )
+        try:
+            data, _ = self.get_scenario_data()
+            self._autosave.save(data)
+        except (OSError, yaml.YAMLError) as e:
+            self.statusBar().showMessage(f"AutoSave failed: {e}", 10000)
 
     def _choose_autosave_file(self) -> None:
-        """
-        Prompts the user to select an autosave file from available options.
-        Description:
-            - Scans the autosave directory for files matching the pattern 'autosave_*.yaml'.
-            - If no autosave files are found, displays a warning message.
-            - If files are found, presents a dialog for the user to choose one.
-            - Loads the selected file using `_load_autosave_file`.
-        Arguments:
-            self: The instance of the class containing autosave configuration and file loading logic.
-        Body:
-            - Uses `glob` to find autosave files and sorts them by modification time (newest first).
-            - Uses `QInputDialog.getItem` to present a selection dialog.
-            - If the user confirms a selection, loads the corresponding file.
-        Returns:
-            None
-        """
-
-        files = sorted(
-            glob.glob(os.path.join(self._autosave_root, "autosave_*.yaml")),
-            key=os.path.getmtime,
-            reverse=True,
-        )
+        """Let the user pick one of the available autosave files (newest first) and load it."""
+        files = self._autosave.files()
         if not files:
             QMessageBox.warning(self, "Load AutoSave", "No autosave files found!")
             return
 
-        items = [os.path.basename(f) for f in files]
+        items = [f.name for f in files]
         file, ok = QInputDialog.getItem(
             self, "Select AutoSave", "Choose a file:", items, 0, False
         )
         if ok and file:
-            self._load_autosave_file(os.path.join(self._autosave_root, file))
+            self._load_autosave_file(str(self._autosave.root / file))
 
     def _load_autosave_file(self, file: str) -> None:
-        """
-        Loads autosave data from the specified file and emits it to the schema handler.
-        Description:
-            - Opens and reads the YAML-formatted autosave file.
-            - Validates the presence and structure of the 'test_scenario' data.
-            - Emits the data to the connected schema handler if valid.
-            - Displays appropriate message dialogs for success or failure.
-        Arguments:
-            file (str): Full path to the autosave file to be loaded.
-        Body:
-            - Uses `yaml.safe_load` to parse the file contents.
-            - Checks for required keys and structure in the loaded data.
-            - Emits `self.schema_selected` signal with the data if valid.
-            - Shows a critical error dialog if the file is empty or malformed.
-            - Shows an informational dialog upon successful load.
-        Returns:
-            None
-        """
-
-        with open(file, "r") as f:
-            data = yaml.safe_load(f)
-        print(f"Loaded autosave data from {file}: {data}")
+        """Load an autosave file and emit it to the editor (schema_selected)."""
+        try:
+            data = self._autosave.load(Path(file))
+        except (OSError, yaml.YAMLError) as e:
+            QMessageBox.critical(self, "Load AutoSave", f"Could not read {file}:\n{e}")
+            return
         if (
             not data
             or "test_scenario" not in data

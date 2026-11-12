@@ -61,6 +61,7 @@ from cpact.system_connections.connection_config import (
 )
 from cpact.system_connections.privilege import PrivilegedShell, PrivilegeEscalationError
 from cpact.system_connections.retry import retry_call
+from cpact.system_connections.ssh_client import create_ssh_client, HOST_KEY_ERRORS
 
 # Exceptions that indicate a dropped/broken transport and warrant a reconnect.
 _RECONNECT_EXCEPTIONS = (paramiko.SSHException, EOFError, socket.error, OSError)
@@ -95,8 +96,9 @@ class SSHConnection(ConnectionInterface):
                 if self.ssh_client:
                     self.disconnect()
 
-                self.ssh_client = paramiko.SSHClient()
-                self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                self.ssh_client = create_ssh_client(
+                    self.conn_config.known_hosts_file or None
+                )
 
                 host = self._get_host()
                 port = self._get_ssh_port()
@@ -124,6 +126,7 @@ class SSHConnection(ConnectionInterface):
                     retries=retry.retry_count,
                     delay=retry.retry_delay,
                     exceptions=_RECONNECT_EXCEPTIONS,
+                    give_up_on=HOST_KEY_ERRORS,
                     logger=self.logger,
                     description=f"SSH connect to {host}:{port}",
                 )

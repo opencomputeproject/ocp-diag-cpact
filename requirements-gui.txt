@@ -1,0 +1,5 @@
+# Scenario recipe creator GUI (cpact -rsc). Installs the CLI requirements as well.
+-r requirements.txt
+PyQt5==5.15.11
+PyQt5-Qt5==5.15.2
+PyQt5_sip==12.20.0

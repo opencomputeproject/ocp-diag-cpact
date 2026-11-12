@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import json
 import re
-import argparse
 from copy import deepcopy
 from typing import Any
+
+from cpact.utils.regex_guard import RegexLimitError, compile_recipe_regex
 
 class JSONValidator:
     _instance = None
@@ -51,8 +51,8 @@ class JSONValidator:
 
         try:
             pattern = self.normalize_regex(pattern)
-            regex = re.fullmatch(pattern, str(value), flags)
-        except re.error:
+            regex = compile_recipe_regex(pattern, flags).fullmatch(str(value))
+        except RegexLimitError:
             return (pattern == value, groups)
 
         if not regex:

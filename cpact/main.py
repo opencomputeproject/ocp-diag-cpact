@@ -19,14 +19,14 @@ Features:
 - Supports exporting results and connection diagnostics to JSON and CSV.
 
 Components:
-    - discover_tests(): Recursively finds valid test files based on filters.
     - run_test(): Executes a single test scenario and logs results.
-    - list_tests(): Displays discovered test scenarios in tabular format.
-    - list_scenarios_with_connections(): Lists scenarios with connection validation status.
-    - discover_and_test_connections(): Discovers and tests all connection combinations.
-    - calculate_connection_statistics(): Computes statistics from connection test results.
-    - validate_schema(): Validates files or directories against config/scenario schemas.
+    - get_final_results(): Overall PASS/FAIL verdict for the run.
     - main(): Entry point for CLI argument parsing and execution flow.
+    - Re-exported from cpact.test_discovery: discover_tests(), list_tests(),
+      list_scenarios_with_connections().
+    - Re-exported from cpact.connection_checks: discover_and_test_connections(),
+      calculate_connection_statistics().
+    - Re-exported from cpact.recipe_validation: validate_schema(), validate_recipe().
 
 Usage:
     Run the script with CLI arguments to list, validate, or execute test scenarios.
@@ -37,129 +37,40 @@ Usage:
 ===============================================================================
 """
 import os, sys
-import sys
 import argparse
-from pathlib import Path
-from email.mime import text
+import copy
 import json
-import os
-import textwrap
 import time
-from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
-
-from tabulate import tabulate
+from typing import Any, Dict, List, Optional
 
 from cpact.scoring.score_manager import ScoreManager
 from cpact.scoring.score_result import ScorePrinter
-from cpact.versions import get_version_info, __version__
+from cpact.versions import get_version_info
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.scenario_parser import load_yaml_file
 from cpact.utils.path_resolver import resolve_paths_in_yaml
-from cpact.result_builder.result_builder import ResultCollector
-# from cpact.schema_checker.factories.schema_factory import ExecutorFactory
-from cpact.schema_checker import ValidationRequest
-from cpact.schema_checker.schema_service import SchemaService
+from cpact.result_builder.result_builder import ResultCollector, is_failed_status
 from cpact.core.orchestrator import Orchestrator
 from cpact.core.context import ExecutionContext
 from cpact.system_connections.connection_factory import ConnectionFactory
-from cpact.system_connections.connection_discovery import ConnectionDiscovery
-from cpact.utils.custom_exception_handler import CustomExceptionHandler
-# from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
+from cpact.test_discovery import discover_tests, list_tests, list_scenarios_with_connections
+from cpact.connection_checks import discover_and_test_connections, calculate_connection_statistics
+from cpact.recipe_validation import validate_schema, validate_recipe
+from cpact.utils.path_guard import configure_allowed_roots
 
-# import sys
-
-# # detect terminal vs file
-# ENABLE_COLOR = sys.stdout.isatty()
-
-# try:
-#     from colorama import Fore, Style, init
-
-#     init(autoreset=True)
-# except:
-#     ENABLE_COLOR = False
-
-# def color_severity(sev: str) -> str:
-#     if not ENABLE_COLOR:
-#         return sev
-
-#     sev_upper = str(sev).upper()
-#     if sev_upper == "ERROR":
-#         return Fore.RED + sev + Style.RESET_ALL
-#     elif sev_upper == "WARNING":
-#         return Fore.YELLOW + sev + Style.RESET_ALL
-#     elif sev_upper == "INFO" or sev_upper == "PASSED" or sev_upper == "SUCCESS":
-#         return Fore.CYAN + sev + Style.RESET_ALL
-#     return sev
-
-# --------------------------------------------------------------------------------------
-# Discovery
-# --------------------------------------------------------------------------------------
-def discover_tests(
-    test_dir: str,
-    filters: Optional[argparse.Namespace],
-    logger: Optional[TestLogger] = None,
-) -> List[str]:
-    """
-    Discover all supported test files (YAML/YML) recursively and filter by test metadata.
-
-    Args:
-        test_dir: Root directory containing test scenarios.
-        filters: Parsed argparse namespace with optional fields:
-                 test_id (List[str]), test_name (str), test_group (str), tags (List[str]).
-                 If None, no filtering is applied.
-        logger: Logger instance.
-
-    Returns:
-        A list of absolute file paths that match the criteria.
-    """
-    logger = logger or TestLogger().get_logger()
-    matched_tests: List[str] = []
-
-    for root, _, files in os.walk(test_dir):
-        for file in files:
-            # Keep behavior: only YAML/YML considered (JSON commented in original)
-            if not (file.endswith(".yaml") or file.endswith(".yml")):
-                continue
-
-            file_path = os.path.join(root, file)
-            try:
-                data = load_yaml_file(file_path)
-                metadata = data.get("test_scenario", {})
-
-                # Apply filters only if provided
-                if filters:
-                    # test_id: list of accepted IDs
-                    if getattr(filters, "test_id", None):
-                        if metadata.get("test_id") not in filters.test_id:
-                            continue
-
-                    # test_name: substring match (case-insensitive)
-                    if getattr(filters, "test_name", None):
-                        name = metadata.get("test_name", "")
-                        if filters.test_name.lower() not in name.lower():
-                            continue
-
-                    # test_group: exact match
-                    if getattr(filters, "test_group", None):
-                        if filters.test_group != metadata.get("test_group"):
-                            continue
-
-                    # tags: intersection with scenario tags
-                    if getattr(filters, "tags", None):
-                        scenario_tags = set(metadata.get("tags", []))
-                        if not scenario_tags.intersection(set(filters.tags)):
-                            continue
-
-                matched_tests.append(file_path)
-
-            except Exception as exc:
-                CustomExceptionHandler.print_exception(exc)
-                logger.error(f"Failed to parse {file_path}: {exc}")
-                continue
-
-    return matched_tests
-
+# Re-exported for callers that import these from cpact.main.
+__all__ = [
+    "discover_tests",
+    "list_tests",
+    "list_scenarios_with_connections",
+    "discover_and_test_connections",
+    "calculate_connection_statistics",
+    "validate_schema",
+    "validate_recipe",
+    "run_test",
+    "get_final_results",
+    "main",
+]
 
 # --------------------------------------------------------------------------------------
 # Execution
@@ -170,6 +81,7 @@ def run_test(
     logger: Optional[TestLogger] = None,
     historical_data: Optional[List[str]] = None,
     score_weights_path: Optional[str] = None,
+    schema_check: bool = True,
 ) -> None:
     """
     Run a single test scenario from the given file path.
@@ -179,6 +91,9 @@ def run_test(
         workspace: Directory for logs and results.
         logger: Logger instance.
         historical_data: Optional list of historical result files for aggregated output.
+        score_weights_path: Optional score weights JSON.
+        schema_check: Validate the recipe (and nested recipes/map files) before
+            running it. False for --no-schema-check.
 
     Returns:
         None
@@ -203,21 +118,25 @@ def run_test(
     orchestrator = Orchestrator(context)
     score_manager.start_run(execution_id=scenario_data.get("test_id"),
                             recipe_name=scenario_data.get("test_name"))
-    
-    valid = validate_recipe(
-        schema_type="scenario",
-        scenario_path=file_path,
-        schema_file=None,
-        score_manager=score_manager,
-        execution_id=scenario_data.get("test_id"),
-        logger=logger,
-    )
+
+    if schema_check:
+        valid = validate_recipe(
+            schema_type="scenario",
+            scenario_path=file_path,
+            schema_file=None,
+            score_manager=score_manager,
+            execution_id=scenario_data.get("test_id"),
+            logger=logger,
+        )
+    else:
+        # --no-schema-check: no schema/map events are recorded, so the Schema
+        # and Map score categories show as N/A instead of counting against it.
+        logger.warning(f"Schema check disabled (--no-schema-check); not validating {file_path}")
+        valid = True
 
     if not valid:
         score_manager.end_run(execution_id=scenario_data.get("test_id"))
         return
-    # score_manager.schema_validation(execution_id=scenario_data.get("test_id"),
-    #                                 passed=True)
 
 
     orchestrator.run(scenario_data, file_path)
@@ -237,14 +156,17 @@ def run_test(
     rc.dump_results(os.path.join(log_dir, "test_results.json"))
     # rc.dump_diagnostics(os.path.join(log_dir, "diagnostics_codes.json"))
 
-    # Historical merging & standardized output
+    # Historical merging & standardized output. Both filters mutate their input
+    # and this block runs after every recipe on the cumulative results, so work
+    # on copies; otherwise earlier scenarios get history counts added and map
+    # data merged once per later recipe.
     filtered_current = rc.filter_historical_data(
-        historical_data or [], rc.scenario_output
+        historical_data or [], copy.deepcopy(rc.scenario_output)
     )
     rc.dump_custom_scenario_output(
         os.path.join(log_dir, "scenario_results.json"), filtered_current
     )
-    standardized = rc.filter_map_file(filtered_current)
+    standardized = rc.filter_map_file(copy.deepcopy(filtered_current))
     rc.dump_custom_scenario_output(
         os.path.join(log_dir, "standardized_results.json"), standardized
     )
@@ -255,447 +177,29 @@ def run_test(
     logger.info(f"⏱️ Total execution time: {elapsed_time:.2f}s\n")
 
 
-# --------------------------------------------------------------------------------------
-# Listing
-# --------------------------------------------------------------------------------------
-def list_tests(test_files: List[str], logger: Optional[TestLogger] = None) -> None:
-    """
-    List all discovered test scenarios in a tabular format.
-
-    Args:
-        test_files: List of test scenario file paths.
-        logger: Logger instance.
-
-    Returns:
-        None
-    """
-    logger = logger or TestLogger().get_logger()
-
-    headers = ["Test ID", "Test Name", "Test Group", "Tags", "Description"]
-    skipped_header = ["Test File", "Reason"]
-    rows: List[List[str]] = []
-    skipped_tests: List[List[str]] = []
-
-    for test_file in test_files:
-        logger.info(f"Processing test file: {test_file}")
-        scenario_doc = load_yaml_file(test_file)
-
-        if not scenario_doc or "test_scenario" not in scenario_doc:
-            # Keep both error lines from original
-            logger.error(f"❌ Invalid test scenario in {test_file}. Skipping.")
-            logger.error(f"❌ No test scenario found in {test_file}. Skipping.")
-            skipped_tests.append(
-                [test_file, "No test scenario found or invalid format"]
-            )
-            continue
-
-        test_scenario = scenario_doc["test_scenario"]
-        rows.append(
-            [
-                str(test_scenario.get("test_id", "")),
-                str(test_scenario.get("test_name", "")),
-                str(test_scenario.get("test_group", "")),
-                ", ".join([str(tag) for tag in test_scenario.get("tags", [])]),
-                str(test_scenario.get("description", "")),
-            ]
-        )
-
-    if rows:
-        logger.info("\n" + tabulate(rows, headers=headers, tablefmt="grid"))
-
-    logger.info("=" * 60)
-    if skipped_tests:
-        logger.info(f"⚠️ Skipped {len(skipped_tests)} invalid test scenarios:")
-        logger.info(
-            "\n" + tabulate(skipped_tests, headers=skipped_header, tablefmt="grid")
-        )
-
-
-def list_scenarios_with_connections(
-    test_files: List[str],
-    connections: Dict[str, Any],
-    logger: Optional[TestLogger] = None,
-) -> List[List[Any]]:
-    """
-    List all discovered test scenarios along with their connection status in a tabular format.
-
-    Args:
-        test_files: List of test scenario file paths.
-        connections: Connection configuration dictionary.
-        logger: Logger instance.
-
-    Returns:
-        A list of lists containing test scenario details and connection status.
-    """
-    logger = logger or TestLogger().get_logger()
-
-    def get_scenario_connection_details(
-        scenario_data: Dict[str, Any],
-    ) -> List[Tuple[str, str]]:
-        """
-        Extract (connection, connection_type) tuples from scenario and nested scenario steps.
-
-        Args:
-            scenario_data: Parsed 'test_scenario' dict.
-
-        Returns:
-            List of (connection_name, connection_type) tuples.
-        """
-        details: List[Tuple[str, str]] = []
-        scenario_steps = scenario_data.get("test_steps", []) or []
-
-        for step in scenario_steps:
-            # Direct connection info
-            if "connection" in step and "connection_type" in step:
-                details.append((step["connection"], step["connection_type"]))
-
-            # Nested scenario reference
-            scenario_path = step.get("scenario_path")
-            if scenario_path and os.path.exists(scenario_path):
-                nested_doc = load_yaml_file(scenario_path)
-                nested = nested_doc.get("test_scenario")
-                if nested:
-                    details.extend(get_scenario_connection_details(nested))
-        return details
-
-    def check_scenario_connections(
-        scenario_details: List[Tuple[str, str]], conn_config: Dict[str, Any]
-    ) -> bool:
-        """
-        Validate that all required connections exist and are non-empty in the given config.
-
-        Args:
-            scenario_details: List of (connection_name, connection_type) pairs.
-            conn_config: Connection configuration dictionary.
-
-        Returns:
-            True if all connections are valid; False otherwise.
-        """
-        for conn_name, conn_type in scenario_details:
-            c = conn_config.get(conn_name)
-            if not c:
-                return False
-            c_t = c.get(conn_type)
-            if c_t in ["N/A", "None", "n/a", "none", "", None]:
-                return False
-        return True
-
-    headers = [
-        "Test ID",
-        "Test Name",
-        "Test Group",
-        "Tags",
-        "Description",
-        "Executable",
-    ]
-    rows: List[List[Any]] = []
-
-    for test_file in test_files:
-        doc = load_yaml_file(test_file)
-        test_scenario = doc.get("test_scenario", {})
-        if not test_scenario:
-            logger.error(f"❌ No test scenario found in {test_file}. Skipping.")
-            continue
-
-        conn_details = get_scenario_connection_details(test_scenario)
-        rows.append(
-            [
-                test_scenario.get("test_id", ""),
-                test_scenario.get("test_name", ""),
-                test_scenario.get("test_group", ""),
-                ", ".join([str(t) for t in test_scenario.get("tags", [])]),
-                test_scenario.get("description", ""),
-                check_scenario_connections(conn_details, connections),
-            ]
-        )
-
-    if rows:
-        logger.info("\n" + tabulate(rows, headers=headers, tablefmt="grid"))
-    return rows
-
-
-# --------------------------------------------------------------------------------------
-# Connection discovery & stats
-# --------------------------------------------------------------------------------------
-def discover_and_test_connections(
-    config: Dict[str, Any], timeout: int = 10, export_csv: bool = False
-) -> Dict[str, Any]:
-    """
-    Discover and test all connections from config.
-
-    Args:
-        config: Connection configuration.
-        timeout: Timeout for connection tests in seconds.
-        export_csv: Whether to export results to CSV.
-
-    Returns:
-        Dict containing discovery info, test results, and statistics.
-    """
-    print("🔍 DISCOVERING ALL POSSIBLE CONNECTIONS...")
-
-    factory = ConnectionFactory.initialize(config)
-    discovery = ConnectionDiscovery(factory)
-
-    # Discover all connections
-    discovery_result = discovery.discover_all_connections()
-    print(
-        f"📊 Found {discovery_result['total_combinations']} possible connection combinations:"
-    )
-    print(
-        f"   • Connection Names: {', '.join(discovery_result['available_connection_names'])}"
-    )
-    print(
-        f"   • Connection Types: {', '.join(discovery_result['available_connection_types'])}"
-    )
-
-    # Test all connections
-    print(f"\n🧪 TESTING CONNECTIVITY (timeout: {timeout}s per test)...")
-    test_results = discovery.test_all_connections(timeout=timeout)
-
-    # Print results table (keep behavior)
-    discovery.print_connection_table(test_results)
-
-    # Export to CSV if requested
-    if export_csv:
-        discovery.export_results_to_csv(test_results)
-
-    # Calculate detailed statistics
-    stats = calculate_connection_statistics(test_results)
-
-    # Clean up
-    factory.close_all_connections()
-
-    return {
-        "discovery": discovery_result,
-        "test_results": test_results,
-        "statistics": stats,
-    }
-
-
-def calculate_connection_statistics(
-    test_results: List[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """
-    Calculate detailed statistics from test results.
-
-    Args:
-        test_results: List of connection test result dicts containing at least
-                      'status', 'connection_type', 'connection_name', and optionally 'total_time'.
-
-    Returns:
-        Dictionary with summary counts, breakdowns by type and name, and timing aggregates.
-    """
-    if not test_results:
-        return {}
-
-    total = len(test_results)
-    success_count = sum(1 for r in test_results if r.get("status") == "SUCCESS")
-    partial_count = sum(1 for r in test_results if r.get("status") == "PARTIAL")
-    failed_count = sum(1 for r in test_results if r.get("status") == "FAILED")
-    error_count = sum(1 for r in test_results if r.get("status") == "ERROR")
-
-    # Stats by connection type
-    type_stats: Dict[str, Dict[str, int]] = defaultdict(
-        lambda: {"total": 0, "success": 0, "failed": 0}
-    )
-    for r in test_results:
-        t = r.get("connection_type", "UNKNOWN")
-        type_stats[t]["total"] += 1
-        if r.get("status") == "SUCCESS":
-            type_stats[t]["success"] += 1
-        else:
-            type_stats[t]["failed"] += 1
-
-    # Stats by connection name
-    name_stats: Dict[str, Dict[str, int]] = defaultdict(
-        lambda: {"total": 0, "success": 0, "failed": 0}
-    )
-    for r in test_results:
-        n = r.get("connection_name", "UNKNOWN")
-        name_stats[n]["total"] += 1
-        if r.get("status") == "SUCCESS":
-            name_stats[n]["success"] += 1
-        else:
-            name_stats[n]["failed"] += 1
-
-    # Timing stats for successful results with numeric total_time
-    successful_times = [
-        float(r["total_time"])
-        for r in test_results
-        if r.get("status") == "SUCCESS"
-        and isinstance(r.get("total_time"), (int, float))
-    ]
-    if successful_times:
-        avg_time = sum(successful_times) / len(successful_times)
-        min_time = min(successful_times)
-        max_time = max(successful_times)
-    else:
-        avg_time = min_time = max_time = 0.0
-
-    return {
-        "summary": {
-            "total_tests": total,
-            "success_count": success_count,
-            "partial_count": partial_count,
-            "failed_count": failed_count,
-            "error_count": error_count,
-            "success_rate": (success_count / total * 100.0) if total > 0 else 0.0,
-        },
-        "by_connection_type": dict(type_stats),
-        "by_connection_name": dict(name_stats),
-        "timing": {
-            "avg_connection_time": avg_time,
-            "min_connection_time": min_time,
-            "max_connection_time": max_time,
-            "successful_connections": len(successful_times),
-        },
-    }
-
-
-# --------------------------------------------------------------------------------------
-# Schema validation
-# --------------------------------------------------------------------------------------
-
-def validate_schema(
-    schema_type: str,
-    schema_file: Optional[List[str]],
-    data: str,
-    logger: Optional[TestLogger],
-):
-    """
-    Validate the given data file(s) against the specified schema type.
-
-    Args:
-        schema_type: 'config' or 'scenario'.
-        schema_file: Optional list with 0 or 1 element for an explicit schema path.
-        data: Path to the data file to validate.
-        logger: Logger instance.
-
-    Returns:
-        True if all validations pass; False otherwise.
-    """
-    service = SchemaService(logger)
-
-    request = ValidationRequest(
-
-        schema_type=schema_type,
-
-        source=data,
-
-        schema_file=schema_file[0]
-        if schema_file
-        else None,
-    )
-
-    return service.validate(request)
-
-
-
-from pathlib import Path
-
-
-def validate_recipe(
-    schema_type: str,
-    schema_file: Optional[List[str]],
-    scenario_path: str,
-    logger: TestLogger,
-    score_manager,
-    execution_id: str,
-    visited: Optional[set] = None,
-):
-    if visited is None:
-        visited = set()
-
-    scenario_path = str(Path(scenario_path).resolve())
-    # Prevent circular invocation
-    scenario_doc = load_yaml_file(scenario_path)
-    if not scenario_doc or "test_scenario" not in scenario_doc:
-        logger.error(f"Invalid scenario file: {scenario_path}")
-        return False
-
-    scenario_data = scenario_doc["test_scenario"]
-    scenario_data, _ = resolve_paths_in_yaml(
-        scenario_data, scenario_data.get("paths", {})
-    )
-
-    if scenario_path in visited:
-        logger.warning(f"Circular invocation detected: {scenario_path}")
-        return False
-
-    visited.add(scenario_path)
-
-    service = SchemaService(logger)
-
-    request = ValidationRequest(
-        schema_type=schema_type,
-        source=scenario_path,
-        schema_file=schema_file[0] if schema_file else None,
-    )
-
-    result = service.validate(request)
-    recipe = result.results[0]
-    if not recipe.recipe_schema_valid:
-        score_manager.record_schema_validation(
-            execution_id=execution_id,
-            validation_result=recipe,
-        )
-        return False
-    # Record this recipe's validation result
-    score_manager.record_schema_validation(
-        execution_id=execution_id,
-        validation_result=result.results[0],
-    )
-    # if not result.success:
-    #     return False
-
-    child_no = 1
-
-    for step in scenario_data.get("test_steps", []):
-        if step.get("step_type") != "invoke_scenario":
-            continue
-
-        child_path = step.get("scenario_path")
-        if not child_path:
-            continue
-        scenario_doc = load_yaml_file(child_path)
-        if not scenario_doc or "test_scenario" not in scenario_doc:
-            logger.error(f"Invalid scenario file: {child_path}")
-            return False
-
-        scenario_data = scenario_doc["test_scenario"]
-        scenario_data, _ = resolve_paths_in_yaml(
-            scenario_data, scenario_data.get("paths", {})
-        )
-        child_execution_id = f"{execution_id}.{scenario_data.get('test_id', f'child_{child_no}')}"
-        score_manager.start_nested_run(
-            parent_execution_id=execution_id,
-            execution_id=child_execution_id,
-            recipe_name=scenario_data.get('test_name'),
-        )
-        valid = validate_recipe(
-            schema_type=schema_type,
-            schema_file=schema_file,
-            scenario_path=child_path,
-            logger=logger,
-            score_manager=score_manager,
-            execution_id=child_execution_id,
-            visited=visited,
-        )
-        if not valid:
-            return False
-
-        child_no += 1
-
-    return True
-
 def get_final_results() -> bool:
+    """Overall verdict for the run.
+
+    False if any step failed, any scenario was reported FAIL (e.g. a failed
+    continued step or a scenario with no test_steps), or any recipe failed
+    schema validation (such recipes are skipped, so they must not pass).
+    """
     rc = ResultCollector().get_instance()
     step_results = rc.get_step_results()
 
-    return not any(
-        step.get("status") in {"FAIL", "fail", "error", "ERROR"}
-        for step in step_results
-    )
+    if any(is_failed_status(step.get("status")) for step in step_results):
+        return False
+
+    for scenario in (rc.scenario_output or {}).values():
+        if isinstance(scenario, dict) and (scenario.get("results") or {}).get("status") == "FAIL":
+            return False
+
+    score_manager = ScoreManager.instance()
+    for execution_id in score_manager.all_execution_ids():
+        ctx = score_manager.get_context(execution_id)
+        if ctx is not None and ctx.schema_exists and not ctx.schema_passed:
+            return False
+    return True
 
 # --------------------------------------------------------------------------------------
 # Main
@@ -714,10 +218,33 @@ def main() -> None:
         "--score_weights", type=str, required=False, help="Path to the score weights file"
     )
     parser.add_argument(
+        "--allowed_path",
+        action="append",
+        default=[],
+        metavar="DIR",
+        help=(
+            "Extra folder that recipe paths (log_analysis_path, expected_output_path, "
+            "scenario_path, map_file) may point into. Repeatable. The working directory, "
+            "--workspace, --test_dir, the log folder and each recipe's own folder are "
+            "always allowed."
+        ),
+    )
+    parser.add_argument(
         "--workspace",
         type=str,
         required=False,
         help="Directory for logs, JSON, and results",
+    )
+    parser.add_argument(
+        "--log_override",
+        type=str,
+        required=False,
+        metavar="LOG_DIR",
+        help=(
+            "Manual override for the output log folder. Logs and results are written "
+            "directly into LOG_DIR (no timestamped test_run_<timestamp> sub-folder). "
+            "The folder is reused if it already exists, otherwise it is created."
+        ),
     )
     parser.add_argument("--test_id", nargs="+", help="Filter by test_id")
     parser.add_argument("--test_name", type=str, help="Filter by test_name")
@@ -801,7 +328,16 @@ def main() -> None:
     parser.set_defaults(run_with_schema_check=True)
     args = parser.parse_args()
     if args.run_scenario_creator:
-        from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
+        try:
+            from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
+        except ImportError as exc:
+            if "PyQt5" not in str(exc):
+                raise
+            parser.exit(
+                1,
+                "The scenario recipe creator GUI needs PyQt5. Install it with:\n"
+                "    pip install -r requirements-gui.txt\n",
+            )
         ScenarioCreator()
         return
     test_dir = args.test_dir or os.path.join(
@@ -821,11 +357,19 @@ def main() -> None:
         os.makedirs(workspace, exist_ok=True)
 
     # Initialize logger and log paths
-    log_path = os.path.join(workspace, "logs")
-    TestLogger(log_dir=log_path)
+    if args.log_override:
+        if os.path.exists(args.log_override) and not os.path.isdir(args.log_override):
+            parser.error(f"--log_override path exists but is not a directory: {args.log_override}")
+        TestLogger(log_dir=args.log_override, use_exact_dir=True)
+    else:
+        TestLogger(log_dir=os.path.join(workspace, "logs"))
     logger = TestLogger().get_logger()
     log_dir = TestLogger().get_log_dir()
     logger.info(f"Log directory: {log_dir}")
+    roots = configure_allowed_roots(
+        [os.getcwd(), workspace, test_dir, log_dir, *args.allowed_path]
+    )
+    logger.info(f"Allowed roots for recipe paths: {roots}")
     logger.info(f"Starting test discovery in: {test_dir}")
 
     # Initial discovery (no filters) for listing-only flows
@@ -884,25 +428,32 @@ def main() -> None:
 
     # Prepare connection factory for execution phase
     factory = ConnectionFactory.initialize(conn_config)
+    discovery_errors: List[str] = []
+    filtered = not args.run_all_scenarios and any(
+        [args.test_id, args.test_name, args.test_group, args.tags]
+    )
     if args.run_all_scenarios:
         logger.info("Running all scenarios without filtering.")
-        matched_files = discover_tests(test_dir, None, logger=logger)
+        matched_files = discover_tests(test_dir, None, logger=logger, errors=discovery_errors)
     else:
-        matched_files = discover_tests(test_dir, args, logger=logger)
+        matched_files = discover_tests(test_dir, args, logger=logger, errors=discovery_errors)
 
-    # if args.run_with_schema_check:
-    #     for matched_file in matched_files:
-    #         ok = validate_schema(
-    #             schema_type="scenario",
-    #             schema_file=None,
-    #             file_or_dir=matched_file,
-    #             logger=logger,
-    #         )
-    #         if not ok:
-    #             logger.error(f"❌ Recipe Schema Check Failed!!! for {matched_file}")
-    #             factory.close_all_connections()
-    #             logger.error("❌ Final Test Result: FAIL")
-    #             sys.exit(1)
+    # Nothing executed must not PASS; unparseable recipes fail unfiltered runs
+    # (with filters an unparseable file cannot be matched, so it is only logged).
+    discovery_ok = True
+    if not matched_files:
+        logger.error(f"No recipes matched under {test_dir}; nothing was executed.")
+        discovery_ok = False
+    if discovery_errors:
+        message = (
+            f"{len(discovery_errors)} recipe file(s) under {test_dir} could not be parsed: "
+            + ", ".join(discovery_errors)
+        )
+        if filtered:
+            logger.warning(message)
+        else:
+            logger.error(message)
+            discovery_ok = False
 
     print("Matched Files are: ", matched_files)
     for file_path in matched_files:
@@ -912,14 +463,15 @@ def main() -> None:
             workspace=workspace,
             logger=logger,
             historical_data=args.historical_data,
-            score_weights_path=score_weights_path
+            score_weights_path=score_weights_path,
+            schema_check=args.run_with_schema_check,
         )
     score_result = ScorePrinter(logger=logger)
     score_result.print_framework_report()
     # score_result.print_all_detailed_reports()
     factory.close_all_connections()
-    logger.info("All tests executed successfully.")
-    result = get_final_results()
+    logger.info("Test execution completed.")
+    result = get_final_results() and discovery_ok
     logger.info(f"Final Test Result: {'PASS' if result else 'FAIL'}")
     import logging
     if not result:

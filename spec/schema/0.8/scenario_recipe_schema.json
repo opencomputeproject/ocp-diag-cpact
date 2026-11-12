@@ -22,6 +22,17 @@
           "additionalProperties": false
         }
       },
+        "parameters": {
+          "type": "object",
+          "description": "Named values (not filesystem paths) usable anywhere in the recipe as {name} or {param:name}. Values may be nested groups, referenced as {param:group.key} or {param:group->key}. Top-level names must not duplicate entries in 'paths'.",
+          "propertyNames": {
+            "allOf": [
+              { "$ref": "#/$defs/param_name" },
+              { "not": { "enum": ["env", "param"] } }
+            ]
+          },
+          "additionalProperties": { "$ref": "#/$defs/param_value" }
+        },
         "tags": {
           "type": "array",
           "items": { "type": "string" }
@@ -161,5 +172,14 @@
     }
   },
   "required": ["test_scenario"],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "param_name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+    "param_value": {
+      "type": ["string", "number", "boolean", "object"],
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/param_name" },
+      "additionalProperties": { "$ref": "#/$defs/param_value" }
+    }
+  }
 }

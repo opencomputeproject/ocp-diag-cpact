@@ -8,6 +8,7 @@ logs/*
 /*workspace*/logs/*
 /workspace*/*
 docs/build/*
+/cpact_rust/
 /.vs
 /bin
 /venv

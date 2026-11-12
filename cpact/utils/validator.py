@@ -27,9 +27,15 @@ Example usage:
 ===============================================================================
 """
 
-import re
 from difflib import SequenceMatcher
-from typing import Any, Tuple, Union
+from typing import Any, Tuple
+
+from cpact.utils.regex_guard import (
+    RegexLimitError,
+    check_input_size,
+    compile_recipe_regex,
+    timed_match,
+)
 
 
 class Validator:
@@ -157,13 +163,17 @@ class Validator:
         expected = expected.strip()
         actual = actual.strip()
 
-        # Regex match
+        # Regex match (too-long or invalid patterns fall back to literal matching)
         if use_regex:
             try:
-                if re.search(expected, actual):
-                    return True, f"Regex matched: `{expected}`"
-            except re.error:
-                pass  # Invalid regex
+                regex = compile_recipe_regex(expected)
+            except RegexLimitError:
+                regex = None
+            if regex is not None:
+                check_input_size(actual, what="output under validation")
+                with timed_match(f"expected_output {expected!r}"):
+                    if regex.search(actual):
+                        return True, f"Regex matched: `{expected}`"
 
         # Substring match
         if expected in actual:

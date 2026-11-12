@@ -29,13 +29,10 @@ Usage:
 ===========================================================================
 """
 
-import re
 import time
-from datetime import datetime, timedelta
-from typing import Any, Type, List
+from datetime import datetime
 
 from cpact.core.context import Context, ExecutionContext
-from cpact.core.scenario_runner import ScenarioRunner
 from cpact.core.step_executor import StepExecutor
 
 from concurrent.futures import ThreadPoolExecutor
@@ -44,13 +41,11 @@ from cpact.result_builder.result_builder import ResultCollector
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.docker_executor import DockerExecutor
 from cpact.utils.logger_utils import OCPTVFileWriter
-from cpact.scoring.score_manager import ScoreManager
 
 import ocptv.output as tv
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
-    SoftwareType,
     TestResult,
     TestStatus,
 )
@@ -145,14 +140,22 @@ class Orchestrator:
         Returns:
             None
         """
-        steps = scenario.get("test_steps")
+        steps = scenario.get("test_steps") or []
         self.logger.info(
             f"Running {len(steps)} steps in scenario: {scenario.get('test_name')}"
         )
         scenario_output = {"status": "", "start_timestamp": "", "end_timestamp": ""}
         start_time = time.time()
+        run = None
+        run_status = True
+        if not steps:
+            # A compliance scenario that executes nothing must not report PASS.
+            self.logger.error(
+                f"Scenario {scenario.get('test_name')} has no test_steps; marking as FAIL."
+            )
+            run_status = False
         if steps:
-            self.logger.info(f"Running inline steps...")
+            self.logger.info("Running inline steps...")
             run = tv.TestRun(name=scenario.get("test_name"), version="1.0")
             dut = tv.Dut(id=scenario["test_id"], name=scenario["test_name"])
             
@@ -161,7 +164,6 @@ class Orchestrator:
                 message=f"Running Test Scenario: {scenario.get('test_name')}",
                 severity=LogSeverity.INFO,
             )
-            run_status = True
             for step in steps:
                 scenario_step = run.add_step(
                     name=f"Step: ID:{step.get('step_id', 'Unnamed Step')}_{step.get('step_name', 'Unnamed Step')}"
@@ -224,10 +226,6 @@ class Orchestrator:
                 self.logger.info(
                     f"================= Completed Executing Step {step.get('step_name', 'Unnamed Step')} ================="
                 )
-        if not run_status:
-            run.end(status=TestStatus.ERROR, result=TestResult.FAIL)
-        else:
-            run.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
         self.logger.info("Finalizing continued steps...")
         final_results = self.finalize_all_continued_steps(self.context)
         end_time = time.time()
@@ -238,29 +236,35 @@ class Orchestrator:
             for step_id, result in final_results.items():
                 if result["status"] == "error":
                     self.logger.error(f"[{step_id}] failed: {result['error']}")
+                    run_status = False
                     self.execution_context.score_manager.execution_step(
                         execution_id=scenario.get("test_id"),
                         passed=False,
                         metadata={
-                            "step": step.get("step_name"),
-                            "message": message,
+                            "step": step_id,
+                            "message": result["error"],
                             "duration": elapsed_time,
                         },
                     )
                 else:
                     self.logger.info(
-                        f"[{step_id}] completed. Output snippet: {result['output'][:100]}"
+                        f"[{step_id}] completed. Output snippet: {(result['output'] or '')[:100]}"
                     )
                     self.execution_context.score_manager.execution_step(
                         execution_id=scenario.get("test_id"),
                         passed=True,
                         metadata={
-                            "step": step.get("step_name"),
-                            "message": message,
+                            "step": step_id,
+                            "message": "Continued step completed",
                             "duration": elapsed_time,
                         },
                     )
             self.logger.info("All continued steps finalized.")
+        if run is not None:
+            if not run_status:
+                run.end(status=TestStatus.ERROR, result=TestResult.FAIL)
+            else:
+                run.end(status=TestStatus.COMPLETE, result=TestResult.PASS)
         self.executor_continue.shutdown(wait=True)
         if self.context.get("docker_steps"):
             self.logger.info("Stopping all Docker containers...")
@@ -344,7 +348,7 @@ class Orchestrator:
                 ).run(validate_continue=True)
                 if not status:
                     self.logger.error(f"Continued step failed: {message}")
-                results[scenario_id] = {
+                results[f"{scenario_id}:{step_id}"] = {
                     "output": output,
                     "status": "error" if not status else "success",
                     "error": message if not status else None,

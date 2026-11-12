@@ -76,6 +76,8 @@ python -m venv venv && venv\Scripts\activate
 #### 3️⃣ **Install Required Packages**
 ```
 pip install -r requirements.txt
+For the scenario recipe creator GUI (-rsc) as well:
+pip install -r requirements-gui.txt
 To verify installed packages:
 pip list
 ```
@@ -99,9 +101,12 @@ You can run test cases using various filters like test ID, test name, group, tag
 | `--tags`                  | Run test case(s) by Tag(s) (comma-separated).                                         |
 | `--test_dir`              | Path to the directory containing input test definitions or scenarios.                 |
 | `--workspace`             | Path to the workspace where logs, temporary files, and results will be stored.        |
+| `--log_override`          | Manual override for the output log folder. Logs/results are written directly into this folder (no `test_run_<timestamp>` sub-folder). The folder is reused if it exists, otherwise it is created. |
+| `--allowed_path`          | Extra folder that recipe file paths may point into (repeatable). See *Recipe path and analysis limits* below. |
 | `--run_all_scenarios`     | Run All scenarios.                                                                    |
 | `--run_scenario_creator`  | Run scenario creator GUI.                                                             |
-| `--no-schema-check`       | Skip schema check while running recipes.                                              |
+| `--run_with_schema_check` | Validate recipes (and nested recipes/map files) before running them. This is the default. |
+| `--no-schema-check`       | Skip schema validation while running recipes; the Schema/Map score categories show N/A. |
 | `--historical_data`       | Option to provide the historical data. Like previously ran recipe results.            |
 | `--schema_check`          | Specifies the mode of schema validation. Use scenario for validating scenario YAMLs.  |
 |  `<test_yaml>`            | Path to the YAML file defining the test scenario to be validated or executed.         |
@@ -112,8 +117,12 @@ You can run test cases using various filters like test ID, test name, group, tag
 | `--list_scenarios_with_connections`, `-lsc` | List all scenarios with connections without                         |    execution.                                                                                                          |
 | `--list_scenarios`, `ls` | List all scenarios without executing them.                                             |
 | `run_with_discover_connections`, `-rdc` | Discover and check all connections without executing the tests.         |
-| `run_with_schema_check`, `-rsc` | Execute tests with schema check and scoring enabled.                             |
 | `--log-path`              | Set the log file or folder path to save execution logs.                               |
+
+### 🔒 Recipe path and analysis limits
+
+- **Recipe file paths** (`log_analysis_path`, `expected_output_path`, `scenario_path`, `map_file`) must resolve (after `..` and symlinks) inside an allowed folder, otherwise the step or recipe fails. Allowed by default: the working directory, `--workspace`, `--test_dir`, the run's log folder and the folder of the recipe that references the path. Add more with `--allowed_path DIR` (repeatable) or the `CPACT_ALLOWED_PATHS` environment variable (`os.pathsep`-separated), e.g. `--allowed_path /var/log`.
+- **Recipe regexes** (diagnostic/output analysis, `expected_output`, JSON patterns) are limited to 4096 characters; patterns with nested quantifiers such as `(a+)+` log a warning, and slow matches (>5 s) are logged. Inputs larger than 256 MB fail the step instead of being truncated; raise the limit with `CPACT_MAX_ANALYSIS_MB`.
 
 ---
 
@@ -169,6 +178,13 @@ You can run test cases using various filters like test ID, test name, group, tag
   ```
   python main.py --test_dir ..\path\to\tests --workspace ..\path\to\workspace --conn_config ..\path\to\config_file --run_all_scenarios
   ```
+
+  - **Write logs to a fixed (override) folder**
+  ```
+  mkdir .\logs\CPACT
+  python main.py --test_dir ..\path\to\tests --conn_config ..\path\to\config_file --log_override .\logs\CPACT
+  ```
+  Logs (`test_run.log`) and result JSON files are written directly into `.\logs\CPACT`. Re-running with the same folder reuses it (the log file is appended to and result files are overwritten); if the folder does not exist it is created.
 
 ## 📡 Connection Management
 
@@ -255,7 +271,6 @@ It simplifies connection handling, command execution, and session management acr
 | `RedfishConnection`       | Manages Redfish API sessions. Supports authenticated and unauthenticated access.                      |
 | `TunnelConnection`        | Manages SSH tunnels to securely connect Redfish or SSH over a remote agent.                            |
 | `ConnectionFactory`       | High-level manager to initialize, create, cache, check, execute, and disconnect all connections.       |
-| `ssh_tunnel.py`           | Utility for setting up SSH tunnels (using `paramiko` or `sshpass`).                                   |
 | `logger_utils.py`         | Logger setup with custom formatting for all modules.                                                  |
 
 ---
@@ -276,6 +291,8 @@ Example snippet:
         "redfish_port": 8080,
         "protocol": "https",
         "use_ssl":true,
+        "verify_ssl": true,
+        "ca_bundle": "",
         "connections": [
         ],
         "connection_types": [
@@ -291,8 +308,8 @@ Example snippet:
     },
     "RackManager": {
         "rackmanager_host": "",
-        "rackmanager_ssh_port": ,
-        "rackmanager_redfish_port": ,
+        "rackmanager_ssh_port": 22,
+        "rackmanager_redfish_port": 443,
         "rackmanager_username": "",
         "rackmanager_password": "",
         "rackmanager_redfish_auth": true
@@ -314,6 +331,12 @@ Example snippet:
     }
 }
 ```
+
+**TLS and host-key verification**
+
+- Redfish verifies the server's TLS certificate by default. Set `Connection.ca_bundle` (or a per-section `<prefix>_ca_bundle`, e.g. `rackmanager_ca_bundle`) to a PEM file to trust a private/self-signed CA. Set `verify_ssl: false` (globally or per section, e.g. `nodemanager_verify_ssl`) only for isolated lab setups; a warning is logged. Tunneled Redfish verifies the certificate against `nodemanager_host`, not the local tunnel address.
+- SSH connections and SSH tunnels only connect to hosts whose key is already in `~/.ssh/known_hosts` (or the configured known_hosts file). For tunnel agents (jump hosts) set `tunnel_agent_known_hosts_file` on the `NodeManagerTunnel` section, or `<agent>_known_hosts_file` on the legacy agent section. Add keys after verifying them out-of-band, e.g. `ssh-keyscan -p 22 <host> >> ~/.ssh/known_hosts`.
+- SSH commands on targets with a POSIX shell are prefixed with `echo <marker>$$;` so CPACT can kill the remote process group when a step exceeds its `duration` (synchronous steps) or a background (`continue: true`) task times out or is terminated. CPACT detects a POSIX shell with a one-time probe per connection, so vendor CLIs (e.g. a RackManager shell) are left untouched; force it with `<prefix>_track_remote_pid: true` / `false`. Privileged (`use_sudo`) commands run in an elevated PTY shell instead, where a timeout sends Ctrl+C.
 
 #### 2. Initialize and Connect
 ```
@@ -413,13 +436,17 @@ ___
 |   ├── `output_analysis_widget.py`   | Widget for specifying and displaying output analysis configuration.                         | 
 |   ├── `recipe_create_widget.py`     | Main widget for creating and editing scenario recipes.                                      |
 |   ├── `scenario_creator.py`         | Core logic for building and managing scenario recipes.                                      |
+|   ├── `recipe_serialization.py`     | Qt-free sanitizing/normalizing of recipe data for export.                                   |
+|   ├── `autosave_store.py`           | Qt-free autosave files (unique per window, atomic writes, pruning).                         |
 |   ├── `schema_order_parser.py`      | Parses and manages the order of schema elements in scenario recipes.                        |
 |   └── `step_widget.py`              | Widget for creating and editing individual scenario steps.                                  |
 | `schema_checker/`         | Schema validation and YAML checking logic.                                                            |
 |   ├── `base_schema.py`            | Defines base classes and utilities for schema validation.                                     |
-|   ├── `schema_factory.py`         | Factory for loading and managing different schema types.                                      |
-|   ├── `validate_config_schema.py` | Validates configuration YAML files against their schema.                                      |
-|   └── `validate_scenario_schema.py`| Validates scenario YAML files against the scenario schema.                                   |
+|   ├── `schema_service.py`         | Entry point that runs schema validation and reporting.                                        |
+|   ├── `factories/schema_factory.py` | Factory for selecting the validator for each schema type.                                   |
+|   ├── `validators/schema_validator.py` | Resolves the schema version/file and dispatches validation.                              |
+|   ├── `validators/validate_config_schema.py` | Validates configuration files against their schema.                                |
+|   └── `validators/validate_scenario_schema.py`| Validates scenario YAML files (and their map files) against the scenario schema.  |
 | `system_connections/`     | System and network connection handlers.                                                               |
 |   ├── `base_connection.py`        | Abstract base class for all connection types.                                                 |
 |   ├── `connection_discovery.py`   | Discovers available system connections.                                                       |
@@ -428,22 +455,28 @@ ___
 |   ├── `local_connection.py`       | Implements local (on-host) connection logic.                                                  |
 |   ├── `redfish_connection.py`     | Handles Redfish API-based remote connections.                                                 |
 |   ├── `ssh_connection.py`         | Manages SSH-based remote connections.                                                         |
+|   ├── `ssh_tasks.py`              | Background-task lifecycle for SSH connections (start, wait, terminate, cleanup).              |
 |   └── `tunnel_connection.py`      | Supports SSH tunneling for secure remote access.                                              |
 | `utils/`                  | Utility functions and helpers.                                                                        |
 |   ├── `docker_executor.py`        | Executes commands inside Docker containers.                                                   |  
-|   ├── `docker_runner.py`          | Manages Docker container lifecycle for test execution.                                        |
 |   ├── `logger_utils.py`           | Provides logging utilities and custom loggers.                                                |
+|   ├── `redaction.py`              | Masks passwords/tokens in log records and OCP TV output.                                      |
 |   ├── `matcher.py`                | Implements matching and validation logic for test outputs.                                    |
 |   ├── `scenario_creator.py`       | Utility for programmatically creating test scenarios.                                         |
 |   ├── `scenario_parser.py`        | Parses scenario YAML files into executable objects.                                           |
-|   ├── `ssh_tunnel.py`             | Sets up and manages SSH tunnels.                                                              |
+|   ├── `path_guard.py`             | Confines recipe file paths to the allowed folders; safe file names.                           |
+|   ├── `regex_guard.py`            | Length/size limits and slow-match logging for recipe regexes.                                 |
 |   ├── `json_validator.py`         | Validate json regex                                                                           |
 | `workspace/`              | Workspace management and related logic                                                                | 
 | `main.py`                 | Entry point for initializing the application.                                                         |
+| `cpact/test_discovery.py` | Recipe discovery and listing for the CLI.                                                             |
+| `cpact/connection_checks.py` | Connection discovery and statistics (`--discover_connections`).                                    |
+| `cpact/recipe_validation.py` | Schema checks (`--schema_check`) and pre-run validation of recipes and nested recipes.             |
 | `spec`                    | Specifiaction and schema definations.                                                                 |  
 | `tests`                   | Colletion on unit test and integration tests.                                                         |
 | `.gitignore/`             | Git version control exclusions.                                                                       |
 | `requirements.txt`        | Python dependencies to install.                                                                       |
+| `requirements-gui.txt`    | Adds PyQt5 for the scenario recipe creator GUI (`-rsc`).                                              |
 | `README.md`               | Project documentation.                                                                                |
 
 ## 🛠️ How It Works
@@ -481,7 +514,7 @@ python scenario_recipe_creator/scenario_creator.py
 This opens the Scenario Designer window. Select a JSON schema file (e.g. [Scenario Recipe Schema](https://github.com/MeritedHobbit/Cloud-Processor-Accessibility-Compliance-Tool/tree/main/spec/schema/scenario_recipe_schema_0.7.json)) and begin building your scenario recipe using the GUI.
 ### 🛠 Requirements
 ```
-pip install PyQt5
+pip install -r requirements-gui.txt
 ```
 ### 💡Note: Ensure the following modules are available:
 - constants.py
@@ -512,6 +545,8 @@ test_scenario:              # ✅ (Mandatory) Defines a complete test case, incl
 
   test_steps:               # ✅ (Mandatory) Test steps to be executed
   ```
+  > ℹ️ `connection` and `connection_type` values (and `Connection.connections` / `Connection.connection_types` in config files) are validated case-insensitively, e.g. `rackmanager` or `SSH` are accepted. All other fields remain case-sensitive.
+
   ### command_execution step
   ```
     - step_id:              # ✅ (Mandatory) Unique step_id value
@@ -528,7 +563,7 @@ test_scenario:              # ✅ (Mandatory) Defines a complete test case, incl
       headers:              # 🟡 (Optional) HTTP headers for API calls.
       body:                 # 🟡 (Optional) HTTP request body for API calls.
       duration:             # 🟡 (Optional) Maximum duration (in seconds) to allow for this step.
-      continue:             # 🟡 (Optional) Whether to continue execution on failure.
+      continue:             # 🟡 (Optional) Run the command in the background and validate it when the scenario ends. It must exit 0 within `duration` seconds of validation starting (otherwise it is stopped and the step fails); allow expected codes yourself, e.g. `timeout 120 ./tool || [ $? -eq 124 ]`.
       loop:                 # 🟡 (Optional) Number of times to repeat this step.
       expected_output:      # 🟡 (Optional) Expected output string for validation.
       expected_output_path: # 🟡 (Optional) Path to a file containing expected output.
@@ -598,6 +633,37 @@ test_scenario:              # ✅ (Mandatory) Defines a complete test case, incl
     scenario_path: ./tests
 -
 ```
+### 🏷️ Parameters Block (schema 0.8)
+```
+- The `parameters` block defines named values that are NOT filesystem paths, e.g. IP addresses,
+  image tags, device names or counts, so you can refer to them by a friendly name.
+- Reference a param anywhere in the recipe with `{param:name}` or simply `{name}`.
+- Values may be a string, number, boolean or a nested group of parameters.
+- Reach into a group with `.` or `->` (they are interchangeable and can be mixed):
+  `{param:server.ip}`, `{param:server->ip}`, `{server.creds->user}`.
+- A param value may itself use `{env:VAR}`, `{path_name}` and other parameters (including nested
+  ones), in any declaration order.
+- Names at every level must match `^[A-Za-z_][A-Za-z0-9_]*$`. Top-level names must not be
+  `env` or `param`, and must not duplicate a name in `paths` (a duplicate is ignored and an
+  error is logged).
+- Use parameters in string fields; typed fields such as `use_sudo` (boolean) are schema-checked
+  before substitution. A whole group can only be used as a complete value (e.g.
+  `body: '{param:server}'`), not inside text.
+
+  test_scenario:
+    schema_version: '0.8'
+    paths:
+      workspace_path: ./sample_workspace
+    parameters:
+      image: shc_gnr_test:1.4.4
+      bmc:
+        ip: 192.168.4.1
+        port: 5000
+      banner: '{param:image} from {workspace_path}'
+    test_steps:
+    - step_id: step_001
+      step_command: docker pull {param:bmc.ip}:{bmc->port}/{image} && echo {banner}
+```
 ### 🗺️ Map File
 ```
 - The map file defines how the framework interprets log output and diagnostic results.
@@ -632,7 +698,7 @@ ___
 - docker
 
 ```
-💡 Note : All dependencies are listed in requirements.txt. Install with pip install -r requirements.txt
+💡 Note : All dependencies are pinned in requirements.txt (CLI) and requirements-gui.txt (adds PyQt5 for the GUI). Install with pip install -r requirements.txt (or -r requirements-gui.txt for both)
 
 ```
 

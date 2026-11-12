@@ -64,10 +64,9 @@ import json
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 
-from cpact.core import context
 from cpact.scoring.score_models import (
     DEFAULT_CONFIG,
     CategoryScore,
@@ -463,6 +462,7 @@ class ScoreManager:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Event:
         """Record a single execution step result."""
+        metadata = dict(metadata or {})
         metadata.update(
             {
                 "score": 0 if not passed else self.config.execution_weight,
@@ -473,7 +473,7 @@ class ScoreManager:
 
     def record_execution_step(self, execution_id, execution_result):
         self.execution_step(
-            execution_id=execution_id, passed=execution_result.passed, meta_data={}
+            execution_id=execution_id, passed=execution_result.passed, metadata={}
         )
 
     def add_profile_score(
@@ -620,17 +620,8 @@ class ScoreManager:
             )
 
             earned = sum(c.earned for c in categories if c.present)
-
-            available = cfg.schema_weight + cfg.execution_weight
-            if context.map_exists:
-                available += cfg.map_weight
-
-            # for c in categories:
-            #     print(f"Category: {c.name}, Earned: {c.earned}, Maximum: {c.maximum}, Status: {c.status}, Present: {c.present}")
-            # available = sum(c.maximum for c in categories if c.present)
-            # print("Available score is ", available)
-            # final = (earned / available * 100.0) if available > 0 else 0.0
-            # print("Final Score is ", final)
+            # Absent categories (e.g. no schema event, no map) are not penalised.
+            available = sum(c.maximum for c in categories if c.present)
             final = (earned / available) * 100.0 if available > 0 else 0.0
             return ScoreResult(
                 execution_id=context.execution_id,
@@ -785,8 +776,8 @@ class ProfileEngine:
         Returns
         -------
         float
-            The total bonus points awarded (also recorded on the context via
-            :meth:`ScoreManager.add_profile_score`).
+            The total bonus points awarded. Re-evaluating the same execution
+            replaces (does not add to) the engine's previous contribution.
         """
         manager = manager or ScoreManager()
         context = manager.get_context(execution_id)
@@ -798,13 +789,20 @@ class ProfileEngine:
             step_events = [
                 e for e in context.events if e.event_type is EventType.EXECUTION_STEP
             ]
+            already_awarded = sum(
+                float(e.metadata.get("score", 0.0))
+                for e in context.events
+                if e.event_type is EventType.PROFILE_SCORE
+                and e.metadata.get("source") == "profile_engine"
+            )
         for event in step_events:
             for rule in self.rules:
                 if self._rule_matches(rule, event.metadata):
                     total += float(rule.get("score", 0.0))
 
-        if total:
+        delta = total - already_awarded
+        if delta:
             manager.add_profile_score(
-                execution_id, total, metadata={"source": "profile_engine"}
+                execution_id, delta, metadata={"source": "profile_engine"}
             )
         return total

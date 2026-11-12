@@ -29,11 +29,10 @@ Usage:
 
 import os
 from jsonschema import Draft7Validator
-from tabulate import tabulate
-from typing import List, Dict
+from typing import List
 
 from cpact.schema_checker.base_schema import BaseSchema
-from cpact.result_builder.result_builder import ResultCollector
+from cpact.schema_checker.utils.case_normalizer import normalize_data, normalize_schema
 from cpact.schema_checker import SchemaValidationResult, ValidationEntry
 
 
@@ -50,16 +49,18 @@ class ConfigSchemaValidator(BaseSchema):
         """
         entries: list[ValidationEntry] = []
         data = self.load_schema(data_file)
-        validator = Draft7Validator(self.schema)
-        errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
+        # Connection fields are validated case-insensitively
+        validator = Draft7Validator(normalize_schema(self.schema))
+        errors = sorted(
+            validator.iter_errors(normalize_data(data)), key=lambda e: e.path
+        )
 
         if not errors:
             self.logger.info("✅ Config Schema is valid")
-            # rc = ResultCollector().get_instance()
             entries.append(
                 ValidationEntry(
                     category="Config Schema",
-                    colateral=os.path.basename(data_file),
+                    collateral=os.path.basename(data_file),
                     status="SUCCESS",
                     message="Config Schema is valid",
                     path="",
@@ -69,10 +70,11 @@ class ConfigSchemaValidator(BaseSchema):
                 recipe_name=data.get("test_scenario", {}).get("test_name", ""),
                 map_file=data.get("test_scenario", {}).get("map_file", ""),
                 config_name=data_file,
-                recipe_schema_valid=False,
-                map_schema_valid=False,
+                schema_version=data.get("schema_version", ""),
+                recipe_schema_valid=None,
+                map_schema_valid=None,
                 config_schema_valid=True,
-                metadata={},
+                entries=entries,
             )
 
         self.logger.info("❌ Validation error")
@@ -81,8 +83,8 @@ class ConfigSchemaValidator(BaseSchema):
             entries.append(
                 ValidationEntry(
                     category="Config Schema",
-                    file=os.path.basename(data_file),
-                    severity="ERROR",
+                    collateral=os.path.basename(data_file),
+                    status="ERROR",
                     message=error.message,
                     path=path,
                 )
@@ -95,8 +97,8 @@ class ConfigSchemaValidator(BaseSchema):
             map_file=data.get("test_scenario", {}).get("map_file", ""),
             config_name=data_file,
             schema_version=data.get("schema_version", ""),
-            recipe_schema_valid=False,
-            map_schema_valid=False,
+            recipe_schema_valid=None,
+            map_schema_valid=None,
             config_schema_valid=(len(errors) == 0),
             entries=entries,
         )

@@ -1,0 +1,42 @@
+{
+    "Connection": {
+        "redfish_port": 8080,
+        "protocol": "https",
+        "use_ssl":true,
+        "connections": [
+        ],
+        "connection_types": [
+            "ssh",
+            "redfish"
+        ]
+    },
+    "Inband": {
+        "inband_host": "",
+        "inband_ssh_port": 22,
+        "inband_username": "",
+        "inband_password": ""
+    },
+    "RackManager": {
+        "rackmanager_host": "",
+        "rackmanager_ssh_port": "",
+        "rackmanager_redfish_port": "",
+        "rackmanager_username": "",
+        "rackmanager_password": "",
+        "rackmanager_redfish_auth": true
+    },
+    "NodeManager": {
+        "nodemanager_tunnel": true,
+        "nodemanager_host": "",
+        "nodemanager_redfish_port": 443,
+        "nodemanager_ssh_port": 22,
+        "nodemanager_username": "",
+        "nodemanager_password": "",
+        "nodemanager_redfish_auth": false
+    },
+    "NodeManagerTunnel": {
+        "nodemanager_tunnel_agent": "",
+        "nodemanager_tunnel_local_host": "127.0.0.1",
+        "nodemanager_tunnel_ssh_local_port": [1234],
+        "nodemanager_tunnel_redfish_local_port": [5555]
+    }
+}

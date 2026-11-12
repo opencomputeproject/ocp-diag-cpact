@@ -68,12 +68,9 @@ from typing import Any, Dict, List, Optional
 from tabulate import tabulate
 from datetime import datetime
 from rich.box import HEAVY_HEAD
-from rich.console import Console
-from rich.table import Table
 
 from cpact.scoring.score_manager import ScoreManager
 from cpact.scoring.score_models import EventType
-from tabulate import tabulate
 from cpact.scoring.utils.score_utils import ReportColor
 
 

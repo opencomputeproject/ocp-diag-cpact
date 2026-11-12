@@ -119,7 +119,7 @@ class DockerDialog(QDialog):
                 # if key in self.load_docker_data:
                 #     line_edit.setText(self.load_docker_data[key])
                 form.addRow(label, line_edit)
-                layout.addLayout(form)
+        layout.addLayout(form)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         ok_btn = buttons.button(QDialogButtonBox.Ok)
         if ok_btn:

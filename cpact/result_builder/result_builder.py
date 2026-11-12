@@ -35,31 +35,24 @@ Usage:
 import csv
 import os
 import re
+import tempfile
 from collections import defaultdict
 import copy
 import json
 import threading
-from time import time
-from zipfile import Path
 from tabulate import tabulate
-import pprint
 from collections.abc import Mapping, Sequence
 from typing import Any, Dict, List, Optional, Union
 from typing import (
-    Any,
-    Dict,
     FrozenSet,
     Iterable,
-    Mapping,
-    Optional,
-    List,
-    Sequence,
     Tuple,
     Type,
 )
 from copy import deepcopy
 from cpact.utils.logger_utils import TestLogger
 from cpact.utils.custom_exception_handler import CustomExceptionHandler
+from cpact.utils.path_guard import PathNotAllowedError, resolve_allowed_path
 
 
 import sys
@@ -69,8 +62,38 @@ try:
     from colorama import Fore, Style, init
 
     init(autoreset=True)
-except:
+except ImportError:
     ENABLE_COLOR = False
+
+
+def is_failed_status(status: Any) -> bool:
+    """True for any failing step status (step results use "Success"/"Failed")."""
+    return str(status or "").strip().lower() in {"fail", "failed", "error", "timeout"}
+
+
+def _atomic_write(file_path: str, write_fn, newline: Optional[str] = None) -> None:
+    """Write via a temp file in the same directory, then os.replace().
+
+    Readers never see a truncated report, and a failure leaves any previous
+    file intact.
+    """
+    directory = os.path.dirname(os.path.abspath(file_path))
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(prefix=".tmp_", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline=newline) as fh:
+            write_fn(fh)
+        os.replace(tmp_path, file_path)
+    except BaseException:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _atomic_write_json(file_path: str, data: Any, **dump_kwargs: Any) -> None:
+    _atomic_write(file_path, lambda fh: json.dump(data, fh, **dump_kwargs))
 
 
 
@@ -390,17 +413,11 @@ class ResultCollector:
                 )
 
     def dump_scenario_output(self, file_path: str) -> None:
-        import json
-
-        with open(file_path, "w") as f:
-            json.dump(self.scenario_output, f, indent=4)
+        _atomic_write_json(file_path, self.scenario_output, indent=4)
         self.logger.info(f"Results saved to {file_path}")
 
     def dump_custom_scenario_output(self, file_path: str, scenario_output: str) -> None:
-        import json
-
-        with open(file_path, "w") as f:
-            json.dump(scenario_output, f, indent=4)
+        _atomic_write_json(file_path, scenario_output, indent=4)
         # self.logger.info(f"Results for scenario '{scenario_output}' saved to {file_path}")
 
     def add_diagnostic_keys(
@@ -459,11 +476,7 @@ class ResultCollector:
             None
         """
         for r in self.step_results:
-            status_icon = (
-                "[PASS]"
-                if r["status"] not in ["FAIL", "fail", "error", "ERROR"]
-                else "[FAIL]"
-            )
+            status_icon = "[FAIL]" if is_failed_status(r.get("status")) else "[PASS]"
             self.logger.info(
                 f"{status_icon} Step: {r['step_name']} | Type: {r['step_type']} | Time: {r['duration']:.2f}s | Msg: {r.get('message', '')}"
             )
@@ -533,10 +546,7 @@ class ResultCollector:
         Returns:
             None
         """
-        import json
-
-        with open(file_path, "w") as f:
-            json.dump(self.get_results(), f, indent=4)
+        _atomic_write_json(file_path, self.get_results(), indent=4)
         self.logger.info(f"Results saved to {file_path}")
 
     def dump_diagnostics(self, file_path: str, dump_data: dict) -> None:
@@ -547,17 +557,11 @@ class ResultCollector:
         Returns:
             None
         """
-        import json
-        import re
-
         if not dump_data:
             data = self.filter_unique_diagnostics(self.diagnostics)
-            with open(file_path, "w") as f:
-                json.dump(data, f, indent=4)
         else:
             data = self.build_drc_summary(dump_data)
-            with open(file_path, "w") as f:
-                json.dump(data, f, indent=4)
+        _atomic_write_json(file_path, data, indent=4)
         self.logger.info(f"Diagnostics saved to {file_path}")
 
     def find_first_key(self, data: Any, target_key: str) -> Optional[Any]:
@@ -1007,20 +1011,23 @@ class ResultCollector:
         ) -> Optional[Dict[str, Any]]:
             if not map_file_path:
                 return None
-            try:
-                scenario_path = os.path.dirname(scenario_path)
-                scenario_dir = os.path.abspath(scenario_path)
-                if os.path.dirname(map_file_path):
-                    resolved_map_file = map_file_path
-                else:
-                    resolved_map_file = os.path.join(scenario_dir, map_file_path)
-                # p = resolved_map_file#str(Path(resolved_map_file).resolve())
-            except Exception:
-                p = map_file_path
+            scenario_dir = os.path.abspath(os.path.dirname(scenario_path or ""))
+            if os.path.dirname(map_file_path):
+                resolved_map_file = map_file_path
+            else:
+                resolved_map_file = os.path.join(scenario_dir, map_file_path)
             if resolved_map_file in map_cache:
                 return map_cache[resolved_map_file]
             try:
-                with open(resolved_map_file, "r", encoding="utf-8") as fh:
+                safe_map_file = resolve_allowed_path(
+                    resolved_map_file, purpose="map_file", recipe_path=scenario_path or None
+                )
+            except PathNotAllowedError as exc:
+                self.logger.error(str(exc))
+                map_cache[resolved_map_file] = None
+                return None
+            try:
+                with open(safe_map_file, "r", encoding="utf-8") as fh:
                     data = json.load(fh)
                     map_cache[resolved_map_file] = (
                         data if isinstance(data, dict) else {}
@@ -1030,7 +1037,7 @@ class ResultCollector:
             return map_cache[resolved_map_file]
 
         def _get_drc_count(entry: Dict[str, Any]) -> int:
-            if hasattr(self, "_safe_int") and callable(getattr(self, "_safe_int")):
+            if hasattr(self, "_safe_int") and callable(self._safe_int):
                 val = self._safe_int(entry.get("DRC_count"))
                 return val if val is not None else 1
             # fallback: try parse int, default to 1
@@ -1247,22 +1254,37 @@ class ResultCollector:
             None
         Raises:
             IOError: If the file cannot be written to the specified output path.
-            KeyError: If CSV export is requested and report list is empty or contains inconsistent keys.
         Example:
             >>> report = [{"name": "test", "status": "pass"}, {"name": "test2", "status": "fail"}]
             >>> self.generate_schema_report(report, "/path/to/output", "both")
             # Creates: /path/to/output.json and /path/to/output.csv
         """
 
+        cleaned = [self._clean_entry(entry) for entry in report]
+
         if output_type in ("json", "both"):
-            with open(f"{output_file}.json", "w", encoding="utf-8") as f:
-                json.dump([self.clean_ansi(entry) for entry in report], f, indent=2)
+            _atomic_write_json(f"{output_file}.json", cleaned, indent=2)
 
         if output_type in ("csv", "both"):
-            with open(f"{output_file}.csv", "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=report[0].keys())
-                writer.writeheader()
-                writer.writerows([self.clean_ansi(entry) for entry in report])
+            fieldnames: List[str] = []
+            for entry in cleaned:
+                for key in entry:
+                    if key not in fieldnames:
+                        fieldnames.append(key)
+
+            def _write_csv(fh) -> None:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                if fieldnames:
+                    writer.writeheader()
+                writer.writerows(cleaned)
+
+            _atomic_write(f"{output_file}.csv", _write_csv, newline="")
+
+    def _clean_entry(self, entry: Any) -> Any:
+        """Strip ANSI codes from a report row, keeping dict rows as dicts."""
+        if isinstance(entry, dict):
+            return {key: self.clean_ansi(value) for key, value in entry.items()}
+        return self.clean_ansi(entry)
     
     def clean_ansi(self, text):
         ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')

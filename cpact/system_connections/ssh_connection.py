@@ -36,12 +36,9 @@ Usage:
 
 import time
 import uuid
-import queue
 import paramiko
 import traceback
 import threading
-from enum import Enum
-from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List, Any
 
 import socket
@@ -61,12 +58,17 @@ from cpact.system_connections.connection_config import (
 )
 from cpact.system_connections.privilege import PrivilegedShell, PrivilegeEscalationError
 from cpact.system_connections.retry import retry_call
+from cpact.system_connections.ssh_client import create_ssh_client, HOST_KEY_ERRORS
+from cpact.system_connections.ssh_tasks import (
+    _PID_MARKER,
+    SSHBackgroundTaskMixin,
+)
 
 # Exceptions that indicate a dropped/broken transport and warrant a reconnect.
 _RECONNECT_EXCEPTIONS = (paramiko.SSHException, EOFError, socket.error, OSError)
 
 
-class SSHConnection(ConnectionInterface):
+class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
     """Enhanced SSH connection with improved task management"""
 
     def __init__(self, config: Dict[str, Any]) -> None:
@@ -87,6 +89,8 @@ class SSHConnection(ConnectionInterface):
         self._priv_lock = threading.Lock()
         # Guard against infinite reconnect recursion.
         self._reconnecting = False
+        # Cached result of the POSIX-shell probe (None = not probed yet).
+        self._posix_shell: Optional[bool] = None
 
     def connect(self) -> bool:
         """Establish SSH connection"""
@@ -94,9 +98,11 @@ class SSHConnection(ConnectionInterface):
             try:
                 if self.ssh_client:
                     self.disconnect()
+                self._posix_shell = None
 
-                self.ssh_client = paramiko.SSHClient()
-                self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                self.ssh_client = create_ssh_client(
+                    self.conn_config.known_hosts_file or None
+                )
 
                 host = self._get_host()
                 port = self._get_ssh_port()
@@ -124,6 +130,7 @@ class SSHConnection(ConnectionInterface):
                     retries=retry.retry_count,
                     delay=retry.retry_delay,
                     exceptions=_RECONNECT_EXCEPTIONS,
+                    give_up_on=HOST_KEY_ERRORS,
                     logger=self.logger,
                     description=f"SSH connect to {host}:{port}",
                 )
@@ -140,7 +147,7 @@ class SSHConnection(ConnectionInterface):
                 if self.ssh_client:
                     try:
                         self.ssh_client.close()
-                    except:
+                    except Exception:
                         pass
                     self.ssh_client = None
                 return False
@@ -230,17 +237,28 @@ class SSHConnection(ConnectionInterface):
             return None
 
         effective_mode = self._resolve_privilege_mode(use_sudo, privilege_mode)
+        is_background = mode in (ExecutionMode.BACKGROUND, ExecutionMode.BACKGROUND_WAIT)
 
         # (1) An explicitly enabled persistent session runs everything elevated.
         with self._priv_lock:
             explicit_session = self._priv_explicit and self._priv_shell is not None
+            session_mode = self._priv_mode
         if explicit_session and privilege_mode != PRIVILEGE_NONE:
+            if is_background:
+                return self._start_privileged_background(
+                    command, session_mode or effective_mode, mode, wait, timeout
+                )
             return self._execute_in_persistent_shell(command, timeout)
 
         # (2) A privileged command reuses one elevated shell (opened once). No
         #     per-command escalation, and no per-command teardown — the shell is
-        #     closed only when the connection is disconnected.
+        #     closed only when the connection is disconnected. Background
+        #     privileged commands get their own elevated shell (see below).
         if effective_mode in (PRIVILEGE_SUDO, PRIVILEGE_SU):
+            if is_background:
+                return self._start_privileged_background(
+                    command, effective_mode, mode, wait, timeout
+                )
             return self._execute_privileged_reused(command, effective_mode, timeout)
 
         # (3) Normal path.
@@ -393,9 +411,7 @@ class SSHConnection(ConnectionInterface):
         try:
             shell = self._get_or_open_privileged_shell(mode)
             stdout, exit_code = shell.run(command, timeout=timeout)
-            result.stdout = stdout
-            result.return_code = exit_code
-            result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
+            self._apply_privileged_result(result, stdout, exit_code, timeout)
         except PrivilegeEscalationError as e:
             self.logger.error(f"Privilege escalation failed: {e}")
             result.status = TaskStatus.FAILED
@@ -427,9 +443,7 @@ class SSHConnection(ConnectionInterface):
             self.logger.info(f"Executing privileged ({mode}) command")
             shell = self._open_privileged_shell(mode)
             stdout, exit_code = shell.run(command, timeout=timeout)
-            result.stdout = stdout
-            result.return_code = exit_code
-            result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
+            self._apply_privileged_result(result, stdout, exit_code, timeout)
         except PrivilegeEscalationError as e:
             self.logger.error(f"Privilege escalation failed: {e}")
             result.status = TaskStatus.FAILED
@@ -466,9 +480,7 @@ class SSHConnection(ConnectionInterface):
                 if shell is None:
                     raise PrivilegeEscalationError("no active privileged session")
                 stdout, exit_code = shell.run(command, timeout=timeout)
-            result.stdout = stdout
-            result.return_code = exit_code
-            result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
+            self._apply_privileged_result(result, stdout, exit_code, timeout)
         except Exception as e:
             self.logger.error(f"Privileged session command error: {e}")
             result.status = TaskStatus.FAILED
@@ -478,6 +490,22 @@ class SSHConnection(ConnectionInterface):
         result.end_time = time.time()
         result.execution_time = result.end_time - result.start_time
         return result
+
+    @staticmethod
+    def _apply_privileged_result(
+        result: TaskResult, stdout: str, exit_code: int, timeout: Optional[float]
+    ) -> None:
+        """Fill a TaskResult from PrivilegedShell.run(); -1 means its marker never arrived."""
+        result.stdout = stdout
+        result.return_code = exit_code
+        if exit_code == -1:
+            result.status = TaskStatus.TIMEOUT
+            result.stderr = (
+                f"Command did not finish within {timeout} seconds and was interrupted"
+            )
+        else:
+            result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
+
 
     def enable_privileged_mode(self, mode: Optional[str] = None) -> bool:
         """
@@ -547,18 +575,28 @@ class SSHConnection(ConnectionInterface):
 
         attempts = 2  # initial try + one reconnect-and-retry
         for attempt in range(attempts):
+            remote_pid: Optional[int] = None
+            channel = None
             try:
                 self.logger.info(f"Executing synchronous command: {command}")
-                stdin, stdout, stderr = self.ssh_client.exec_command(
-                    command, timeout=timeout
+                track_pid = self._track_remote_pid()
+                remote_command = (
+                    f'echo "{_PID_MARKER}$$"; {command}' if track_pid else command
                 )
-                if timeout:
-                    stdout.channel.settimeout(timeout)
-                    stderr.channel.settimeout(timeout)
+                stdin, stdout, stderr = self.ssh_client.exec_command(
+                    remote_command, timeout=timeout
+                )
+                channel = stdout.channel
+                deadline = (start_time + timeout) if timeout else None
 
-                stdout_data = stdout.read().decode("utf-8", errors="ignore")
-                stderr_data = stderr.read().decode("utf-8", errors="ignore")
-                exit_code = stdout.channel.recv_exit_status()
+                def _on_pid(pid: int) -> None:
+                    nonlocal remote_pid
+                    remote_pid = pid
+
+                stdout_data, stderr_data = self._collect_channel_output(
+                    channel, deadline, track_pid, _on_pid
+                )
+                exit_code = channel.recv_exit_status()
 
                 result.return_code = exit_code
                 result.stdout = stdout_data
@@ -569,7 +607,16 @@ class SSHConnection(ConnectionInterface):
                 break  # success
 
             except socket.timeout:
-                # Read/exec exceeded the timeout — not a transport failure.
+                # The step's duration was exceeded — not a transport failure.
+                # Closing a non-PTY channel does not stop the remote command, so
+                # kill its process group when we know it.
+                if remote_pid:
+                    self._kill_remote_process_group(remote_pid)
+                if channel is not None:
+                    try:
+                        channel.close()
+                    except Exception:
+                        pass
                 result.status = TaskStatus.TIMEOUT
                 result.stderr = f"Command timeout after {timeout} seconds"
                 result.return_code = -1
@@ -606,6 +653,63 @@ class SSHConnection(ConnectionInterface):
         self.logger.info(f"Synchronous command completed with status: {result.status}")
         return result
 
+    @staticmethod
+    def _collect_channel_output(
+        channel, deadline: Optional[float], track_pid: bool, on_pid
+    ) -> Tuple[str, str]:
+        """
+        Drain stdout and stderr together until the command exits.
+
+        Reading both streams at once avoids the deadlock where a command blocks
+        on a full stderr buffer while we wait on stdout. ``deadline`` is an
+        absolute time for the whole command (raises ``socket.timeout`` when
+        passed). With ``track_pid`` the leading PID-marker line is stripped and
+        handed to ``on_pid`` as soon as it arrives.
+        """
+        out, err = bytearray(), bytearray()
+        pid_pending = track_pid
+        marker = _PID_MARKER.encode("ascii")
+
+        def take_marker(final: bool) -> None:
+            # Byte-level so a multi-byte character split across chunks is never altered.
+            nonlocal out, pid_pending
+            if out.startswith(marker):
+                newline = out.find(b"\n")
+                if newline == -1 and not final:
+                    return
+                end = newline if newline != -1 else len(out)
+                value = bytes(out[len(marker):end]).strip()
+                if value.isdigit():
+                    on_pid(int(value))
+                out = out[end + 1:] if newline != -1 else bytearray()
+                pid_pending = False
+            elif final or len(out) >= len(marker) or not marker.startswith(bytes(out)):
+                pid_pending = False
+
+        while True:
+            busy = False
+            if channel.recv_ready():
+                out += channel.recv(65536)
+                busy = True
+                if pid_pending:
+                    take_marker(final=False)
+            if channel.recv_stderr_ready():
+                err += channel.recv_stderr(65536)
+                busy = True
+            if not busy:
+                if channel.exit_status_ready():
+                    break
+                if channel.closed:
+                    # Transport/channel died mid-command: let the caller's
+                    # reconnect-and-retry path handle it (as the old blocking read did).
+                    raise paramiko.SSHException("Channel closed")
+                if deadline is not None and time.time() > deadline:
+                    raise socket.timeout("command exceeded its duration")
+                time.sleep(0.05)
+        if pid_pending:
+            take_marker(final=True)
+        return out.decode("utf-8", errors="ignore"), err.decode("utf-8", errors="ignore")
+
     def _force_reconnect(self) -> bool:
         """Tear down and re-establish the connection once.
 
@@ -629,615 +733,6 @@ class SSHConnection(ConnectionInterface):
         finally:
             self._reconnecting = False
 
-    def _execute_background(self, task_id: str, command: str) -> None:
-        """Execute command in background thread."""
-        try:
-            self.logger.info(f"Starting background task {task_id}: {command}")
-
-            thread = threading.Thread(
-                target=self._background_worker, args=(task_id, command), daemon=True
-            )
-
-            background_task = BackgroundTask(task_id, command, self.ssh_client, thread)
-
-            with self.lock:
-                self.background_tasks[task_id] = background_task
-
-            thread.start()
-            self.logger.info(f"Started background task {task_id}")
-
-        except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Failed to start background task {task_id}: {e}")
-            result = TaskResult(
-                task_id=task_id,
-                command=command,
-                status=TaskStatus.FAILED,
-                stderr=str(e),
-                return_code=-1,
-                start_time=time.time(),
-            )
-            with self.lock:
-                self.completed_tasks[task_id] = result
-
-    def _background_worker(self, task_id: str, command: str) -> TaskResult:
-        """Worker function for background task execution."""
-        start_time = time.time()
-        stdout_data = ""
-        stderr_data = ""
-        stdin = stdout = stderr = None
-
-        try:
-            # Execute command
-            stdin, stdout, stderr = self.ssh_client.exec_command(command)
-
-            # Store channels in background task for potential termination
-            with self.lock:
-                if task_id in self.background_tasks:
-                    self.background_tasks[task_id].channels = (stdin, stdout, stderr)
-
-            # Read output with streaming capability
-            stdout_data = ""
-            stderr_data = ""
-
-            # Set non-blocking mode and timeouts
-            stdout.channel.settimeout(1.0)
-            stderr.channel.settimeout(1.0)
-
-            while True:
-                # Check if task was terminated
-                with self.lock:
-                    if (
-                        task_id in self.background_tasks
-                        and self.background_tasks[task_id].terminated
-                    ):
-                        self.logger.info(f"Background task {task_id} was terminated")
-                        break
-
-                try:
-                    # Read available stdout
-                    if stdout.channel.recv_ready():
-                        chunk = stdout.channel.recv(4096).decode(
-                            "utf-8", errors="ignore"
-                        )
-                        stdout_data += chunk
-
-                    # Read available stderr
-                    if stderr.channel.recv_stderr_ready():
-                        chunk = stderr.channel.recv_stderr(4096).decode(
-                            "utf-8", errors="ignore"
-                        )
-                        stderr_data += chunk
-
-                    # Check if command finished
-                    if stdout.channel.exit_status_ready():
-                        # Read any remaining data
-                        while stdout.channel.recv_ready():
-                            chunk = stdout.channel.recv(4096).decode(
-                                "utf-8", errors="ignore"
-                            )
-                            stdout_data += chunk
-                        while stderr.channel.recv_stderr_ready():
-                            chunk = stderr.channel.recv_stderr(4096).decode(
-                                "utf-8", errors="ignore"
-                            )
-                            stderr_data += chunk
-                        break
-
-                    time.sleep(0.1)
-
-                except Exception as e:
-                    tb_str = "".join(
-                        traceback.format_exception(type(e), e, e.__traceback__)
-                    )
-                    self.logger.error(f"Formatted traceback:\n{tb_str}")
-                    # Check if it's a timeout (normal) or real error
-                    if "timeout" not in str(e).lower():
-                        self.logger.warning(f"Error reading from channels: {e}")
-                        break
-
-            # Get exit code
-            exit_code = -1
-            try:
-                with self.lock:
-                    if (
-                        task_id in self.background_tasks
-                        and not self.background_tasks[task_id].terminated
-                    ):
-                        exit_code = stdout.channel.recv_exit_status()
-            except Exception as e:
-                tb_str = "".join(
-                    traceback.format_exception(type(e), e, e.__traceback__)
-                )
-                self.logger.error(f"Formatted traceback:\n{tb_str}")
-                self.logger.warning(f"Could not get exit status: {e}")
-
-            # Determine final status
-            with self.lock:
-                is_terminated = (
-                    task_id in self.background_tasks
-                    and self.background_tasks[task_id].terminated
-                )
-
-            if is_terminated:
-                status = TaskStatus.TERMINATED
-            else:
-                status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
-
-            result = TaskResult(
-                task_id=task_id,
-                command=command,
-                status=status,
-                return_code=exit_code,
-                stdout=stdout_data,
-                stderr=stderr_data,
-                start_time=start_time,
-                end_time=time.time(),
-            )
-            result.execution_time = result.end_time - result.start_time
-
-        except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Error in background worker for task {task_id}: {e}")
-            result = TaskResult(
-                task_id=task_id,
-                command=command,
-                status=TaskStatus.FAILED,
-                return_code=-1,
-                stdout=stdout_data,  # Return any partial stdout we collected
-                stderr=stderr_data
-                + f"\nError: {str(e)}",  # Include partial stderr + error
-                start_time=start_time,
-                end_time=time.time(),
-            )
-            result.execution_time = result.end_time - result.start_time
-
-        finally:
-            # Always close channels to prevent resource leaks
-            try:
-                if stdin:
-                    stdin.close()
-                if stdout:
-                    stdout.close()
-                if stderr:
-                    stderr.close()
-            except:
-                pass
-
-        # Move task to completed tasks
-        with self.lock:
-            if task_id in self.background_tasks:
-                background_task = self.background_tasks[task_id]
-                background_task.result_queue.put(result)
-                background_task.completed.set()
-                del self.background_tasks[task_id]
-                self.completed_tasks[task_id] = result
-
-        self.logger.info(
-            f"Background task {task_id} completed with status: {result.status}"
-        )
-        return result
-
-    def wait_for_task(
-        self, task_id: str, timeout: Optional[float] = None
-    ) -> Optional[TaskResult]:
-        """
-        Wait for a specific background task to complete.
-
-        Args:
-            task_id: ID of the task to wait for (ensure it's a string)
-            timeout: Maximum time to wait in seconds
-
-        Returns:
-            TaskResult if task completes, None if timeout or task not found
-        """
-        try:
-            # Ensure task_id is a string, not a TaskResult object
-            if hasattr(task_id, "task_id"):
-                actual_task_id = task_id.task_id
-            else:
-                actual_task_id = str(task_id)
-
-            with self.lock:
-                if actual_task_id in self.completed_tasks:
-                    return self.completed_tasks[actual_task_id]
-
-                if actual_task_id not in self.background_tasks:
-                    self.logger.warning(f"Task {actual_task_id} not found")
-                    return None
-
-                background_task = self.background_tasks[actual_task_id]
-
-            # Wait for completion outside the lock
-            if background_task.completed.wait(timeout=timeout):
-                try:
-                    return background_task.result_queue.get_nowait()
-                except queue.Empty:
-                    # Check completed tasks again
-                    with self.lock:
-                        return self.completed_tasks.get(actual_task_id)
-
-            # Timeout occurred - terminate task and return partial results
-            self.logger.warning(
-                f"Timeout waiting for task {actual_task_id}, terminating and collecting results"
-            )
-
-            # Force terminate the task
-            self.terminate_task(actual_task_id)
-
-            # Wait a bit for termination to complete
-            background_task.completed.wait(timeout=2.0)
-
-            # Try to get the result from the queue or completed tasks
-            try:
-                return background_task.result_queue.get_nowait()
-            except queue.Empty:
-                with self.lock:
-                    if actual_task_id in self.completed_tasks:
-                        return self.completed_tasks[actual_task_id]
-
-                    # If still not in completed tasks, create a timeout result with partial data
-                    # Try to get any partial output that might be available
-                    partial_stdout = ""
-                    partial_stderr = ""
-
-                    # Create timeout result
-                    result = TaskResult(
-                        task_id=actual_task_id,
-                        command=background_task.command,
-                        status=TaskStatus.TIMEOUT,
-                        return_code=-1,
-                        stdout=partial_stdout,
-                        stderr=f"Task timed out after {timeout} seconds",
-                        start_time=background_task.start_time,
-                        end_time=time.time(),
-                    )
-                    result.execution_time = result.end_time - result.start_time
-
-                    self.completed_tasks[actual_task_id] = result
-                    return result
-
-        except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Error waiting for task {task_id}: {e}")
-            # Even on error, try to return something useful
-            actual_task_id = (
-                str(task_id) if not hasattr(task_id, "task_id") else task_id.task_id
-            )
-            return TaskResult(
-                task_id=actual_task_id,
-                command=f"Unknown command for {actual_task_id}",
-                status=TaskStatus.FAILED,
-                return_code=-1,
-                stdout="",
-                stderr=f"Error waiting for task: {e}",
-                start_time=time.time(),
-                end_time=time.time(),
-                execution_time=0,
-            )
-
-    def wait_for_all_tasks(
-        self, timeout: Optional[float] = None
-    ) -> Dict[str, TaskResult]:
-        """
-        Wait for all background tasks to complete.
-
-        Args:
-            timeout: Maximum time to wait for all tasks
-
-        Returns:
-            Dictionary of task_id -> TaskResult for all tasks
-        """
-        start_time = time.time()
-        results = {}
-
-        # Get snapshot of current background tasks
-        with self.lock:
-            task_ids = list(self.background_tasks.keys())
-            # Also include already completed tasks
-            results.update(self.completed_tasks)
-
-        for task_id in task_ids:
-            remaining_timeout = None
-            if timeout is not None:
-                elapsed = time.time() - start_time
-                remaining_timeout = max(0, timeout - elapsed)
-                if remaining_timeout <= 0:
-                    break
-
-            result = self.wait_for_task(task_id, remaining_timeout)
-            if result:
-                results[task_id] = result
-
-        return results
-
-    def get_task_result_and_details(self, task_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get comprehensive task details including result if completed.
-
-        Args:
-            task_id: ID of the task (ensure it's a string)
-
-        Returns:
-            Dictionary with task details and result, or None if not found
-        """
-        # Ensure task_id is a string, not a TaskResult object
-        if hasattr(task_id, "task_id"):
-            actual_task_id = task_id.task_id
-        else:
-            actual_task_id = str(task_id)
-
-        with self.lock:
-            # Check completed tasks first
-            if actual_task_id in self.completed_tasks:
-                result = self.completed_tasks[actual_task_id]
-                return {
-                    "task_id": actual_task_id,
-                    "command": result.command,
-                    "status": result.status.value,
-                    "return_code": result.return_code,
-                    "stdout": result.stdout,
-                    "stderr": result.stderr,
-                    "start_time": result.start_time,
-                    "end_time": result.end_time,
-                    "execution_time": result.execution_time,
-                    "is_running": False,
-                    "has_result": True,
-                }
-
-            # Check running tasks
-            if actual_task_id in self.background_tasks:
-                background_task = self.background_tasks[actual_task_id]
-                return {
-                    "task_id": actual_task_id,
-                    "command": background_task.command,
-                    "status": TaskStatus.RUNNING.value,
-                    "return_code": None,
-                    "stdout": "",
-                    "stderr": "",
-                    "start_time": background_task.start_time,
-                    "end_time": None,
-                    "execution_time": None,
-                    "current_runtime": time.time() - background_task.start_time,
-                    "is_running": True,
-                    "has_result": False,
-                }
-
-        return None
-
-    def wait_for_task_with_details(
-        self, task_id: str, timeout: Optional[float] = None, wait: bool = True
-    ) -> Optional[Tuple[str, str, int, str]]:
-        """
-        Wait for a specific background task and get detailed result.
-
-        Args:
-            task_id: ID of the task to wait for
-            timeout: Maximum time to wait in seconds
-            wait: If True, wait for completion; if False, return current status
-
-        Returns:
-            Tuple of (stdout, stderr, exit_code, status) - always returns a result, never None for timeouts
-        """
-        # Ensure task_id is a string, not a TaskResult object
-        if hasattr(task_id, "task_id"):
-            actual_task_id = task_id.task_id
-        else:
-            actual_task_id = str(task_id)
-
-        if not wait:
-            details = self.get_task_result_and_details(actual_task_id)
-            if details:
-                return (
-                    details.get("stdout", ""),
-                    details.get("stderr", ""),
-                    details.get("return_code", -1),
-                    details.get("status", "unknown"),
-                )
-            # Return empty result instead of None
-            return ("", f"Task {actual_task_id} not found", -1, "not_found")
-
-        # Wait for task completion
-        result = self.wait_for_task(actual_task_id, timeout)
-
-        # wait_for_task now always returns a result (even for timeouts), so this should not be None
-        if result is None:
-            # This should rarely happen now, but handle it just in case
-            self.logger.warning(f"Unexpected None result for task {actual_task_id}")
-            return ("", f"Task {actual_task_id} returned None result", -1, "error")
-
-        # Return result as tuple
-        return (result.stdout, result.stderr, result.return_code, result.status.value)
-
-    def get_all_tasks(self) -> Dict[str, Dict[str, Any]]:
-        """Get details of all tasks (running and completed)."""
-        all_tasks = {}
-
-        try:
-            with self.lock:
-                # Add running tasks
-                for task_id, background_task in self.background_tasks.items():
-                    all_tasks[task_id] = {
-                        "task_id": task_id,
-                        "command": background_task.command,
-                        "status": TaskStatus.RUNNING.value,
-                        "start_time": background_task.start_time,
-                        "current_runtime": time.time() - background_task.start_time,
-                        "is_running": True,
-                        "has_result": False,
-                    }
-
-                # Add completed tasks
-                for task_id, result in self.completed_tasks.items():
-                    all_tasks[task_id] = {
-                        "task_id": task_id,
-                        "command": result.command,
-                        "status": result.status.value,
-                        "return_code": result.return_code,
-                        "stdout": result.stdout,
-                        "stderr": result.stderr,
-                        "start_time": result.start_time,
-                        "end_time": result.end_time,
-                        "execution_time": result.execution_time,
-                        "is_running": False,
-                        "has_result": True,
-                    }
-        except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Error getting all tasks: {e}")
-
-        return all_tasks
-
-    def terminate_task(self, task_id: str) -> bool:
-        """
-        Terminate a running background task.
-
-        Args:
-            task_id: ID of the task to terminate (ensure it's a string)
-
-        Returns:
-            True if task was terminated, False if not found or already completed
-        """
-        # Ensure task_id is a string, not a TaskResult object
-        if hasattr(task_id, "task_id"):
-            actual_task_id = task_id.task_id
-        else:
-            actual_task_id = str(task_id)
-
-        with self.lock:
-            if actual_task_id not in self.background_tasks:
-                self.logger.warning(
-                    f"Task {actual_task_id} not found or already completed"
-                )
-                return False
-
-            background_task = self.background_tasks[actual_task_id]
-
-            # Mark as terminated - the background worker will detect this
-            background_task.terminated = True
-
-        try:
-            # Try to send Ctrl+C signal to the command if channels are available
-            if background_task.channels:
-                try:
-                    stdin, stdout, stderr = background_task.channels
-                    if stdout.channel and not stdout.channel.closed:
-                        stdout.channel.send("\x03")  # Send Ctrl+C
-                        time.sleep(0.1)
-                    if stdout.channel and not stdout.channel.closed:
-                        stdout.channel.close()
-                except Exception as e:
-                    tb_str = "".join(
-                        traceback.format_exception(type(e), e, e.__traceback__)
-                    )
-                    self.logger.error(f"Formatted traceback:\n{tb_str}")
-                    self.logger.warning(f"Could not send termination signal: {e}")
-
-            self.logger.info(f"Initiated termination for task {actual_task_id}")
-            return True
-
-        except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            self.logger.error(f"Formatted traceback:\n{tb_str}")
-            self.logger.error(f"Failed to terminate task {actual_task_id}: {e}")
-
-            # Even if termination failed, create a terminated result to ensure we return something
-            try:
-                result = TaskResult(
-                    task_id=actual_task_id,
-                    command=background_task.command,
-                    status=TaskStatus.TERMINATED,
-                    return_code=-1,
-                    start_time=background_task.start_time,
-                    end_time=time.time(),
-                    stdout="",  # No partial output available in this case
-                    stderr=f"Task termination failed: {str(e)}",
-                )
-                result.execution_time = result.end_time - result.start_time
-
-                # Force move to completed tasks
-                with self.lock:
-                    if actual_task_id in self.background_tasks:
-                        del self.background_tasks[actual_task_id]
-                    self.completed_tasks[actual_task_id] = result
-
-            except Exception as cleanup_error:
-                tb_str = "".join(
-                    traceback.format_exception(
-                        type(cleanup_error), cleanup_error, cleanup_error.__traceback__
-                    )
-                )
-                self.logger.error(f"Formatted traceback:\n{tb_str}")
-                self.logger.error(
-                    f"Failed to create terminated result: {cleanup_error}"
-                )
-
-            return False
-
-    def terminate_all_tasks(self) -> List[str]:
-        """
-        Terminate all running background tasks.
-
-        Returns:
-            List of task IDs that were terminated
-        """
-        with self.lock:
-            task_ids = list(self.background_tasks.keys())
-
-        terminated = []
-        for task_id in task_ids:
-            if self.terminate_task(task_id):
-                terminated.append(task_id)
-
-        return terminated
-
-    def get_task_output(self, task_id: str) -> Optional[TaskResult]:
-        """
-        Get output of a completed task and optionally remove it from completed tasks.
-
-        Args:
-            task_id: ID of the task
-
-        Returns:
-            TaskResult if found, None otherwise
-        """
-        with self.lock:
-            return self.completed_tasks.get(task_id)
-
-    def close_task(self, task_id: str) -> bool:
-        """
-        Remove a completed task from the completed tasks list.
-
-        Args:
-            task_id: ID of the task to close
-
-        Returns:
-            True if task was closed, False if not found
-        """
-        with self.lock:
-            if task_id in self.completed_tasks:
-                del self.completed_tasks[task_id]
-                self.logger.info(f"Closed task {task_id}")
-                return True
-            return False
-
-    def close_all_completed_tasks(self) -> List[str]:
-        """
-        Remove all completed tasks from memory.
-
-        Returns:
-            List of task IDs that were closed
-        """
-        with self.lock:
-            closed_task_ids = list(self.completed_tasks.keys())
-            self.completed_tasks.clear()
-
-        self.logger.info(f"Closed {len(closed_task_ids)} completed tasks")
-        return closed_task_ids
 
     def disconnect(self) -> None:
         """Close SSH connection and cleanup"""
@@ -1316,109 +811,6 @@ class SSHConnection(ConnectionInterface):
                 and self.ssh_client.get_transport() is not None
                 and self.ssh_client.get_transport().is_active()
             )
-
-    # Additional compatibility methods for the original SSH interface
-    def get_task_result(
-        self,
-        task_id: str,
-        wait: bool = False,
-        timeout: float = None,
-        force_stop: bool = False,
-    ) -> Optional[Tuple[str, str, int, str]]:
-        """
-        Get results from background task (compatibility method)
-
-        Args:
-            task_id: Task identifier
-            wait: If True, wait for task completion
-            timeout: Maximum time to wait
-            force_stop: If True, terminate running task
-
-        Returns:
-            Tuple of (stdout, stderr, exit_code, status) or None if not ready
-        """
-        # Ensure task_id is a string
-        if hasattr(task_id, "task_id"):
-            actual_task_id = task_id.task_id
-        else:
-            actual_task_id = str(task_id)
-
-        if force_stop:
-            self.terminate_task(actual_task_id)
-
-        return self.wait_for_task_with_details(actual_task_id, timeout, wait)
-
-    def get_all_background_results(
-        self,
-        wait: bool = True,
-        timeout: float = None,
-        force_stop_remaining: bool = True,
-    ) -> Dict[str, Tuple[str, str, int, str]]:
-        """
-        Get results from all background tasks (compatibility method)
-
-        Args:
-            wait: If True, wait for tasks to complete
-            timeout: Maximum time to wait for each task (None = no timeout)
-            force_stop_remaining: If True, force stop tasks that don't complete within timeout
-
-        Returns:
-            Dict mapping task_id to (stdout, stderr, exit_code, status)
-        """
-        results = {}
-
-        if wait:
-            all_results = self.wait_for_all_tasks(timeout)
-            for task_id, result in all_results.items():
-                results[task_id] = (
-                    result.stdout,
-                    result.stderr,
-                    result.return_code,
-                    result.status.value,
-                )
-        else:
-            # Just get current status of all tasks
-            all_tasks = self.get_all_tasks()
-            for task_id, details in all_tasks.items():
-                results[task_id] = (
-                    details.get("stdout", ""),
-                    details.get("stderr", ""),
-                    details.get("return_code", -1),
-                    details.get("status", "unknown"),
-                )
-
-        if force_stop_remaining:
-            running_tasks = [
-                tid for tid, (_, _, _, status) in results.items() if status == "running"
-            ]
-            for task_id in running_tasks:
-                self.terminate_task(task_id)
-
-        return results
-
-    def cleanup_task(self, task_id: str) -> bool:
-        """Clean up task resources (compatibility method)"""
-        # Ensure task_id is a string
-        if hasattr(task_id, "task_id"):
-            actual_task_id = task_id.task_id
-        else:
-            actual_task_id = str(task_id)
-
-        self.close_task(actual_task_id)
-
-    def cleanup_completed_tasks(self) -> int:
-        """Clean up all completed tasks (compatibility method)"""
-        return len(self.close_all_completed_tasks())
-
-    def cleanup_all_tasks(self) -> int:
-        """Clean up all tasks (completed and running) (compatibility method)"""
-        # First terminate any running tasks
-        terminated = self.terminate_all_tasks()
-
-        # Clean up all tasks
-        closed = self.close_all_completed_tasks()
-
-        return len(terminated) + len(closed)
 
     # Disconnect wrapper for compatibility
     def close_connection(self) -> None:

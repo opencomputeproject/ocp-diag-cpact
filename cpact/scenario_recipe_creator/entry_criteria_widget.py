@@ -34,19 +34,15 @@ Usage:
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,
-    QLineEdit,
     QComboBox,
     QWidget,
     QDialogButtonBox,
     QDialog,
     QFormLayout,
     QCheckBox,
-    QTextEdit,
 )
 
 from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QFontMetrics
-from PyQt5.QtCore import Qt
 
 from cpact.scenario_recipe_creator.constants import ExpandingTextEdit
 
@@ -75,6 +71,7 @@ class EntryCriteriaDialog(QDialog):
         self.setWindowTitle("Add / Edit Entry Criteria")
         self.setFixedSize(500, 300)
         self.data = data or {}
+        entry_criteria_schema = entry_criteria_schema or {}
         self.entry_criteria_schema = (
             entry_criteria_schema.get("items", {}).get("properties", {}) or {}
         )

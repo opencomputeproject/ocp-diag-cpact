@@ -35,6 +35,7 @@ from cpact.utils.logger_utils import TestLogger
 from cpact.utils.scenario_parser import load_yaml_file
 from cpact.core.context import Context
 from cpact.utils.path_resolver import resolve_paths_in_yaml
+from cpact.utils.path_guard import resolve_allowed_path
 import ocptv.output as tv
 from concurrent.futures import ThreadPoolExecutor
 from cpact.scoring.score_manager import ScoreManager
@@ -83,6 +84,10 @@ class ScenarioInvoker:
         scenario_path = self.step.get("scenario_path")
         if not scenario_path:
             raise ValueError("Scenario path is required for ScenarioInvoker step.")
+        parent_scenario_path = self.context.get("scenario_path")
+        scenario_path = resolve_allowed_path(
+            scenario_path, purpose="scenario_path", recipe_path=parent_scenario_path
+        )
         scenario_data = load_yaml_file(scenario_path)
         scenario_data, _ = resolve_paths_in_yaml(
             scenario_data["test_scenario"], scenario_data.get("paths", {})
@@ -122,7 +127,12 @@ class ScenarioInvoker:
             validate_continue=self.validate_continue,
             score_manager=score_manager
         )
-        output, status, message = runner.run()
+        # Paths inside the child recipe are allowed relative to the child's folder.
+        self.context.set("scenario_path", scenario_path)
+        try:
+            output, status, message = runner.run()
+        finally:
+            self.context.set("scenario_path", parent_scenario_path)
 
         end_time = time.time()
         duration = end_time - start_time

@@ -57,7 +57,8 @@ class ConnectionDiscovery:
         # Get available connections and connection types from config
         connection_config = self.config.get("Connection", {})
         available_connections = connection_config.get("connections", [])
-        available_types = connection_config.get("connection_types", [])
+        # Copy: appending "local" must not mutate the caller's config.
+        available_types = list(connection_config.get("connection_types", []) or [])
 
         # Also add 'local' type as it's always available
         if "local" not in available_types:
@@ -183,6 +184,7 @@ class ConnectionDiscovery:
     ) -> Dict[str, Any]:
         """Test a single connection"""
         start_time = time.time()
+        connection = None
 
         try:
             # Create connection
@@ -195,7 +197,6 @@ class ConnectionDiscovery:
             connect_time = time.time() - start_time
 
             if not connect_success:
-                connection.disconnect()
                 return {
                     "connection_name": connection_name,
                     "connection_type": connection_type,
@@ -216,9 +217,6 @@ class ConnectionDiscovery:
             command_time = time.time() - cmd_start_time
 
             total_time = time.time() - start_time
-
-            # Disconnect
-            connection.disconnect()
 
             if command_result["success"]:
                 return {
@@ -258,6 +256,13 @@ class ConnectionDiscovery:
                 "total_time": total_time,
                 "details": f"Exception during testing: {type(e).__name__}",
             }
+        finally:
+            # Always release the connection, including when the test raised.
+            if connection is not None:
+                try:
+                    connection.disconnect()
+                except Exception as e:
+                    print(f"Warning: failed to disconnect {connection_name} ({connection_type}): {e}")
 
     @staticmethod
     def _normalize_result(result) -> Dict[str, Any]:

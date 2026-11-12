@@ -28,16 +28,76 @@ Usage:
     Instantiate DockerExecutor with step data and index.
     Call `load_docker()` to start the container.
     Use `execute_command()` to run commands inside the container.
-    Call `stop_container()` or `stop_all_containers()` to clean up after execution.
+    Call `stop_container()` or `stop_all_containers()` (CPACT-labelled containers only) to clean up after execution.
 ===============================================================================
 """
 
+import re
+import shlex
 import time
+from typing import List, Optional, Sequence, Tuple, Union
+
 import docker
 
 from cpact.system_connections.connection_factory import ConnectionFactory
+from cpact.system_connections.local_connection import LocalConnection
 from cpact.utils.logger_utils import TestLogger
 from cpact.system_connections.constants import ExecutionMode
+
+# Docker's own container-name rule; also guarantees the name is shell-safe.
+_CONTAINER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+# Image reference ([registry[:port]/]repo[:tag][@digest]) without shell metacharacters.
+_IMAGE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/:@-]*$")
+_SHELL_PATH_RE = re.compile(r"^[A-Za-z0-9_./-]+$")
+# Every container CPACT starts carries this label so cleanup never touches
+# containers it does not own.
+_MANAGED_LABEL = "cpact.managed=true"
+# cmd.exe has no reliable escape for these inside a quoted argument: '"' ends the
+# quoted region (exposing & | < > to cmd) and %VAR% is expanded even in quotes.
+_CMD_UNQUOTABLE_RE = re.compile(r'["%\r\n]')
+_CMD_SAFE_ARG_RE = re.compile(r"^[A-Za-z0-9_./:=,@+\\-]+$")
+
+
+def _quote_windows_arg(arg: str) -> str:
+    if _CMD_UNQUOTABLE_RE.search(arg):
+        raise ValueError(
+            f"Argument {arg!r} cannot be safely quoted for cmd.exe "
+            "(double quotes, % and newlines are not supported)"
+        )
+    if _CMD_SAFE_ARG_RE.match(arg):
+        return arg
+    # Inside "..." cmd.exe treats & | < > ^ ( ) literally; trailing backslashes
+    # must be doubled so they don't escape the closing quote (MSVC rules).
+    return '"' + re.sub(r"(\\+)$", r"\1\1", arg) + '"'
+
+
+def validate_container_name(name: str) -> str:
+    """Return ``name`` if it is a valid Docker container name, else raise ValueError."""
+    if not isinstance(name, str) or not _CONTAINER_NAME_RE.match(name):
+        raise ValueError(
+            f"Invalid container_name {name!r}: must match [A-Za-z0-9][A-Za-z0-9_.-]*"
+        )
+    return name
+
+
+def validate_image(image: str) -> str:
+    """Return ``image`` if it is a plain Docker image reference, else raise ValueError."""
+    if not isinstance(image, str) or not _IMAGE_REF_RE.match(image):
+        raise ValueError(
+            f"Invalid container_image {image!r}: only letters, digits and ._/:@- are allowed"
+        )
+    return image
+
+
+def quote_command(args: Sequence[str], connection: object) -> str:
+    """Join ``args`` into one command string quoted for the connection's shell.
+
+    Raises ValueError for arguments that cannot be quoted safely for cmd.exe
+    on a Windows local connection.
+    """
+    if isinstance(connection, LocalConnection) and connection.is_windows:
+        return " ".join(_quote_windows_arg(str(arg)) for arg in args)
+    return " ".join(shlex.quote(str(arg)) for arg in args)
 
 
 class DockerExecutor:
@@ -69,15 +129,23 @@ class DockerExecutor:
         """
         # self.stop_container()
 
-        container_name = self.docker_steps.get("container_name", "prime95-test")
-        container_image = self.docker_steps.get("container_image", "prime95-stress")
+        container_name = validate_container_name(
+            self.docker_steps.get("container_name", "prime95-test")
+        )
+        container_image = validate_image(
+            self.docker_steps.get("container_image", "prime95-stress")
+        )
         connection_name = self.docker_steps.get("connection", "Inband")
         connection_type = self.docker_steps.get("connection_type", "ssh")
         container_location = self.docker_steps.get("container_location", "local")
         self.use_sudo = self.docker_steps.get("use_sudo", False)
         self.logger.info(f"\n🚀 Starting container: {container_name}")
-        start_cmd = f"docker run -dit --name {container_name} {container_image}"
-        self.logger.info(f"Executing command to start container: {start_cmd}")
+        start_cmd = [
+            "docker", "run", "-dit",
+            "--label", _MANAGED_LABEL,
+            "--name", container_name, container_image,
+        ]
+        self.logger.info(f"Executing command to start container: {' '.join(start_cmd)}")
         self.container_id, err = self.execute(
             start_cmd,
             container_location=container_location,
@@ -86,7 +154,7 @@ class DockerExecutor:
             use_sudo=self.use_sudo,
         )
         self.logger.info(f"Container ID: {self.container_id}")
-        if not self.container_id:
+        if err or not self.container_id:
             self.logger.error(f"Failed to start container: {err}")
             raise RuntimeError(f"Failed to start container: {err}")
         self.logger.info(f"Container started with ID: {self.container_id}")
@@ -104,36 +172,43 @@ class DockerExecutor:
         use_sudo: bool = False,
     ) -> tuple[str, bool, str]:
         """Executes a command in the Docker container.
-        If the container is running locally, it uses subprocess to execute the command.
-        If the container is running remotely, it uses SSH to execute the command.
+        ``command`` is run by ``shell -c`` inside the container; it is passed as a
+        single quoted argument so the host shell never interprets it.
         """
+        if not _SHELL_PATH_RE.match(shell or ""):
+            return "", False, f"Invalid shell {shell!r}"
+        try:
+            validate_container_name(container_name)
+        except ValueError as e:
+            return "", False, str(e)
 
-        command = f'docker exec {container_name} {shell} -c "{command}"'
+        args = ["docker", "exec", container_name, shell, "-c", command]
         output, error = self.execute(
-            command,
+            args,
             container_location=container_location,
             connection_name=connection_name,
             connection_type=connection_type,
             use_sudo=use_sudo,
         )
-        time.sleep(duration)
         if error:
             self.logger.error(f"Error executing command: {error}")
             return "", False, f"Error executing command: {error}"
-        self.logger.info(f"Command executed successfully: {command}")
+        time.sleep(duration)
+        self.logger.info(f"Command executed successfully: {' '.join(args)}")
         self.logger.debug(f"Command output: {output}")
         return output, True, "Command executed successfully"
 
     def stop_container(self: object) -> None:
         """Stops and removes the Docker container."""
-        container_name = self.docker_steps.get("container_name", "prime95-test")
-        container_image = self.docker_steps.get("container_image", "prime95-stress")
+        container_name = validate_container_name(
+            self.docker_steps.get("container_name", "prime95-test")
+        )
         connection_name = self.docker_steps.get("connection", "Inband")
         connection_type = self.docker_steps.get("connection_type", "ssh")
         container_location = self.docker_steps.get("container_location", "local")
         self.logger.info(f"🛑 Stopping container: {self.container_id}")
         self.execute(
-            f"docker stop {container_name}",
+            ["docker", "stop", container_name],
             container_location=container_location,
             connection_name=connection_name,
             connection_type=connection_type,
@@ -141,7 +216,7 @@ class DockerExecutor:
         )
         self.logger.info(f"Container {container_name} stopped.")
         self.execute(
-            f"docker rm {container_name}",
+            ["docker", "rm", container_name],
             container_location=container_location,
             connection_name=connection_name,
             connection_type=connection_type,
@@ -150,11 +225,11 @@ class DockerExecutor:
         self.logger.info(f"Container {container_name} removed.")
 
     def stop_all_containers(self: object) -> None:
-        """Stops all running Docker containers."""
-        self.logger.info("🛑 Stopping all running containers.")
+        """Stops and removes the running containers started by CPACT (labelled)."""
+        self.logger.info("🛑 Stopping all CPACT-managed containers.")
         try:
             client = docker.from_env()
-            for container in client.containers.list():
+            for container in client.containers.list(filters={"label": _MANAGED_LABEL}):
                 self.logger.info(f"Stopping container: {container.name}")
                 container.stop()
                 container.remove()
@@ -165,48 +240,51 @@ class DockerExecutor:
 
     def execute(
         self,
-        command: str,
+        command: Union[str, List[str]],
         container_location: str = "local",
         connection_name: str = None,
         connection_type: str = None,
         use_sudo: bool = False,
-    ) -> tuple[str, bool]:
+    ) -> Tuple[str, Optional[str]]:
         """
-        Executes a command in the Docker container.
+        Runs a docker CLI command on the configured connection.
+
+        ``command`` should be an argument list; it is quoted for the target
+        shell. Returns ``(stdout, error)`` where ``error`` is None on success.
         """
-        # if container_location == "target":
-        # For remote execution, use SSH or other remote command execution methods
-        self.logger.info(f"Executing command on remote container: {command}")
         self.logger.info(
             f"Using connection: {connection_name} of type {connection_type}"
         )
         factory = ConnectionFactory.get_instance()
         connection = factory.get_connection(connection_name, connection_type)
         if not connection:
-            self.logger.error(
-                f"Connection {connection_name} of type {connection_type} not found."
-            )
-            return (
-                "",
-                False,
-                f"Connection {connection_name} of type {connection_type} not found.",
-            )
+            msg = f"Connection {connection_name} of type {connection_type} not found."
+            self.logger.error(msg)
+            return "", msg
         if not connection.is_connected():
             self.logger.info(
                 f"Connecting to {connection_name} of type {connection_type}."
             )
             if not connection.connect():
-                self.logger.error(
-                    f"Failed to connect to {connection_name} of type {connection_type}."
-                )
-                return (
-                    "",
-                    False,
-                    f"Failed to connect to {connection_name} of type {connection_type}.",
-                )
-        output = connection.execute_command(
+                msg = f"Failed to connect to {connection_name} of type {connection_type}."
+                self.logger.error(msg)
+                return "", msg
+
+        if not isinstance(command, str):
+            try:
+                command = quote_command(command, connection)
+            except ValueError as e:
+                self.logger.error(str(e))
+                return "", str(e)
+        self.logger.info(f"Executing docker command: {command}")
+        result = connection.execute_command(
             command,
             mode=ExecutionMode.SYNCHRONOUS,
+            use_sudo=use_sudo,
         )
-        self.logger.info(f"Command executed successfully: {command}")
-        return output, None
+        stdout = (getattr(result, "stdout", "") or "").strip()
+        return_code = getattr(result, "return_code", None)
+        if return_code not in (0, None):
+            stderr = (getattr(result, "stderr", "") or "").strip()
+            return stdout, stderr or f"exit code {return_code}"
+        return stdout, None

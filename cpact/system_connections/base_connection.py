@@ -29,7 +29,7 @@ Usage:
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any
 
 from cpact.utils.logger_utils import TestLogger
 

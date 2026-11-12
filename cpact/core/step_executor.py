@@ -31,11 +31,8 @@ Usage:
 
 import time
 
-from cpact.executor.command_executor import CommandExecutor
 from concurrent.futures import ThreadPoolExecutor
 from cpact.core.context import Context
-from cpact.executor.log_analyzer import LogAnalyzer
-from cpact.executor.scenario_invoker import ScenarioInvoker
 from cpact.executor.executor_factory import ExecutorFactory
 from cpact.utils.logger_utils import TestLogger
 from cpact.result_builder.result_builder import ResultCollector
@@ -45,9 +42,6 @@ from cpact.utils.custom_exception_handler import CustomExceptionHandler
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
-    SoftwareType,
-    TestResult,
-    TestStatus,
 )
 import ocptv.output as tv
 

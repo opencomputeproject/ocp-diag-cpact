@@ -13,6 +13,7 @@ to remote systems through intermediate agents.
 
 Features:
 - Establishes SSH and Redfish tunnels using `SSHTunnelForwarder`.
+- Verifies the tunnel agent's SSH host key against known_hosts.
 - Supports dynamic local port binding and keepalive settings.
 - Integrates with existing SSHConnection and RedfishConnection classes.
 - Automatically overrides host and port resolution when tunnels are active.
@@ -46,8 +47,12 @@ import threading
 from typing import Dict, Any
 
 from sshtunnel import SSHTunnelForwarder
-from cpact.system_connections.redfish_connection import RedfishConnection
+from cpact.system_connections.redfish_connection import (
+    RedfishConnection,
+    ServerHostnameAdapter,
+)
 from cpact.system_connections.ssh_connection import SSHConnection
+from cpact.system_connections.ssh_client import load_known_host_key
 from cpact.system_connections.connection_config import TunnelAgentConfig, RetryPolicy
 from cpact.system_connections.retry import retry_call
 
@@ -103,8 +108,11 @@ class TunnelConnection(SSHConnection):
         retry = RetryPolicy.from_config(self.tunnel_config)
 
         def _build_and_start() -> bool:
+            # A previous attempt may have started one tunnel before failing.
+            self._cleanup_tunnels()
             self.ssh_tunnel = SSHTunnelForwarder(
                 ssh_address_or_host=(agent.host, agent.ssh_port),
+                ssh_host_key=host_key,
                 ssh_username=agent.username,
                 ssh_password=agent.password,
                 local_bind_address=(agent.local_host, agent.ssh_local_port),
@@ -113,6 +121,7 @@ class TunnelConnection(SSHConnection):
             )
             self.redfish_tunnel = SSHTunnelForwarder(
                 ssh_address_or_host=(agent.host, agent.ssh_port),
+                ssh_host_key=host_key,
                 ssh_username=agent.username,
                 ssh_password=agent.password,
                 local_bind_address=(agent.local_host, agent.redfish_local_port),
@@ -125,6 +134,9 @@ class TunnelConnection(SSHConnection):
             return True
 
         try:
+            host_key = load_known_host_key(
+                agent.host, agent.ssh_port, agent.known_hosts_file or None
+            )
             retry_call(
                 _build_and_start,
                 retries=retry.retry_count,
@@ -152,15 +164,15 @@ class TunnelConnection(SSHConnection):
             if self.ssh_tunnel:
                 try:
                     self.ssh_tunnel.stop()
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.warning(f"Error stopping SSH tunnel: {e}")
                 self.ssh_tunnel = None
 
             if self.redfish_tunnel:
                 try:
                     self.redfish_tunnel.stop()
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.warning(f"Error stopping Redfish tunnel: {e}")
                 self.redfish_tunnel = None
 
     def _get_host(self) -> str:
@@ -264,8 +276,10 @@ class TunneledRedfishConnection(RedfishConnection):
         retry = RetryPolicy.from_config(self.tunnel_config)
 
         def _build_and_start() -> bool:
+            self._stop_tunnel()
             self.tunnel = SSHTunnelForwarder(
                 ssh_address_or_host=(agent.host, agent.ssh_port),
+                ssh_host_key=host_key,
                 ssh_username=agent.username,
                 ssh_password=agent.password,
                 local_bind_address=(agent.local_host, agent.redfish_local_port),
@@ -280,6 +294,9 @@ class TunneledRedfishConnection(RedfishConnection):
             return True
 
         try:
+            host_key = load_known_host_key(
+                agent.host, agent.ssh_port, agent.known_hosts_file or None
+            )
             retry_call(
                 _build_and_start,
                 retries=retry.retry_count,
@@ -294,7 +311,18 @@ class TunneledRedfishConnection(RedfishConnection):
             return True
         except Exception as e:
             self.logger.error(f"Failed to create Redfish tunnel: {e}")
+            self._stop_tunnel()
             return False
+
+    def _stop_tunnel(self) -> None:
+        """Stop and forget the Redfish tunnel, if any."""
+        with self._tunnel_lock:
+            if self.tunnel:
+                try:
+                    self.tunnel.stop()
+                except Exception as e:
+                    self.logger.warning(f"Error stopping Redfish tunnel: {e}")
+                self.tunnel = None
 
     def _get_host(self) -> str:
         """Override to use tunneled localhost when tunnel is active"""
@@ -310,16 +338,17 @@ class TunneledRedfishConnection(RedfishConnection):
             )
         return super()._get_redfish_port()
 
+    def _configure_session(self, session) -> None:
+        """Verify the BMC certificate against its real hostname, not the tunnel's localhost."""
+        if self.tunnel and self.tunnel.is_active and session.verify is not False:
+            session.mount(
+                "https://", ServerHostnameAdapter(self.config["nodemanager_host"])
+            )
+
     def disconnect(self) -> None:
         """Disconnect and cleanup tunnel"""
         super().disconnect()
-        if self.tunnel:
-            with self._tunnel_lock:
-                try:
-                    self.tunnel.stop()
-                except:
-                    pass
-                self.tunnel = None
+        self._stop_tunnel()
 
     def is_connected(self) -> bool:
         """Check if connection and tunnel are active"""

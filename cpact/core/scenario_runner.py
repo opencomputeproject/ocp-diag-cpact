@@ -39,7 +39,6 @@ import ocptv.output as tv
 from ocptv.output import (
     DiagnosisType,
     LogSeverity,
-    SoftwareType,
     TestResult,
     TestStatus,
 )
@@ -68,6 +67,8 @@ class ScenarioRunner:
         self.scenario = scenario
         self.context = context
         self.executor_continue = thread_executor or ThreadPoolExecutor(max_workers=5)
+        # Only shut down a pool we created; a caller-supplied pool is theirs.
+        self._owns_executor = thread_executor is None
         self.validate_continue = validate_continue
         self.score_manager = ScoreManager.instance() if not score_manager else score_manager
     def run(self) -> tuple[None, bool, str]:
@@ -78,6 +79,14 @@ class ScenarioRunner:
         Returns:
             tuple: A tuple containing None, a boolean indicating success or failure, and a message.
         """
+        try:
+            return self._run()
+        finally:
+            if self._owns_executor:
+                self.executor_continue.shutdown(wait=True)
+
+    def _run(self) -> tuple[None, bool, str]:
+        """Execute the scenario; see :meth:`run`."""
         self.ocptv_writer = OCPTVFileWriter(
             TestLogger(), self.scenario.get("test_name")
         )
@@ -86,7 +95,7 @@ class ScenarioRunner:
         tv.config(writer=self.ocptv_writer, enable_runtime_checks=True)
         self.logger.info(f"Running scenario: {self.scenario.get('test_name')}")
         data = self.scenario
-        steps = data.get("test_steps", [])
+        steps = data.get("test_steps") or []
         self.context.set("test_id", data.get("test_id"))
         self.context.set("test_name", data.get("test_name"))
         run = tv.TestRun(name=self.scenario.get("test_name"), version="1.0")
@@ -97,6 +106,12 @@ class ScenarioRunner:
             severity=LogSeverity.INFO,
         )
         run_status = True
+        message = ""
+        if not steps:
+            # A compliance scenario that executes nothing must not report PASS.
+            message = f"Scenario '{self.scenario.get('test_name')}' has no test_steps"
+            self.logger.error(message)
+            run_status = False
 
         execution_id = f"{self.context.get('parent_recipe_id')}.{data.get('test_id')}"
         for step in steps:

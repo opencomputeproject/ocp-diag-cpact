@@ -82,6 +82,7 @@ aligns with CPACT framework coding standards.
 
 from __future__ import annotations
 
+import math
 import threading
 import time
 from dataclasses import dataclass, field
@@ -216,17 +217,44 @@ class ScoringConfig:
 
     @classmethod
     def from_dict(cls, raw: Dict[str, Any]) -> "ScoringConfig":
-        """Build a :class:`ScoringConfig` from an already-merged mapping."""
-        weights = raw.get("weights", {})
-        try:
-            return cls(
-                schema_weight=float(weights.get("schema", 30)),
-                map_weight=float(weights.get("map", 20)),
-                execution_weight=float(weights.get("execution", 50)),
-                profile_rules=list(raw.get("profile_rules", [])),
-            )
-        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
-            raise ValueError(f"Invalid scoring configuration: {exc}") from exc
+        """Build a :class:`ScoringConfig` from an already-merged mapping.
+
+        Accepts the ``score_weights_schema.json`` key names (``recipe_schema``,
+        ``map_schema``) as well as the legacy ``schema`` / ``map`` names; the
+        schema names win when both are present.
+
+        Raises
+        ------
+        ValueError
+            If any weight is not a finite, non-negative number.
+        """
+        weights = raw.get("weights", {}) or {}
+        candidates = {
+            "schema": weights.get("recipe_schema", weights.get("schema", 30)),
+            "map": weights.get("map_schema", weights.get("map", 20)),
+            "execution": weights.get("execution", 50),
+        }
+        parsed: Dict[str, float] = {}
+        for name, value in candidates.items():
+            if isinstance(value, bool):
+                raise ValueError(f"Invalid scoring configuration: weight '{name}' must be a number")
+            try:
+                number = float(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"Invalid scoring configuration: weight '{name}'={value!r} is not a number"
+                ) from exc
+            if not math.isfinite(number) or number < 0:
+                raise ValueError(
+                    f"Invalid scoring configuration: weight '{name}'={value!r} must be finite and >= 0"
+                )
+            parsed[name] = number
+        return cls(
+            schema_weight=parsed["schema"],
+            map_weight=parsed["map"],
+            execution_weight=parsed["execution"],
+            profile_rules=list(raw.get("profile_rules", []) or []),
+        )
 
 
 # ===========================================================================

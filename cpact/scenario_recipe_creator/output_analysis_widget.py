@@ -33,7 +33,6 @@ Usage:
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,
-    QLineEdit,
     QComboBox,
     QDialogButtonBox,
     QDialog,

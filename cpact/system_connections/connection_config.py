@@ -40,6 +40,23 @@ PRIVILEGE_SUDO = "sudo"
 PRIVILEGE_SU = "su"
 _VALID_PRIVILEGE_MODES = {PRIVILEGE_NONE, PRIVILEGE_SUDO, PRIVILEGE_SU}
 
+_TRUE_STRINGS = {"true", "1", "yes", "on"}
+_FALSE_STRINGS = {"false", "0", "no", "off"}
+
+
+def parse_optional_bool(value: Any) -> Optional[bool]:
+    """Parse a config flag that may be a bool or a string; None/"" means unset."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in _TRUE_STRINGS:
+        return True
+    if text in _FALSE_STRINGS:
+        return False
+    raise ValueError(f"Invalid boolean config value: {value!r}")
+
 
 @dataclass
 class RetryPolicy:
@@ -88,6 +105,24 @@ class ConnectionConfig:
 
     # Tunnel flag (NodeManager only, historically)
     tunnel_enabled: bool = False
+
+    # Optional extra known_hosts file used to verify the SSH server host key
+    # (in addition to the user's ~/.ssh/known_hosts).
+    known_hosts_file: str = ""
+
+    # Redfish TLS verification override for this section, as configured (bool
+    # or string). None means "use the global Connection.verify_ssl setting",
+    # which itself defaults to True. Parsed by RedfishConnection so a bad value
+    # only fails the Redfish connection.
+    verify_ssl: Any = None
+    # Optional CA bundle path used to verify the Redfish server certificate.
+    ca_bundle: str = ""
+
+    # SSH commands are prefixed with a POSIX `echo <marker>$$;` so the remote
+    # process group can be killed on timeout/terminate. None = auto-detect a
+    # POSIX shell; true/false forces it. Raw value (bool or string); parsed by
+    # SSHConnection.
+    track_remote_pid: Any = None
 
     retry: RetryPolicy = field(default_factory=RetryPolicy)
 
@@ -142,6 +177,10 @@ class ConnectionConfig:
             sudo_password_explicit=bool(raw_sudo),
             su_password_explicit=bool(raw_su),
             tunnel_enabled=bool(config.get(f"{prefix}_tunnel", False)) if prefix else False,
+            known_hosts_file=g("known_hosts_file", "") or "",
+            verify_ssl=g("verify_ssl", None),
+            ca_bundle=g("ca_bundle", "") or "",
+            track_remote_pid=g("track_remote_pid", None),
             retry=RetryPolicy.from_config(config),
         )
 
@@ -227,6 +266,9 @@ class TunnelAgentConfig:
     redfish_local_port: int = 8443
 
     keepalive: int = 30
+    # Optional extra known_hosts file used to verify the agent's SSH host key
+    # (in addition to the user's ~/.ssh/known_hosts).
+    known_hosts_file: str = ""
     valid: bool = False
     source: str = "none"
 
@@ -251,6 +293,7 @@ class TunnelAgentConfig:
         username = tunnel_config.get("tunnel_agent_username", "")
         password = tunnel_config.get("tunnel_agent_password", "")
         ssh_port = int(tunnel_config.get("tunnel_agent_ssh_port", 22))
+        known_hosts_file = tunnel_config.get("tunnel_agent_known_hosts_file", "")
         source = "explicit"
 
         # 2) Legacy indirection through a named global section.
@@ -263,6 +306,9 @@ class TunnelAgentConfig:
                 username = section.get(f"{a}_username", "") or section.get("username", "")
                 password = section.get(f"{a}_password", "") or section.get("password", "")
                 ssh_port = int(section.get(f"{a}_ssh_port", section.get("ssh_port", 22)))
+                known_hosts_file = known_hosts_file or section.get(
+                    f"{a}_known_hosts_file", ""
+                ) or section.get("known_hosts_file", "")
                 source = f"legacy_section:{agent}"
 
         return cls(
@@ -274,6 +320,7 @@ class TunnelAgentConfig:
             ssh_local_port=ssh_local_port,
             redfish_local_port=redfish_local_port,
             keepalive=keepalive,
+            known_hosts_file=known_hosts_file or "",
             valid=bool(host and username and password),
             source=source,
         )
