@@ -392,7 +392,8 @@ class CommandExecutor(BaseExecutor):
         err = open(stderr_path, "w")
         check_docker_step = self.check_docker_step(self.step)
         if check_docker_step:
-            container_name = validate_container_name(step.get("container_name"))
+            container_name = validate_container_name(
+                step.get("container_name"))
             command = f"docker exec {container_name} {command}"
             self.logger.info(f"Executing Docker command: {command}")
             self.scenario_step.add_log(

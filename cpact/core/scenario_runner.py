@@ -67,11 +67,13 @@ class ScenarioRunner:
         self.logger = TestLogger().get_logger()
         self.scenario = scenario
         self.context = context
-        self.executor_continue = thread_executor or ThreadPoolExecutor(max_workers=5)
+        self.executor_continue = thread_executor or ThreadPoolExecutor(
+            max_workers=5)
         # Only shut down a pool we created; a caller-supplied pool is theirs.
         self._owns_executor = thread_executor is None
         self.validate_continue = validate_continue
         self.score_manager = ScoreManager.instance() if not score_manager else score_manager
+
     def run(self) -> tuple[None, bool, str]:
         """
         Runs the test scenario by executing the defined test steps and managing the test run lifecycle.
@@ -100,7 +102,8 @@ class ScenarioRunner:
         self.context.set("test_id", data.get("test_id"))
         self.context.set("test_name", data.get("test_name"))
         run = tv.TestRun(name=self.scenario.get("test_name"), version="1.0")
-        dut = tv.Dut(id=self.scenario["test_id"], name=self.scenario["test_name"])
+        dut = tv.Dut(id=self.scenario["test_id"],
+                     name=self.scenario["test_name"])
         run.start(dut=dut)
         run.add_log(
             message=f"Running Test Scenario: {self.scenario.get('test_name')}",

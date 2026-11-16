@@ -68,7 +68,8 @@ from cpact.system_connections.ssh_tasks import (
 )
 
 # Exceptions that indicate a dropped/broken transport and warrant a reconnect.
-_RECONNECT_EXCEPTIONS = (paramiko.SSHException, EOFError, socket.error, OSError)
+_RECONNECT_EXCEPTIONS = (paramiko.SSHException,
+                         EOFError, socket.error, OSError)
 
 
 class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
@@ -87,8 +88,10 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
         self.connection_lock = threading.RLock()
         # Persistent elevated session state (see enable_privileged_mode()).
         self._priv_shell: Optional[PrivilegedShell] = None
-        self._priv_mode: Optional[str] = None      # mode the shell was opened with
-        self._priv_explicit = False                # True only via enable_privileged_mode()
+        # mode the shell was opened with
+        self._priv_mode: Optional[str] = None
+        # True only via enable_privileged_mode()
+        self._priv_explicit = False
         self._priv_lock = threading.Lock()
         # Guard against infinite reconnect recursion.
         self._reconnecting = False
@@ -173,7 +176,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
             )
             return True
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Failed to download file: {e}")
             return False
@@ -182,7 +186,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
         """Upload file to remote server"""
         if not self.is_connected():
             if not self.connect():
-                self.logger.error("Failed to establish SSH connection for file upload")
+                self.logger.error(
+                    "Failed to establish SSH connection for file upload")
                 return False
 
         try:
@@ -194,7 +199,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
             )
             return True
         except Exception as e:
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            tb_str = "".join(traceback.format_exception(
+                type(e), e, e.__traceback__))
             self.logger.error(f"Formatted traceback:\n{tb_str}")
             self.logger.error(f"Failed to upload file: {e}")
             return False
@@ -293,7 +299,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
             return None
 
         effective_mode = self._resolve_privilege_mode(use_sudo, privilege_mode)
-        is_background = mode in (ExecutionMode.BACKGROUND, ExecutionMode.BACKGROUND_WAIT)
+        is_background = mode in (
+            ExecutionMode.BACKGROUND, ExecutionMode.BACKGROUND_WAIT)
 
         # (1) An explicitly enabled persistent session runs everything elevated.
         with self._priv_lock:
@@ -357,7 +364,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
             return False
         self._reconnecting = True
         try:
-            self.logger.warning("SSH transport not active; attempting (re)connect")
+            self.logger.warning(
+                "SSH transport not active; attempting (re)connect")
             return self.connect()
         finally:
             self._reconnecting = False
@@ -447,7 +455,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
                     pass
                 self._priv_shell = None
                 self._priv_mode = None
-            shell = self._open_privileged_shell(mode)  # may raise; nothing stored
+            shell = self._open_privileged_shell(
+                mode)  # may raise; nothing stored
             self._priv_shell = shell
             self._priv_mode = mode
             return shell
@@ -534,7 +543,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
             with self._priv_lock:
                 shell = self._priv_shell
                 if shell is None:
-                    raise PrivilegeEscalationError("no active privileged session")
+                    raise PrivilegeEscalationError(
+                        "no active privileged session")
                 stdout, exit_code = shell.run(command, timeout=timeout)
             self._apply_privileged_result(result, stdout, exit_code, timeout)
         except Exception as e:
@@ -562,7 +572,6 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
         else:
             result.status = TaskStatus.COMPLETED if exit_code == 0 else TaskStatus.FAILED
 
-
     def enable_privileged_mode(self, mode: Optional[str] = None) -> bool:
         """
         Open a persistent elevated shell so subsequent ``execute_command`` calls
@@ -588,7 +597,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
                 self._priv_shell = self._open_privileged_shell(mode)
                 self._priv_mode = mode
                 self._priv_explicit = True
-                self.logger.info(f"Persistent privileged mode enabled ({mode})")
+                self.logger.info(
+                    f"Persistent privileged mode enabled ({mode})")
                 return True
             except Exception as e:
                 self.logger.error(f"Failed to enable privileged mode: {e}")
@@ -706,7 +716,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
         result.end_time = time.time()
         result.execution_time = result.end_time - result.start_time
 
-        self.logger.info(f"Synchronous command completed with status: {result.status}")
+        self.logger.info(
+            f"Synchronous command completed with status: {result.status}")
         return result
 
     @staticmethod
@@ -789,7 +800,6 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
         finally:
             self._reconnecting = False
 
-
     def disconnect(self) -> None:
         """Close SSH connection and cleanup"""
         self.logger.info("Disconnecting SSH connection...")
@@ -844,7 +854,8 @@ class SSHConnection(SSHBackgroundTaskMixin, ConnectionInterface):
             except BaseException as e:  # noqa: BLE001 - reported via `error`
                 error.append(e)
 
-        t = threading.Thread(target=_closer, name="ssh-close-watchdog", daemon=True)
+        t = threading.Thread(
+            target=_closer, name="ssh-close-watchdog", daemon=True)
         t.start()
         t.join(timeout)
         if t.is_alive():
