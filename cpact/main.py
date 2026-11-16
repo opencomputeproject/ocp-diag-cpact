@@ -56,7 +56,6 @@ from cpact.core.recipe_selector import RecipeSelector
 from cpact.core.scenario_adapter import ScenarioAdapter
 from cpact.analysis.followup_resolver import FollowUpResolver
 from cpact.result_builder.result_builder import ResultCollector
-from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
 from cpact.schema_checker import ValidationRequest
 from cpact.schema_checker.schema_service import SchemaService
 from cpact.scoring.score_manager import ScoreManager
@@ -1016,21 +1015,27 @@ def main() -> None:
     parser.set_defaults(run_with_schema_check=True)
     args = parser.parse_args()
     if args.run_scenario_creator:
+        # Imported lazily so builds without PyQt5 (CPACT_NO_GUI=1) still run
+        from cpact.scenario_recipe_creator.scenario_creator import main as ScenarioCreator
         ScenarioCreator()
         return
-    test_dir = args.test_dir or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests"
-    )
+    if getattr(sys, "frozen", False):
+        # PyInstaller bundle: read-only resources live in the unpack dir;
+        # writable output goes next to the executable.
+        resource_root = sys._MEIPASS
+        writable_root = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        resource_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))
+        writable_root = resource_root
+
+    test_dir = args.test_dir or os.path.join(resource_root, "tests")
     if not os.path.exists(test_dir):
         parser.error(f"Test directory does not exist: {test_dir}")
 
-    workspace = args.workspace or os.path.join(
-        os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__))), "workspace"
-    )
+    workspace = args.workspace or os.path.join(writable_root, "workspace")
     score_weights_path = args.score_weights or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))
-                        ), "spec", "input", "score_weights.json"
+        resource_root, "spec", "input", "score_weights.json"
     )
     print("test dir", test_dir)
     if not os.path.exists(workspace):
